@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yao Design Lab — 火焰的形成从不只是一种元素</title>
+  <title>Yao Design Lab</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="lang-en">
   <div id="bg">
     <div class="bg-stripe bg-stripe-1"></div>
     <div class="bg-stripe bg-stripe-2"></div>
@@ -15,19 +15,28 @@
   </div>
 
   <header class="topbar">
-    <div class="brand">Yao Design Lab<span class="dot">.</span></div>
+    <div class="brand">
+      <span data-lang="en">Yao Design Lab</span>
+      <span data-lang="cn">姚设计实验室</span><span class="dot">.</span>
+    </div>
     <nav class="nav">
-      <a href="#about">About<span class="cn">关于</span></a>
-      <a href="#work">Work<span class="cn">作品</span></a>
-      <a href="#contact">Contact<span class="cn">联络</span></a>
+      <a href="#about"><span data-lang="en">About</span><span data-lang="cn">关于</span></a>
+      <a href="#work"><span data-lang="en">Work</span><span data-lang="cn">作品</span></a>
+      <a href="#contact"><span data-lang="en">Contact</span><span data-lang="cn">联络</span></a>
     </nav>
   </header>
 
   <main>
     <section class="hero">
       <div class="hero-text">
-        <h1>YAO <em>DESIGN</em> LAB</h1>
-        <p class="sub">A flame is never made of a single element<span class="cn">火焰的形成从不只是一种元素</span></p>
+        <h1>
+          <span data-lang="en">YAO <em>DESIGN</em> LAB</span>
+          <span data-lang="cn">姚 <em>设计</em> 实验室</span>
+        </h1>
+        <p class="sub">
+          <span data-lang="en">A flame is never made of a single element</span>
+          <span data-lang="cn">火焰的形成从不只是一种元素</span>
+        </p>
       </div>
 
       <canvas id="stage"></canvas>
@@ -35,19 +44,27 @@
       <div class="categories" aria-hidden="true">
         <button class="cat" data-cat="economy">
           <span class="cat-num">01</span>
-          <span class="cat-name">Economy<span class="cn">经济</span></span>
+          <span class="cat-name">
+            <span data-lang="en">Economy</span><span data-lang="cn">经济</span>
+          </span>
         </button>
         <button class="cat" data-cat="emotion">
           <span class="cat-num">02</span>
-          <span class="cat-name">Emotion<span class="cn">情感</span></span>
+          <span class="cat-name">
+            <span data-lang="en">Emotion</span><span data-lang="cn">情感</span>
+          </span>
         </button>
         <button class="cat" data-cat="welfare">
           <span class="cat-num">03</span>
-          <span class="cat-name">Welfare<span class="cn">公益</span></span>
+          <span class="cat-name">
+            <span data-lang="en">Welfare</span><span data-lang="cn">公益</span>
+          </span>
         </button>
         <button class="cat" data-cat="creative">
           <span class="cat-num">04</span>
-          <span class="cat-name">Creative<span class="cn">创意</span></span>
+          <span class="cat-name">
+            <span data-lang="en">Creative</span><span data-lang="cn">创意</span>
+          </span>
         </button>
       </div>
     </section>
@@ -56,19 +73,31 @@
 
     <section id="work" class="work">
       <div class="work-inner">
-        <p class="work-eyebrow">Selected Work<span class="cn">作品集</span></p>
-        <h2>Four burns. Four languages.<span class="cn">四种燃烧，四种语言。</span></h2>
-        <p class="work-lede">
+        <p class="work-eyebrow">
+          <span data-lang="en">Selected Work</span>
+          <span data-lang="cn">作品集</span>
+        </p>
+        <h2>
+          <span data-lang="en">Four burns. Four languages.</span>
+          <span data-lang="cn">四种燃烧，四种语言。</span>
+        </h2>
+        <p class="work-lede" data-lang="en">
           Every fire grows from a different element — from the logic of markets, to the dim glow of feeling,
           to the echo of crowds, to the chance of creation. Tap any of the four touchpoints above to enter its category.
         </p>
-        <p class="work-lede cn-block">
+        <p class="work-lede" data-lang="cn">
           每一团火都从不同的元素生长——从市场的逻辑、情绪的微光、人群的回响，到创造的偶然。
           点击上方四个触点，进入对应的作品类别。
         </p>
       </div>
     </section>
   </main>
+
+  <div class="lang-switch" id="langSwitch" aria-label="Language switch">
+    <button type="button" data-set-lang="en" class="active">EN</button>
+    <span class="lang-divider">/</span>
+    <button type="button" data-set-lang="cn">中文</button>
+  </div>
 
   <div class="cursor" id="cursor"></div>
 

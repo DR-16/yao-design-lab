@@ -512,3 +512,24 @@ document.querySelectorAll('.cat').forEach((btn) => {
     console.log('category:', cat);
   });
 });
+
+// ---------- Language switch ----------
+const LANG_KEY = 'ydl-lang';
+function setLang(lang) {
+  if (lang !== 'en' && lang !== 'cn') lang = 'en';
+  document.body.classList.remove('lang-en', 'lang-cn');
+  document.body.classList.add('lang-' + lang);
+  document.documentElement.lang = (lang === 'cn') ? 'zh-CN' : 'en';
+  document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.setLang === lang);
+  });
+  try { localStorage.setItem(LANG_KEY, lang); } catch {}
+}
+document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+  b.addEventListener('click', () => setLang(b.dataset.setLang));
+});
+// restore previous choice
+try {
+  const saved = localStorage.getItem(LANG_KEY);
+  if (saved) setLang(saved);
+} catch {}
