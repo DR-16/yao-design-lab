@@ -97,7 +97,7 @@ html { background: var(--bg); }
 }
 .brand .dot { color: var(--accent); }
 
-.nav { display: flex; gap: 28px; }
+.nav { display: flex; gap: 28px; align-items: flex-start; }
 .nav a {
   color: inherit;
   text-decoration: none;
@@ -106,8 +106,23 @@ html { background: var(--bg); }
   text-transform: uppercase;
   opacity: 0.85;
   transition: opacity 0.2s;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
 }
 .nav a:hover { opacity: 1; }
+
+/* small Chinese subline that sits under any English label */
+.cn {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  opacity: 0.6;
+  margin-top: 4px;
+  font-weight: 400;
+  text-transform: none;
+}
 
 main { position: relative; }
 
@@ -140,6 +155,12 @@ main { position: relative; }
 
 .hero-text .sub {
   margin-top: 10px;
+}
+.hero-text .sub .cn {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  margin-top: 6px;
+  opacity: 0.7;
 }
 
 .hero-text h1 {
@@ -276,6 +297,16 @@ main { position: relative; }
 }
 .cat-name {
   font-weight: 600;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.cat-name .cn {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  margin-top: 5px;
+  opacity: 0.7;
 }
 
 .cat[data-cat="economy"]  { left: 22%; top: 38%; }
@@ -322,6 +353,28 @@ main { position: relative; }
   line-height: 1.7;
   opacity: 0.85;
   max-width: 60ch;
+}
+.work-lede.cn-block {
+  font-size: 13px;
+  line-height: 1.85;
+  opacity: 0.55;
+  margin-top: 14px;
+  letter-spacing: 0.06em;
+}
+/* In the work section, .cn under headings/eyebrow becomes a softer subline */
+.work-eyebrow .cn,
+.work h2 .cn {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  opacity: 0.55;
+  font-weight: 400;
+}
+.work h2 .cn {
+  font-family: "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.12em;
 }
 
 /* mouse halo: a radial purple→cyan glow that follows the pointer.
