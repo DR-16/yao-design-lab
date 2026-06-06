@@ -709,6 +709,109 @@ const portrait = new THREE.Points(portraitGeo, portraitMat);
 portrait.position.set(0, 0.1, 0.4);
 aboutScene.add(portrait);
 
+// ---------- Ring particle burst ----------
+// When the user scrolls and the focused step changes, a circular ring of
+// particles bursts outward (and rises or falls depending on scroll direction).
+// Colours are drawn at random from the hero's four stripe colours.
+const RING_PALETTE = [
+  [0.75, 0.15, 0.83], // violet  #c026d3
+  [0.98, 0.75, 0.14], // yellow  #fbbf24
+  [0.12, 0.25, 0.69], // blue    #1e40af
+  [0.50, 0.11, 0.11], // red     #7f1d1d
+];
+const RING_COUNT = 90;
+const ringPos    = new Float32Array(RING_COUNT * 3);
+const ringVel    = new Float32Array(RING_COUNT * 3);
+const ringColor  = new Float32Array(RING_COUNT * 3);
+const ringLife   = new Float32Array(RING_COUNT); // 1 just born → 0 dead
+const ringGeo    = new THREE.BufferGeometry();
+ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+ringGeo.setAttribute('color',    new THREE.BufferAttribute(ringColor, 3));
+ringGeo.setAttribute('life',     new THREE.BufferAttribute(ringLife, 1));
+
+const ringMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: /* glsl */`
+    attribute vec3 color;
+    attribute float life;
+    varying vec3 vColor;
+    varying float vLife;
+    void main(){
+      vColor = color;
+      vLife = life;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      // size grows then fades with life
+      float s = 9.0 * (0.5 + 0.5 * life);
+      gl_PointSize = s * (260.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    varying vec3 vColor;
+    varying float vLife;
+    void main(){
+      vec2 q = gl_PointCoord - 0.5;
+      float d = length(q);
+      float a = smoothstep(0.5, 0.0, d) * vLife;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor * (1.2 + vLife * 0.6), a);
+    }
+  `,
+});
+const ringParticles = new THREE.Points(ringGeo, ringMat);
+aboutScene.add(ringParticles);
+
+function emitRing(dir /* +1 = scroll down (rising up), -1 = scroll up (falling down) */) {
+  for (let i = 0; i < RING_COUNT; i++) {
+    const angle = (i / RING_COUNT) * Math.PI * 2 + Math.random() * 0.05;
+    const r = 1.4 + Math.random() * 0.4;
+    ringPos[i*3+0] = Math.cos(angle) * r;
+    ringPos[i*3+1] = -dir * 0.6;   // start below if rising, above if falling
+    ringPos[i*3+2] = Math.sin(angle) * r;
+
+    // expand outward + vertical sweep in scroll direction
+    const expandSpeed = 0.6 + Math.random() * 0.3;
+    ringVel[i*3+0] = Math.cos(angle) * expandSpeed;
+    ringVel[i*3+1] = dir * (1.4 + Math.random() * 0.4);
+    ringVel[i*3+2] = Math.sin(angle) * expandSpeed;
+
+    // pick a random colour from the hero palette
+    const c = RING_PALETTE[Math.floor(Math.random() * RING_PALETTE.length)];
+    // small per-particle variation so the ring isn't 4 monolithic blocks of colour
+    const jitter = 0.85 + Math.random() * 0.3;
+    ringColor[i*3+0] = c[0] * jitter;
+    ringColor[i*3+1] = c[1] * jitter;
+    ringColor[i*3+2] = c[2] * jitter;
+
+    ringLife[i] = 1.0;
+  }
+  ringGeo.attributes.position.needsUpdate = true;
+  ringGeo.attributes.color.needsUpdate    = true;
+  ringGeo.attributes.life.needsUpdate     = true;
+}
+
+function tickRingParticles(dt) {
+  let anyAlive = false;
+  for (let i = 0; i < RING_COUNT; i++) {
+    if (ringLife[i] <= 0) continue;
+    anyAlive = true;
+    ringLife[i] = Math.max(0, ringLife[i] - dt * 0.6); // ~1.6s lifetime
+    ringPos[i*3+0] += ringVel[i*3+0] * dt;
+    ringPos[i*3+1] += ringVel[i*3+1] * dt;
+    ringPos[i*3+2] += ringVel[i*3+2] * dt;
+    // slow expansion + slight gravity
+    ringVel[i*3+0] *= (1 - dt * 0.5);
+    ringVel[i*3+1] *= (1 - dt * 0.2);
+    ringVel[i*3+2] *= (1 - dt * 0.5);
+  }
+  if (anyAlive) {
+    ringGeo.attributes.position.needsUpdate = true;
+    ringGeo.attributes.life.needsUpdate = true;
+  }
+}
+
 // ---------- About scroll → staircase rotation + portrait dissolve ----------
 let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
 let __prevAboutScroll = 0;
@@ -742,6 +845,14 @@ function updateAboutScroll() {
   const focusF = (-deg) / 60;
   const focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
   const approachIdx = Math.max(0, Math.min(5, focusIdx + __scrollDir));
+
+  // when the focused panel changes (you've actually arrived at a new step),
+  // burst a ring of coloured particles in the scroll direction
+  if (typeof updateAboutScroll.lastFocus === 'undefined') updateAboutScroll.lastFocus = focusIdx;
+  if (focusIdx !== updateAboutScroll.lastFocus) {
+    emitRing(__scrollDir);
+    updateAboutScroll.lastFocus = focusIdx;
+  }
   // continuous reveal: how far along we are toward the approaching panel (0..1)
   const approachAmount = Math.min(1, Math.max(0, Math.abs(focusF - focusIdx) * 2));
   stepEls().forEach((s, i) => {
@@ -831,11 +942,15 @@ window.addEventListener('resize', onAboutResize);
 onAboutResize();
 
 // ---------- About scene tick (only renders while active to save GPU) ----------
+let __aboutLastT = 0;
 function aboutTick() {
   if (mode === 'about' || aboutView.classList.contains('active')) {
     const t = clock.elapsedTime;
+    const dt = Math.min(0.05, t - __aboutLastT);
+    __aboutLastT = t;
     glassUniforms.uTime.value = t;
     portraitMat.uniforms.uTime.value = t;
+    tickRingParticles(dt);
     // gentle camera orbit so the portrait + flame feel "alive"
     aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
     aboutCam.position.y = Math.cos(t * 0.14) * 0.25;

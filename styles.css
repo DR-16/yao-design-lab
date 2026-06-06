@@ -128,16 +128,7 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   z-index: 60;
   opacity: 0;
   pointer-events: none;
-  /* The view's base layer is a soft chromatic painting — broad, colourful
-     glows on a deep dark plate. This layer is what gets blurred behind the
-     frosted glass plate above. */
-  background:
-    radial-gradient(circle at 22% 26%, rgba(150, 80, 230, 0.55), transparent 38%),
-    radial-gradient(circle at 78% 18%, rgba(70, 130, 240, 0.48), transparent 42%),
-    radial-gradient(circle at 64% 82%, rgba(220, 90, 150, 0.42), transparent 40%),
-    radial-gradient(circle at 28% 70%, rgba(80, 220, 220, 0.36), transparent 45%),
-    radial-gradient(circle at 90% 55%, rgba(255, 180, 90, 0.20), transparent 38%),
-    #07050d;
+  background: #050308;
   transform: scale(1.12);
   filter: blur(24px);
   transition:
@@ -152,66 +143,19 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   pointer-events: auto;
 }
 
-/* ---- THE FROSTED GLASS PANEL ----
-   ::before is the glass plate itself. It does two jobs:
-     1. backdrop-filter blurs the colourful base behind it → chroma becomes haze
-     2. its own background paints subtle glass highlights on top
-   The combination gives "I can sense colour through fog" without revealing
-   any clear shape. */
+/* Subtle ambient highlights — two slanted light reflections, like distant
+   light catching the glass surface. Nothing else, kept very minimal. */
 .about-view::before {
   content: "";
   position: absolute; inset: 0;
   background:
-    /* slanted top-left highlight, like ambient light catching the surface */
     linear-gradient(125deg,
       rgba(255, 255, 255, 0.0) 0%,
-      rgba(255, 255, 255, 0.06) 16%,
+      rgba(255, 255, 255, 0.035) 18%,
       rgba(255, 255, 255, 0.0) 32%,
       rgba(255, 255, 255, 0.0) 100%),
-    /* soft reflection blobs */
-    radial-gradient(ellipse 60% 22% at 25% 18%, rgba(255, 255, 255, 0.05), transparent 70%),
-    radial-gradient(ellipse 55% 18% at 78% 85%, rgba(255, 255, 255, 0.04), transparent 70%),
-    /* dark veil so the centre subject stays legible */
-    linear-gradient(180deg, rgba(8, 5, 16, 0.32) 0%, rgba(8, 5, 16, 0.48) 100%);
-  backdrop-filter: blur(70px) saturate(160%) brightness(0.88);
-  -webkit-backdrop-filter: blur(70px) saturate(160%) brightness(0.88);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ---- HIGHLIGHT WAVES ----
-   Cathedral-glass style: large-scale Perlin waves of LIGHT.
-   baseFrequency 0.014 = big slow waves (not grain). colorMatrix turns the
-   bright crests into white-alpha (alpha = 2·gray - 0.9, so only the top
-   ~55% of crests survive). Light blur softens the wave edges so it reads
-   organic, not pixellated. screen blend over the chromatic base lifts the
-   crests into "凸起 highlights" you can see catching the light. */
-.about-view::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-image:
-    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='3' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.66 0.66 0.66 0 -0.45'/%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E");
-  background-size: 1100px 1100px;
-  mix-blend-mode: screen;
-  opacity: 0.45;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ---- SHADOW WAVES ----
-   The SAME wave field as the highlight layer, but masked to the dark valleys
-   (alpha = -2·gray + 0.75) and **offset 14px diagonally**. The offset is the
-   trick: the eye sees "bright crest with a dark shadow next to it" and
-   interprets that as a physical bump in the glass surface. multiply blend
-   deepens the valleys, completing the embossed look. */
-.about-view > .about-glass-shadow {
-  position: absolute; inset: 0;
-  background-image:
-    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='3' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.66 -0.66 -0.66 0 0.75'/%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
-  background-size: 1100px 1100px;
-  background-position: 14px 14px;
-  mix-blend-mode: multiply;
-  opacity: 0.38;
+    radial-gradient(ellipse 65% 22% at 25% 18%, rgba(255, 255, 255, 0.045), transparent 70%),
+    radial-gradient(ellipse 55% 18% at 78% 85%, rgba(255, 255, 255, 0.035), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
