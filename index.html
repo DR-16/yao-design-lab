@@ -87,6 +87,88 @@
     </section>
   </main>
 
+  <!-- ===== ABOUT VIEW ===== Triggered by clicking the top cylinder ring (WHO I AM).
+       Sits on top of the hero, fades in via .active. Contains a black frosted backdrop,
+       a separate WebGL canvas for liquid-glass flame + particle portrait, and a
+       CSS-3D "spiral staircase" of text that rotates as you scroll inside the view. -->
+  <section id="aboutView" class="about-view" aria-hidden="true">
+    <button class="about-close" type="button" id="aboutClose">
+      <span class="about-close-arrow">←</span>
+      <span class="about-close-label" data-lang="en">Back</span>
+      <span class="about-close-label" data-lang="cn">返回</span>
+    </button>
+
+    <div class="about-eyebrow">
+      <span data-lang="en">WHO I AM</span>
+      <span data-lang="cn">我是谁</span>
+    </div>
+
+    <canvas id="aboutStage" class="about-stage"></canvas>
+
+    <!-- internal scroller drives the staircase rotation -->
+    <div class="about-scroll" id="aboutScroll">
+      <div class="about-scroll-inner">
+        <!-- spiral staircase of text panels; rotateY set per panel, container rotateY animated on scroll -->
+        <div class="staircase" id="staircase">
+         <div class="staircase-rotor" id="staircaseRotor">
+          <div class="step" style="--ry: 0deg">
+            <p class="step-num">01</p>
+            <h3 data-lang="en">Placeholder heading one</h3>
+            <h3 data-lang="cn">占位标题一</h3>
+            <p data-lang="en">Placeholder paragraph — replace with your own copy when ready. This panel sits at 0° around the central flame.</p>
+            <p data-lang="cn">占位段落——你提供文案后我替换。本面板位于火焰中心轴的 0° 方向。</p>
+          </div>
+          <div class="step" style="--ry: 60deg">
+            <p class="step-num">02</p>
+            <h3 data-lang="en">Placeholder heading two</h3>
+            <h3 data-lang="cn">占位标题二</h3>
+            <p data-lang="en">Placeholder paragraph two. 60° around.</p>
+            <p data-lang="cn">占位段落二，60° 方向。</p>
+          </div>
+          <div class="step" style="--ry: 120deg">
+            <p class="step-num">03</p>
+            <h3 data-lang="en">Placeholder heading three</h3>
+            <h3 data-lang="cn">占位标题三</h3>
+            <p data-lang="en">Placeholder paragraph three. 120° around.</p>
+            <p data-lang="cn">占位段落三，120° 方向。</p>
+          </div>
+          <div class="step" style="--ry: 180deg">
+            <p class="step-num">04</p>
+            <h3 data-lang="en">Placeholder heading four</h3>
+            <h3 data-lang="cn">占位标题四</h3>
+            <p data-lang="en">Placeholder paragraph four. 180° around — the back of the spiral.</p>
+            <p data-lang="cn">占位段落四，180° 方向——螺旋的背面。</p>
+          </div>
+          <div class="step" style="--ry: 240deg">
+            <p class="step-num">05</p>
+            <h3 data-lang="en">Placeholder heading five</h3>
+            <h3 data-lang="cn">占位标题五</h3>
+            <p data-lang="en">Placeholder paragraph five. 240° around.</p>
+            <p data-lang="cn">占位段落五，240° 方向。</p>
+          </div>
+          <div class="step" style="--ry: 300deg">
+            <p class="step-num">06</p>
+            <h3 data-lang="en">Placeholder heading six</h3>
+            <h3 data-lang="cn">占位标题六</h3>
+            <p data-lang="en">Placeholder paragraph six. 300° around. Scroll down to keep rotating; the photo at centre dissolves as you go.</p>
+            <p data-lang="cn">占位段落六，300° 方向。继续往下滑会继续旋转；中央照片随之溶散。</p>
+          </div>
+         </div>
+        </div>
+        <div class="about-end">
+          <p data-lang="en">— End of section. Scroll up to revisit, or close to return.</p>
+          <p data-lang="cn">— 段落结束。向上滚动可重看，或点关闭返回主页。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- subtle scroll hint at first open -->
+    <div class="about-hint" id="aboutHint">
+      <span data-lang="en">Scroll to rotate</span>
+      <span data-lang="cn">滚动以旋转</span>
+    </div>
+  </section>
+
   <div class="lang-switch" id="langSwitch" aria-label="Language switch">
     <button type="button" data-set-lang="en" class="active">EN</button>
     <span class="lang-divider">/</span>

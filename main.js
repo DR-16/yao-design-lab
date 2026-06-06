@@ -513,6 +513,289 @@ document.querySelectorAll('.cat').forEach((btn) => {
   });
 });
 
+// =====================================================================
+// ABOUT VIEW — triggered when user clicks the top cylinder ring (WHO I AM).
+// A separate WebGL scene (liquid-glass flame + particle portrait) renders into
+// #aboutStage canvas. A CSS-3D spiral staircase of text rotates in sync with
+// the user's scroll inside .about-scroll.
+// =====================================================================
+const aboutCanvas = document.getElementById('aboutStage');
+const aboutView   = document.getElementById('aboutView');
+const aboutClose  = document.getElementById('aboutClose');
+const aboutScroll = document.getElementById('aboutScroll');
+const aboutHint   = document.getElementById('aboutHint');
+const staircaseRotor = document.getElementById('staircaseRotor');
+
+const aboutRenderer = new THREE.WebGLRenderer({
+  canvas: aboutCanvas,
+  antialias: true,
+  alpha: true,
+});
+aboutRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+aboutRenderer.setSize(window.innerWidth, window.innerHeight);
+aboutRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const aboutScene  = new THREE.Scene();
+const aboutCam    = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+aboutCam.position.set(0, 0, 9);
+
+aboutScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const aboutKey = new THREE.PointLight(0xc0d8ff, 1.1, 30);
+aboutKey.position.set(2, 3, 4);
+aboutScene.add(aboutKey);
+
+// ---------- Liquid-glass flame ----------
+const glassUniforms = {
+  uTime: { value: 0 },
+  uIntensity: { value: 0.85 },
+};
+const glassMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.NormalBlending,
+  uniforms: glassUniforms,
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec2 vUv;
+    uniform float uTime;
+    uniform float uIntensity;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p){
+      vec2 i = floor(p), f = fract(p);
+      float a = hash(i);
+      float b = hash(i + vec2(1.0, 0.0));
+      float c = hash(i + vec2(0.0, 1.0));
+      float d = hash(i + vec2(1.0, 1.0));
+      vec2 u = f*f*(3.0 - 2.0*f);
+      return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+    }
+    float fbm(vec2 p){
+      float v = 0.0, a = 0.5;
+      for(int i=0;i<5;i++){ v += a*noise(p); p = p*2.07 + vec2(3.1,1.7); a *= 0.52; }
+      return v;
+    }
+    void main(){
+      vec2 uv = vUv;
+      vec2 p = vec2(uv.x - 0.5, uv.y);
+      float t = uTime * 0.45;
+
+      // flame silhouette (same as main chrome flame)
+      vec2 q1 = vec2(uv.x*2.6, uv.y*1.8 - t*1.3);
+      float n1 = fbm(q1);
+      float wander = (fbm(vec2(uv.y*1.6 - t*0.8, 7.0)) - 0.5) * 0.32;
+      float dx = abs(p.x - wander);
+      float envWidth = mix(0.4, 0.06, pow(uv.y, 0.85));
+      float silhouette = 1.0 - smoothstep(envWidth*0.55, envWidth*1.15, dx);
+      float bite = smoothstep(0.25, 0.85, n1);
+      float mask = silhouette * bite;
+      mask *= smoothstep(0.0, 0.06, uv.y);
+      mask *= smoothstep(1.0, 0.35, uv.y);
+      mask = pow(clamp(mask, 0.0, 1.0), 1.2);
+
+      // ---- Liquid GLASS look ----
+      // domain-warped low-frequency noise for the smooth glass surface
+      vec2 g = vec2(uv.x*2.2, uv.y*1.6 - t*0.6);
+      float w1 = fbm(g);
+      float w2 = fbm(g + vec2(3.2, 1.1));
+      vec2 warp = (vec2(w1, w2) - 0.5) * 1.2;
+      float surf = fbm(g + warp);
+      float sheen = fbm(vec2(uv.x*7.0, uv.y*5.0 - t*1.0) + warp*0.5);
+
+      // base glass colour: a faint cool tint, mostly white-blue
+      vec3 cBase = vec3(0.80, 0.88, 1.0);
+      vec3 cDeep = vec3(0.18, 0.28, 0.42);   // shadow tone
+      vec3 cWhite = vec3(1.0);
+      vec3 col = mix(cDeep, cBase, smoothstep(0.25, 0.55, surf));
+      col = mix(col, cWhite, smoothstep(0.65, 0.88, surf));
+
+      // sharp white speculars — glass catches highlights
+      float spec = smoothstep(0.78, 0.96, sheen);
+      col = mix(col, cWhite, spec * 0.85);
+
+      // fresnel: alpha rises near the silhouette edge → looks like glass thickness
+      float edgeProx = clamp(dx / (envWidth * 1.1), 0.0, 1.0);
+      float fresnel = pow(edgeProx, 1.4);
+      float a = mask * (0.18 + fresnel * 0.65) * uIntensity;
+
+      // central body slightly transparent so you can see the particle photo behind
+      a = clamp(a, 0.0, 0.85);
+
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(col, a);
+    }
+  `,
+});
+const glassFlame = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 6.2), glassMat);
+glassFlame.position.set(0, 0.3, 0);
+aboutScene.add(glassFlame);
+
+// ---------- Particle portrait placeholder ----------
+// Builds a particle cloud in a humanoid silhouette (head + bust) as a stand-in.
+// When you upload a photo, replace `buildPlaceholderShape()` with a function that
+// samples the image's brightness and emits one particle per dark pixel.
+function buildPlaceholderShape(count = 4000) {
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    // sample roughly an oval head + a trapezoidal bust
+    let x, y, z, ok = false;
+    while (!ok) {
+      x = (Math.random() - 0.5) * 2.4;
+      y = (Math.random() - 0.5) * 3.0;
+      const r = Math.hypot(x, (y - 0.7) * 1.3); // head sphere
+      const inHead = r < 0.55;
+      const inBust = y < 0.05 && Math.abs(x) < (0.9 + (0.05 - y) * 0.6) && y > -1.2;
+      if (inHead || inBust) ok = true;
+    }
+    z = (Math.random() - 0.5) * 0.6;
+    pos[i*3 + 0] = x;
+    pos[i*3 + 1] = y;
+    pos[i*3 + 2] = z;
+  }
+  return pos;
+}
+const portraitGeo = new THREE.BufferGeometry();
+portraitGeo.setAttribute('position', new THREE.BufferAttribute(buildPlaceholderShape(4200), 3));
+
+const portraitMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    uTime: { value: 0 },
+    uDissolve: { value: 0 }, // 0 → 1 as user scrolls; particles drift outward
+    uOpacity: { value: 0.95 },
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    uniform float uDissolve;
+    varying float vDist;
+    void main(){
+      vec3 p = position;
+      // gentle floating
+      p.x += sin(uTime * 0.6 + position.y * 4.0) * 0.04;
+      p.y += cos(uTime * 0.5 + position.x * 5.0) * 0.04;
+      // dissolve: push particles outward
+      vec3 dir = normalize(p + vec3(0.001));
+      p += dir * uDissolve * 2.5;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      vDist = -mv.z;
+      gl_PointSize = (1.4 + 1.6 * (1.0 - uDissolve)) * (220.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform float uDissolve;
+    uniform float uOpacity;
+    varying float vDist;
+    void main(){
+      vec2 q = gl_PointCoord - 0.5;
+      float d = length(q);
+      float a = smoothstep(0.5, 0.0, d);
+      a *= (1.0 - uDissolve * 0.85) * uOpacity;
+      // soft white with a hint of blue (matches glass flame)
+      vec3 col = mix(vec3(0.85, 0.9, 1.0), vec3(1.0), a);
+      gl_FragColor = vec4(col, a);
+    }
+  `,
+});
+const portrait = new THREE.Points(portraitGeo, portraitMat);
+portrait.position.set(0, 0.1, 0.4);
+aboutScene.add(portrait);
+
+// ---------- About scroll → staircase rotation + portrait dissolve ----------
+let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
+function updateAboutScroll() {
+  if (!aboutScroll) return;
+  const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+  aboutScrollProgress = Math.min(1, Math.max(0, aboutScroll.scrollTop / max));
+
+  // rotate the staircase rotor — 360° × 1.5 turns over the full scroll for "spiral staircase" feel
+  if (staircaseRotor) {
+    const deg = aboutScrollProgress * -540;
+    staircaseRotor.style.transform = `rotateY(${deg}deg) translateY(${aboutScrollProgress * -80}px)`;
+  }
+  // dissolve the portrait gradually
+  portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);
+  // hide the scroll hint once the user moves
+  if (aboutScrollProgress > 0.03 && aboutHint) aboutHint.classList.add('faded');
+}
+aboutScroll?.addEventListener('scroll', updateAboutScroll, { passive: true });
+
+// ---------- Enter / exit transitions ----------
+let mode = 'hero'; // 'hero' | 'about'
+function enterAbout() {
+  if (mode === 'about') return;
+  mode = 'about';
+  document.body.classList.add('mode-about');
+  aboutView.classList.add('active');
+  aboutView.setAttribute('aria-hidden', 'false');
+  aboutScroll.scrollTop = 0;
+  updateAboutScroll();
+}
+function exitAbout() {
+  if (mode === 'hero') return;
+  mode = 'hero';
+  document.body.classList.remove('mode-about');
+  aboutView.classList.remove('active');
+  aboutView.setAttribute('aria-hidden', 'true');
+}
+aboutClose?.addEventListener('click', exitAbout);
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitAbout(); });
+
+// ---------- Click the top ring (WHO I AM) → open about ----------
+let __clickStart = null;
+window.addEventListener('pointerdown', (e) => {
+  __clickStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+});
+window.addEventListener('pointerup', (e) => {
+  const start = __clickStart;
+  __clickStart = null;
+  if (!start) return;
+  const dt = performance.now() - start.t;
+  const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+  if (dt > 350 || moved > 8) return; // a drag, not a click
+  if (mode !== 'hero') return;
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(rings.map(r => r.mesh), false)[0];
+  if (!hit) return;
+  const idx = rings.findIndex(r => r.mesh === hit.object);
+  if (idx === 0) enterAbout(); // top ring = WHO I AM
+});
+
+// ---------- About scene resize ----------
+function onAboutResize() {
+  aboutCam.aspect = window.innerWidth / window.innerHeight;
+  aboutCam.updateProjectionMatrix();
+  aboutRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onAboutResize);
+onAboutResize();
+
+// ---------- About scene tick (only renders while active to save GPU) ----------
+function aboutTick() {
+  if (mode === 'about' || aboutView.classList.contains('active')) {
+    const t = clock.elapsedTime;
+    glassUniforms.uTime.value = t;
+    portraitMat.uniforms.uTime.value = t;
+    // gentle camera orbit so the portrait + flame feel "alive"
+    aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
+    aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
+    aboutCam.lookAt(0, 0, 0);
+    aboutRenderer.render(aboutScene, aboutCam);
+  }
+  requestAnimationFrame(aboutTick);
+}
+aboutTick();
+
 // ---------- Language switch ----------
 const LANG_KEY = 'ydl-lang';
 function setLang(lang) {
