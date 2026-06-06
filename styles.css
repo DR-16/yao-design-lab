@@ -143,9 +143,8 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   pointer-events: auto;
 }
 
-/* Frosted backdrop layer — sits behind the canvas (z-index: 0 under the canvas at 1).
-   Multi-layer: deep radial gradient + chromatic glow blobs + film-grain noise.
-   Heavily blurred so it feels like soft-focus glass without touching the centre subject. */
+/* Layer 1 — soft chromatic glow blobs (the "behind-the-glass" lighting).
+   Heavily blurred so it reads as out-of-focus light through frosted glass. */
 .about-view::before {
   content: "";
   position: absolute; inset: 0;
@@ -159,19 +158,37 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   pointer-events: none;
   z-index: 0;
 }
-/* Second frosted layer: high-frequency noise grain that makes the black surface
-   read as ground glass, not painted-flat colour. Very low opacity so it doesn't
-   compete with the central subject. */
+
+/* Layer 2 — frosted-glass GRAIN. SVG fractalNoise generates a continuous bumpy
+   surface like the reference photo. The colorMatrix at the end is the key:
+     alpha = 2.4·gray - 1.1
+   That means only the BRIGHTEST 50% of noise pixels survive (everything else
+   goes transparent), so we get sharp scattered highlights — the "glass crystals"
+   in the photo — instead of a uniform fog. screen blending then lays those
+   highlights over the dark backdrop. */
 .about-view::after {
   content: "";
   position: absolute; inset: 0;
   background-image:
-    radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
-    radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 3px 3px, 7px 7px;
-  background-position: 0 0, 1px 2px;
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 280 280'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 2.4 -1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  background-size: 280px 280px;
   mix-blend-mode: screen;
-  opacity: 0.7;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Layer 3 — subtle dark grain pass, offset by 1px from the bright layer.
+   This is the SHADOW companion of each bright grain. Together they read as
+   "bump → highlight + adjacent shadow" instead of "isolated dot of light",
+   which is the trick that makes glass look 3-D. */
+.about-view > .about-frost-shadow {
+  position: absolute; inset: 0;
+  background-image:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 280 280'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 2.0 -1.0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 280px 280px;
+  background-position: 2px 2px;
+  mix-blend-mode: multiply;
+  opacity: 0.45;
   pointer-events: none;
   z-index: 0;
 }
