@@ -686,19 +686,51 @@ const portraitMat = new THREE.ShaderMaterial({
     uniform float uDissolve;
     varying float vDist;
     varying float vTop;
+    varying float vEmber;
+
+    // cheap hash for per-particle deterministic randomness (no jitter from frame to frame)
+    float h(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5); }
+
     void main(){
       vec3 p = position;
-      // 0 at base, 1 at tip — drives how strongly each particle "flickers"
+      float t = uTime;
+      // 0 at the base, 1 at the tip — controls how lively a particle moves
       float topness = clamp((position.y + 1.7) / 3.6, 0.0, 1.0);
 
-      // upward drift — the flame rises
-      float t = uTime;
-      p.y += sin(t * 0.9 + position.x * 3.0) * 0.06 * (0.3 + topness * 1.4);
-      // sideways sway — stronger at the tip, like a real flame's tail
-      p.x += sin(t * 1.2 + position.y * 2.0) * 0.10 * topness;
-      p.x += sin(t * 0.5 + position.y * 5.0) * 0.04;
-      // tiny breathing of the depth so it doesn't look perfectly flat
-      p.z += sin(t * 0.7 + position.x * 4.0) * 0.04;
+      // per-particle deterministic "personality": phase + ember status
+      float r = h(position);
+      float r2 = h(position + 7.3);
+      float phaseX = r * 6.28;
+      float phaseY = r2 * 6.28;
+
+      // ---- TURBULENT FLOW ----
+      // Multi-frequency horizontal sway — looks like rising heat carrying
+      // particles back and forth, never the same way twice. Layered freq.
+      float swayA = sin(t * 1.4 + position.y * 4.2 + phaseX) * 0.20;
+      float swayB = sin(t * 2.6 + position.y * 8.0 + phaseX * 1.7) * 0.10;
+      float swayC = sin(t * 0.7 + position.y * 1.6 + phaseY) * 0.12;
+      // sway scales with how high up you are — base barely moves, tip whips around
+      p.x += (swayA + swayB + swayC) * (0.25 + topness * 1.4);
+
+      // Upward drifting — base rises a touch, tip dances vertically
+      p.y += sin(t * 1.1 + phaseY) * 0.10 * (0.3 + topness * 1.6);
+
+      // Depth wobble keeps it volumetric, not a flat sheet
+      p.z += sin(t * 0.9 + phaseX) * 0.06;
+
+      // ---- EMBERS ----
+      // ~6% of particles "escape" — they detach from the flame body and float
+      // upward + outward, like sparks rising from a real fire. Their motion is
+      // deliberately slower (long arc) and they fade more aggressively.
+      float emberMask = step(0.94, r);
+      vEmber = emberMask;
+      if (emberMask > 0.5) {
+        // ember rises slowly and curves
+        float emberT = mod(t * 0.4 + r * 12.0, 4.0); // 4s cycle per ember
+        p.y += emberT * 0.7;
+        p.x += sin(emberT * 1.5 + r * 10.0) * 0.25 * emberT;
+        p.z += cos(emberT * 1.2 + r * 8.0) * 0.18 * emberT;
+      }
 
       // dissolve: push particles outward (used when scrolling toward the top)
       vec3 dir = normalize(p + vec3(0.001));
@@ -707,7 +739,9 @@ const portraitMat = new THREE.ShaderMaterial({
       vec4 mv = modelViewMatrix * vec4(p, 1.0);
       vDist = -mv.z;
       vTop = topness;
-      gl_PointSize = (0.6 + 0.9 * (1.0 - uDissolve)) * (220.0 / -mv.z);
+      // embers stay a little brighter / bigger so they're visible
+      float sizeBase = (0.6 + 0.9 * (1.0 - uDissolve)) + emberMask * 0.4;
+      gl_PointSize = sizeBase * (220.0 / -mv.z);
       gl_Position = projectionMatrix * mv;
     }
   `,
@@ -716,16 +750,18 @@ const portraitMat = new THREE.ShaderMaterial({
     uniform float uOpacity;
     varying float vDist;
     varying float vTop;
+    varying float vEmber;
     void main(){
       vec2 q = gl_PointCoord - 0.5;
       float d = length(q);
       float a = smoothstep(0.5, 0.0, d);
-      // tip particles fade more: makes the flame's top dissolve into the dark
+      // tip particles fade more; embers get their own subtle envelope
       a *= (1.0 - uDissolve * 0.85) * uOpacity * (1.0 - vTop * 0.45);
-      // colour: hot white-blue at the base, cool blue-violet at the tip
+      // hot white at the base → cool blue tip; embers gain a faint ember warmth
       vec3 cBase = vec3(0.95, 0.98, 1.0);
       vec3 cTip  = vec3(0.55, 0.65, 1.0);
       vec3 col = mix(cBase, cTip, vTop);
+      col = mix(col, vec3(1.0, 0.7, 0.4), vEmber * 0.35);
       gl_FragColor = vec4(col, a);
     }
   `,
@@ -744,7 +780,8 @@ const RING_PALETTE = [
   [0.12, 0.25, 0.69], // blue    #1e40af
   [0.50, 0.11, 0.11], // red     #7f1d1d
 ];
-const RING_COUNT = 90;
+const RING_COUNT = 240;
+const RING_PER_BURST = 80;
 const ringPos    = new Float32Array(RING_COUNT * 3);
 const ringVel    = new Float32Array(RING_COUNT * 3);
 const ringColor  = new Float32Array(RING_COUNT * 3);
@@ -788,25 +825,43 @@ const ringMat = new THREE.ShaderMaterial({
 const ringParticles = new THREE.Points(ringGeo, ringMat);
 aboutScene.add(ringParticles);
 
-function emitRing(dir /* +1 = scroll down (rising up), -1 = scroll up (falling down) */) {
+// Pick the indices in the particle pool that this burst will use. Prefer
+// dead slots so existing rings keep flying undisturbed; if not enough are
+// dead, take the ones nearest to death (the ones the user would barely
+// notice replacing). This makes fast scrolling feel smooth — multiple rings
+// can coexist instead of slamming each other on top.
+function pickRingSlots(n) {
+  const dead = [];
   for (let i = 0; i < RING_COUNT; i++) {
-    const angle = (i / RING_COUNT) * Math.PI * 2 + Math.random() * 0.04;
-    // bigger ring (radius 2.6-2.95) + thin band (only ±0.35 radial spread)
+    if (ringLife[i] <= 0.001) dead.push(i);
+    if (dead.length === n) return dead;
+  }
+  // not enough dead — fill rest with the lowest-life living particles
+  const remaining = [];
+  for (let i = 0; i < RING_COUNT; i++) {
+    if (ringLife[i] > 0.001) remaining.push(i);
+  }
+  remaining.sort((a, b) => ringLife[a] - ringLife[b]);
+  while (dead.length < n && remaining.length) dead.push(remaining.shift());
+  return dead;
+}
+
+function emitRing(dir /* +1 = scroll down (rising up), -1 = scroll up (falling down) */) {
+  const slots = pickRingSlots(RING_PER_BURST);
+  for (let k = 0; k < slots.length; k++) {
+    const i = slots[k];
+    const angle = (k / slots.length) * Math.PI * 2 + Math.random() * 0.04;
     const r = 2.6 + Math.random() * 0.35;
     ringPos[i*3+0] = Math.cos(angle) * r;
     ringPos[i*3+1] = -dir * 0.4;
     ringPos[i*3+2] = Math.sin(angle) * r;
 
-    // slow radial expansion → ring stays a ring instead of bloating into a disc;
-    // fast vertical sweep → it streaks past in the scroll direction.
-    const expandSpeed = 0.15 + Math.random() * 0.15;
+    const expandSpeed = 0.12 + Math.random() * 0.12;
     ringVel[i*3+0] = Math.cos(angle) * expandSpeed;
-    ringVel[i*3+1] = dir * (2.0 + Math.random() * 0.6);
+    ringVel[i*3+1] = dir * (1.7 + Math.random() * 0.5);
     ringVel[i*3+2] = Math.sin(angle) * expandSpeed;
 
-    // pick a random colour from the hero palette
     const c = RING_PALETTE[Math.floor(Math.random() * RING_PALETTE.length)];
-    // small per-particle variation so the ring isn't 4 monolithic blocks of colour
     const jitter = 0.85 + Math.random() * 0.3;
     ringColor[i*3+0] = c[0] * jitter;
     ringColor[i*3+1] = c[1] * jitter;
@@ -824,7 +879,7 @@ function tickRingParticles(dt) {
   for (let i = 0; i < RING_COUNT; i++) {
     if (ringLife[i] <= 0) continue;
     anyAlive = true;
-    ringLife[i] = Math.max(0, ringLife[i] - dt * 0.6); // ~1.6s lifetime
+    ringLife[i] = Math.max(0, ringLife[i] - dt * 0.42); // ~2.4s lifetime — longer arc, smoother fade
     ringPos[i*3+0] += ringVel[i*3+0] * dt;
     ringPos[i*3+1] += ringVel[i*3+1] * dt;
     ringPos[i*3+2] += ringVel[i*3+2] * dt;
