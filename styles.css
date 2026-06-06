@@ -271,8 +271,15 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
     rotateY(var(--ry))
     translateY(var(--ty, 0px))
     translateZ(var(--tz, 360px));
-  transition: opacity 0.35s ease;
+  opacity: 0;
+  transition: opacity 0.45s cubic-bezier(0.5, 0, 0.2, 1);
 }
+/* The focused step (closest to camera) is always visible. */
+.step.current { opacity: 1; }
+/* While the user is actively scrolling the about view, reveal every step
+   so they can see the whole spiral; idle for ~380ms → fade back to focus-only. */
+body.about-scrolling .step { opacity: 0.85; }
+body.about-scrolling .step.current { opacity: 1; }
 .step .step-num {
   font-family: "Times New Roman", serif;
   font-style: italic;

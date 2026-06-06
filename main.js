@@ -711,6 +711,7 @@ aboutScene.add(portrait);
 
 // ---------- About scroll → staircase rotation + portrait dissolve ----------
 let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
+const stepEls = () => document.querySelectorAll('.step');
 function updateAboutScroll() {
   if (!aboutScroll) return;
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
@@ -720,20 +721,40 @@ function updateAboutScroll() {
   // translating downward by 550px (= total spiral height). The combined motion makes
   // each numbered panel arrive face-on at the centre as the user scrolls, like
   // climbing a double helix.
+  const TOTAL_RY = -300;
+  const START_TY = -275; // step 1 (lowest) starts at the centre
+  const END_TY   =  275; // step 6 (highest) ends at the centre
+  const deg = aboutScrollProgress * TOTAL_RY;
   if (staircaseRotor) {
-    const TOTAL_RY = -300;
-    const START_TY = -275; // step 1 (lowest) starts at the centre
-    const END_TY   =  275; // step 6 (highest) ends at the centre
-    const deg = aboutScrollProgress * TOTAL_RY;
     const ty  = START_TY + aboutScrollProgress * (END_TY - START_TY);
     staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${deg}deg)`;
   }
+
+  // figure out which step is currently facing the camera. each step is 60° apart.
+  // step.--ry === -deg → that step's world rotation is 0 → faces user.
+  const focusIdx = Math.max(0, Math.min(5, Math.round((-deg) / 60)));
+  stepEls().forEach((s, i) => s.classList.toggle('current', i === focusIdx));
+
   // dissolve the portrait gradually
   portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);
   // hide the scroll hint once the user moves
   if (aboutScrollProgress > 0.03 && aboutHint) aboutHint.classList.add('faded');
 }
-aboutScroll?.addEventListener('scroll', updateAboutScroll, { passive: true });
+
+// while the user is actively scrolling, reveal every step; idle for 350ms → fade back
+// to only the focused step. <body> carries the class so it applies to all step descendants.
+let __scrollIdleTimer = null;
+function markScrolling() {
+  document.body.classList.add('about-scrolling');
+  clearTimeout(__scrollIdleTimer);
+  __scrollIdleTimer = setTimeout(() => {
+    document.body.classList.remove('about-scrolling');
+  }, 380);
+}
+aboutScroll?.addEventListener('scroll', () => {
+  markScrolling();
+  updateAboutScroll();
+}, { passive: true });
 
 // ---------- Enter / exit transitions ----------
 let mode = 'hero'; // 'hero' | 'about'
