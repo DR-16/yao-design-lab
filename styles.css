@@ -174,41 +174,31 @@ body.mode-about .work {
   pointer-events: none;
   transition: opacity 0.55s ease;
 }
-/* Hero "rams forward into the cylinder": scale up hard + heavy blur + bloom.
-   easeInExpo curve = barely moves at the start, then accelerates explosively —
-   pairs with about-view's easeOutExpo for a true dolly-into-impact feel. */
+/* Hero dolly-in: the camera rushes toward the cylinder. Continuous accelerating
+   curve (no flash, no slam) — just a smooth, fast push from scale 1 all the way
+   to scale 4.5, with motion blur ramping up as if you were physically moving
+   through the air toward it. Origin set to the WHO I AM ring (top third). */
 body.mode-about #stage {
   opacity: 0;
-  transform: scale(3.6);
-  filter: blur(48px) brightness(1.5);
-  transform-origin: 50% 55%;
+  transform: scale(4.5);
+  filter: blur(40px);
+  transform-origin: 50% 48%;
   pointer-events: none;
   transition:
-    opacity 0.55s cubic-bezier(0.7, 0, 0.84, 0),
-    transform 0.55s cubic-bezier(0.7, 0, 0.84, 0),
-    filter 0.55s cubic-bezier(0.7, 0, 0.84, 0);
+    opacity 0.7s cubic-bezier(0.5, 0, 0.55, 1),
+    transform 0.7s cubic-bezier(0.5, 0, 0.55, 1),
+    filter 0.7s cubic-bezier(0.5, 0, 0.55, 1);
 }
-
-/* Impact flash — white screen-blend frame that fires during the punch, simulating
-   the "crash through the surface" highlight. Triggered by JS-added .firing class. */
-.impact-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 75;
-  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 30%, rgba(255,255,255,0) 70%);
-  mix-blend-mode: screen;
+/* Same dolly-in motion applied to the hero text so it rushes past with the camera */
+body.mode-about .hero-text {
   opacity: 0;
-  pointer-events: none;
-  will-change: opacity;
-}
-@keyframes impact-flash-burst {
-  0%   { opacity: 0; transform: scale(0.7); }
-  18%  { opacity: 0.9; transform: scale(1.1); }
-  55%  { opacity: 0.55; transform: scale(1.4); }
-  100% { opacity: 0; transform: scale(1.7); }
-}
-.impact-flash.firing {
-  animation: impact-flash-burst 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translateX(-50%) scale(2.6);
+  filter: blur(24px);
+  transform-origin: 50% 45%;
+  transition:
+    opacity 0.6s cubic-bezier(0.5, 0, 0.55, 1),
+    transform 0.6s cubic-bezier(0.5, 0, 0.55, 1),
+    filter 0.6s cubic-bezier(0.5, 0, 0.55, 1);
 }
 
 .about-stage {

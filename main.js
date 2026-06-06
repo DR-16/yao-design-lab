@@ -971,37 +971,6 @@ aboutScroll?.addEventListener('scroll', () => {
 
 // ---------- Enter / exit transitions ----------
 let mode = 'hero'; // 'hero' | 'about'
-const flashEl = document.getElementById('impactFlash');
-
-// 360° outward-burst particle ring — the "shockwave" that fires the moment
-// you slam through the cylinder. Unlike the per-step rings, this one doesn't
-// have a vertical direction; it explodes radially in 3D.
-function emitShockwave() {
-  const slots = pickRingSlots(Math.min(RING_COUNT, 180));
-  for (let k = 0; k < slots.length; k++) {
-    const i = slots[k];
-    const theta = (k / slots.length) * Math.PI * 2;
-    const phi = (Math.random() - 0.5) * Math.PI * 0.6; // some vertical spread
-    const r = 0.4 + Math.random() * 0.3;
-    const cphi = Math.cos(phi);
-    ringPos[i*3+0] = Math.cos(theta) * cphi * r;
-    ringPos[i*3+1] = Math.sin(phi) * r;
-    ringPos[i*3+2] = Math.sin(theta) * cphi * r;
-    const speed = 3.2 + Math.random() * 1.4;
-    ringVel[i*3+0] = Math.cos(theta) * cphi * speed;
-    ringVel[i*3+1] = Math.sin(phi) * speed;
-    ringVel[i*3+2] = Math.sin(theta) * cphi * speed;
-    const c = RING_PALETTE[Math.floor(Math.random() * RING_PALETTE.length)];
-    const jitter = 0.85 + Math.random() * 0.3;
-    ringColor[i*3+0] = c[0] * jitter;
-    ringColor[i*3+1] = c[1] * jitter;
-    ringColor[i*3+2] = c[2] * jitter;
-    ringLife[i] = 1.0;
-  }
-  ringGeo.attributes.position.needsUpdate = true;
-  ringGeo.attributes.color.needsUpdate    = true;
-  ringGeo.attributes.life.needsUpdate     = true;
-}
 
 function enterAbout() {
   if (mode === 'about') return;
@@ -1011,16 +980,6 @@ function enterAbout() {
   aboutView.setAttribute('aria-hidden', 'false');
   aboutScroll.scrollTop = 0;
   updateAboutScroll();
-
-  // Impact flash — restart the CSS animation by toggling the class with a reflow.
-  if (flashEl) {
-    flashEl.classList.remove('firing');
-    void flashEl.offsetWidth; // force reflow so the animation restarts
-    flashEl.classList.add('firing');
-  }
-  // 360° shockwave of coloured particles, fired slightly delayed so it lands
-  // just as the about view snaps to focus (≈350ms in).
-  setTimeout(emitShockwave, 320);
 }
 function exitAbout() {
   if (mode === 'hero') return;
