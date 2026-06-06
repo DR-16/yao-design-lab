@@ -153,40 +153,48 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
 }
 
 /* ---- THE FROSTED GLASS PANEL ----
-   This is the actual ground-glass plate. It sits in front of the colourful
-   base and uses backdrop-filter to blur EVERYTHING behind it — so the chroma
-   from the base layer becomes a soft, indistinct haze (the signature seen
-   through real frosted glass). A subtle dark veil on top keeps the brightness
-   under control so the centre subject reads cleanly. */
+   ::before is the glass plate itself. It does two jobs:
+     1. backdrop-filter blurs the colourful base behind it → chroma becomes haze
+     2. its own background paints subtle glass highlights on top
+   The combination gives "I can sense colour through fog" without revealing
+   any clear shape. */
 .about-view::before {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(8, 5, 16, 0.30) 0%, rgba(8, 5, 16, 0.45) 100%);
-  backdrop-filter: blur(70px) saturate(160%) brightness(0.85);
-  -webkit-backdrop-filter: blur(70px) saturate(160%) brightness(0.85);
+  background:
+    /* slanted top-left highlight, like ambient light catching the surface */
+    linear-gradient(125deg,
+      rgba(255, 255, 255, 0.0) 0%,
+      rgba(255, 255, 255, 0.06) 16%,
+      rgba(255, 255, 255, 0.0) 32%,
+      rgba(255, 255, 255, 0.0) 100%),
+    /* soft reflection blobs */
+    radial-gradient(ellipse 60% 22% at 25% 18%, rgba(255, 255, 255, 0.05), transparent 70%),
+    radial-gradient(ellipse 55% 18% at 78% 85%, rgba(255, 255, 255, 0.04), transparent 70%),
+    /* dark veil so the centre subject stays legible */
+    linear-gradient(180deg, rgba(8, 5, 16, 0.32) 0%, rgba(8, 5, 16, 0.48) 100%);
+  backdrop-filter: blur(70px) saturate(160%) brightness(0.88);
+  -webkit-backdrop-filter: blur(70px) saturate(160%) brightness(0.88);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ---- GLASS HIGHLIGHTS ----
-   Real glass plates catch streaks of light. A pair of slanted elliptical
-   gradients fake those reflections subtly — they give the surface a sense of
-   thickness and reflectivity without adding any "noise" pattern. */
+/* ---- SOFT MIST OVERLAY ----
+   This is what gives the glass its "若影若现" feel — a gentle cloud-like
+   noise drawn with low-frequency fractal turbulence + Gaussian blur baked
+   into the SVG. baseFrequency 0.35 = large blobs (mist, not grain).
+   feGaussianBlur stdDeviation=1.5 inside the SVG softens the blobs further
+   so there are no hard edges → reads as "fog inside the glass". Overlay
+   blend keeps it subtle: brightens highlights, deepens shadows, very
+   organic. */
 .about-view::after {
   content: "";
   position: absolute; inset: 0;
-  background:
-    /* top-left diagonal highlight */
-    linear-gradient(125deg,
-      rgba(255, 255, 255, 0.0) 0%,
-      rgba(255, 255, 255, 0.06) 18%,
-      rgba(255, 255, 255, 0.0) 32%,
-      rgba(255, 255, 255, 0.0) 100%),
-    /* mid soft highlight */
-    radial-gradient(ellipse 60% 22% at 25% 18%, rgba(255, 255, 255, 0.07), transparent 70%),
-    /* bottom-right reflection */
-    radial-gradient(ellipse 55% 18% at 78% 85%, rgba(255, 255, 255, 0.05), transparent 70%);
-  mix-blend-mode: screen;
+  background-image:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 480'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.35' numOctaves='3' stitchTiles='stitch' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.92  0 0 0 0 0.92  0 0 0 0 1  0 0 0 1.2 -0.1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+  background-size: 520px 520px;
+  mix-blend-mode: overlay;
+  opacity: 0.55;
   pointer-events: none;
   z-index: 0;
 }
