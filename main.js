@@ -547,7 +547,7 @@ aboutScene.add(aboutKey);
 // ---------- Liquid-glass flame ----------
 const glassUniforms = {
   uTime: { value: 0 },
-  uIntensity: { value: 0.85 },
+  uIntensity: { value: 0.55 },
 };
 const glassMat = new THREE.ShaderMaterial({
   transparent: true,
@@ -640,28 +640,30 @@ aboutScene.add(glassFlame);
 // Builds a particle cloud in a humanoid silhouette (head + bust) as a stand-in.
 // When you upload a photo, replace `buildPlaceholderShape()` with a function that
 // samples the image's brightness and emits one particle per dark pixel.
-function buildPlaceholderShape(count = 4000) {
+function buildPlaceholderShape(count = 1200) {
   const pos = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
-    // sample roughly an oval head + a trapezoidal bust
+    // sample roughly an oval head + a trapezoidal bust, with deeper z spread
     let x, y, z, ok = false;
     while (!ok) {
-      x = (Math.random() - 0.5) * 2.4;
-      y = (Math.random() - 0.5) * 3.0;
-      const r = Math.hypot(x, (y - 0.7) * 1.3); // head sphere
-      const inHead = r < 0.55;
-      const inBust = y < 0.05 && Math.abs(x) < (0.9 + (0.05 - y) * 0.6) && y > -1.2;
+      x = (Math.random() - 0.5) * 2.6;
+      y = (Math.random() - 0.5) * 3.2;
+      const r = Math.hypot(x, (y - 0.7) * 1.3);
+      const inHead = r < 0.6;
+      const inBust = y < 0.05 && Math.abs(x) < (0.95 + (0.05 - y) * 0.6) && y > -1.3;
       if (inHead || inBust) ok = true;
     }
-    z = (Math.random() - 0.5) * 0.6;
-    pos[i*3 + 0] = x;
-    pos[i*3 + 1] = y;
+    z = (Math.random() - 0.5) * 1.4; // deeper depth so the cloud feels volumetric
+    // wider jitter so the placeholder reads as a loose cloud of points,
+    // not a solid silhouette
+    pos[i*3 + 0] = x + (Math.random() - 0.5) * 0.45;
+    pos[i*3 + 1] = y + (Math.random() - 0.5) * 0.45;
     pos[i*3 + 2] = z;
   }
   return pos;
 }
 const portraitGeo = new THREE.BufferGeometry();
-portraitGeo.setAttribute('position', new THREE.BufferAttribute(buildPlaceholderShape(4200), 3));
+portraitGeo.setAttribute('position', new THREE.BufferAttribute(buildPlaceholderShape(1200), 3));
 
 const portraitMat = new THREE.ShaderMaterial({
   transparent: true,
@@ -670,7 +672,7 @@ const portraitMat = new THREE.ShaderMaterial({
   uniforms: {
     uTime: { value: 0 },
     uDissolve: { value: 0 }, // 0 → 1 as user scrolls; particles drift outward
-    uOpacity: { value: 0.95 },
+    uOpacity: { value: 0.3 },
   },
   vertexShader: /* glsl */`
     uniform float uTime;
@@ -686,7 +688,7 @@ const portraitMat = new THREE.ShaderMaterial({
       p += dir * uDissolve * 2.5;
       vec4 mv = modelViewMatrix * vec4(p, 1.0);
       vDist = -mv.z;
-      gl_PointSize = (1.4 + 1.6 * (1.0 - uDissolve)) * (220.0 / -mv.z);
+      gl_PointSize = (0.6 + 0.9 * (1.0 - uDissolve)) * (220.0 / -mv.z);
       gl_Position = projectionMatrix * mv;
     }
   `,
@@ -742,8 +744,8 @@ const ringMat = new THREE.ShaderMaterial({
       vColor = color;
       vLife = life;
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
-      // size grows then fades with life
-      float s = 9.0 * (0.5 + 0.5 * life);
+      // smaller points so the ring reads as a thin glowing band, not a fat cloud
+      float s = 6.0 * (0.55 + 0.45 * life);
       gl_PointSize = s * (260.0 / -mv.z);
       gl_Position = projectionMatrix * mv;
     }
@@ -765,16 +767,18 @@ aboutScene.add(ringParticles);
 
 function emitRing(dir /* +1 = scroll down (rising up), -1 = scroll up (falling down) */) {
   for (let i = 0; i < RING_COUNT; i++) {
-    const angle = (i / RING_COUNT) * Math.PI * 2 + Math.random() * 0.05;
-    const r = 1.4 + Math.random() * 0.4;
+    const angle = (i / RING_COUNT) * Math.PI * 2 + Math.random() * 0.04;
+    // bigger ring (radius 2.6-2.95) + thin band (only ±0.35 radial spread)
+    const r = 2.6 + Math.random() * 0.35;
     ringPos[i*3+0] = Math.cos(angle) * r;
-    ringPos[i*3+1] = -dir * 0.6;   // start below if rising, above if falling
+    ringPos[i*3+1] = -dir * 0.4;
     ringPos[i*3+2] = Math.sin(angle) * r;
 
-    // expand outward + vertical sweep in scroll direction
-    const expandSpeed = 0.6 + Math.random() * 0.3;
+    // slow radial expansion → ring stays a ring instead of bloating into a disc;
+    // fast vertical sweep → it streaks past in the scroll direction.
+    const expandSpeed = 0.15 + Math.random() * 0.15;
     ringVel[i*3+0] = Math.cos(angle) * expandSpeed;
-    ringVel[i*3+1] = dir * (1.4 + Math.random() * 0.4);
+    ringVel[i*3+1] = dir * (2.0 + Math.random() * 0.6);
     ringVel[i*3+2] = Math.sin(angle) * expandSpeed;
 
     // pick a random colour from the hero palette
