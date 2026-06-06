@@ -760,15 +760,17 @@ window.addEventListener('pointerup', (e) => {
   if (!start) return;
   const dt = performance.now() - start.t;
   const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
-  if (dt > 350 || moved > 8) return; // a drag, not a click
+  if (dt > 350 || moved > 8) return; // it was a drag, not a click
   if (mode !== 'hero') return;
   pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(rings.map(r => r.mesh), false)[0];
-  if (!hit) return;
-  const idx = rings.findIndex(r => r.mesh === hit.object);
-  if (idx === 0) enterAbout(); // top ring = WHO I AM
+  const hits = raycaster.intersectObjects(rings.map(r => r.mesh), false);
+  if (!hits.length) return;
+  // For now, clicking ANY ring opens the About view (only WHO I AM's
+  // content is built). When you finish ring 1 / ring 2, branch on
+  // `rings.findIndex(r => r.mesh === hits[0].object)`.
+  enterAbout();
 });
 
 // ---------- About scene resize ----------
