@@ -129,12 +129,14 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   opacity: 0;
   pointer-events: none;
   background: #050308;
-  transform: scale(1.12);
-  filter: blur(24px);
+  /* deeper starting scale + blur so the punch-in feels longer & harder */
+  transform: scale(1.32);
+  filter: blur(40px);
+  /* easeOutExpo: very fast at the start, slams to a stop — feels like an impact */
   transition:
-    opacity 0.85s cubic-bezier(0.55, 0, 0.18, 1),
-    transform 0.85s cubic-bezier(0.55, 0, 0.18, 1),
-    filter 0.85s cubic-bezier(0.55, 0, 0.18, 1);
+    opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.72s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.72s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .about-view.active {
   opacity: 1;
@@ -172,16 +174,41 @@ body.mode-about .work {
   pointer-events: none;
   transition: opacity 0.55s ease;
 }
+/* Hero "rams forward into the cylinder": scale up hard + heavy blur + bloom.
+   easeInExpo curve = barely moves at the start, then accelerates explosively —
+   pairs with about-view's easeOutExpo for a true dolly-into-impact feel. */
 body.mode-about #stage {
   opacity: 0;
-  transform: scale(1.5);
-  filter: blur(28px);
+  transform: scale(3.6);
+  filter: blur(48px) brightness(1.5);
   transform-origin: 50% 55%;
   pointer-events: none;
   transition:
-    opacity 0.7s cubic-bezier(0.5, 0, 0.2, 1),
-    transform 0.7s cubic-bezier(0.5, 0, 0.2, 1),
-    filter 0.7s cubic-bezier(0.5, 0, 0.2, 1);
+    opacity 0.55s cubic-bezier(0.7, 0, 0.84, 0),
+    transform 0.55s cubic-bezier(0.7, 0, 0.84, 0),
+    filter 0.55s cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+/* Impact flash — white screen-blend frame that fires during the punch, simulating
+   the "crash through the surface" highlight. Triggered by JS-added .firing class. */
+.impact-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 30%, rgba(255,255,255,0) 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+@keyframes impact-flash-burst {
+  0%   { opacity: 0; transform: scale(0.7); }
+  18%  { opacity: 0.9; transform: scale(1.1); }
+  55%  { opacity: 0.55; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+.impact-flash.firing {
+  animation: impact-flash-burst 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .about-stage {
