@@ -179,22 +179,39 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   z-index: 0;
 }
 
-/* ---- SOFT MIST OVERLAY ----
-   This is what gives the glass its "若影若现" feel — a gentle cloud-like
-   noise drawn with low-frequency fractal turbulence + Gaussian blur baked
-   into the SVG. baseFrequency 0.35 = large blobs (mist, not grain).
-   feGaussianBlur stdDeviation=1.5 inside the SVG softens the blobs further
-   so there are no hard edges → reads as "fog inside the glass". Overlay
-   blend keeps it subtle: brightens highlights, deepens shadows, very
-   organic. */
+/* ---- HIGHLIGHT WAVES ----
+   Cathedral-glass style: large-scale Perlin waves of LIGHT.
+   baseFrequency 0.014 = big slow waves (not grain). colorMatrix turns the
+   bright crests into white-alpha (alpha = 2·gray - 0.9, so only the top
+   ~55% of crests survive). Light blur softens the wave edges so it reads
+   organic, not pixellated. screen blend over the chromatic base lifts the
+   crests into "凸起 highlights" you can see catching the light. */
 .about-view::after {
   content: "";
   position: absolute; inset: 0;
   background-image:
-    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 480'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.35' numOctaves='3' stitchTiles='stitch' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.92  0 0 0 0 0.92  0 0 0 0 1  0 0 0 1.2 -0.1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
-  background-size: 520px 520px;
-  mix-blend-mode: overlay;
-  opacity: 0.55;
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='3' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.66 0.66 0.66 0 -0.45'/%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23h)'/%3E%3C/svg%3E");
+  background-size: 1100px 1100px;
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- SHADOW WAVES ----
+   The SAME wave field as the highlight layer, but masked to the dark valleys
+   (alpha = -2·gray + 0.75) and **offset 14px diagonally**. The offset is the
+   trick: the eye sees "bright crest with a dark shadow next to it" and
+   interprets that as a physical bump in the glass surface. multiply blend
+   deepens the valleys, completing the embossed look. */
+.about-view > .about-glass-shadow {
+  position: absolute; inset: 0;
+  background-image:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.014' numOctaves='3' stitchTiles='stitch' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.66 -0.66 -0.66 0 0.75'/%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+  background-size: 1100px 1100px;
+  background-position: 14px 14px;
+  mix-blend-mode: multiply;
+  opacity: 0.38;
   pointer-events: none;
   z-index: 0;
 }
