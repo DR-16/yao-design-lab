@@ -640,30 +640,37 @@ aboutScene.add(glassFlame);
 // Builds a particle cloud in a humanoid silhouette (head + bust) as a stand-in.
 // When you upload a photo, replace `buildPlaceholderShape()` with a function that
 // samples the image's brightness and emits one particle per dark pixel.
-function buildPlaceholderShape(count = 1200) {
+function buildPlaceholderShape(count = 1400) {
+  // Particles arranged in a FLAME silhouette: wide at the base, tapering to
+  // a slim tip at the top. Sampled by rejection so density follows the flame
+  // profile (lots of points at the base, few wisps at the tip).
   const pos = new Float32Array(count * 3);
+  const Y_BASE = -1.7;
+  const Y_TOP  =  1.9;
   for (let i = 0; i < count; i++) {
-    // sample roughly an oval head + a trapezoidal bust, with deeper z spread
     let x, y, z, ok = false;
     while (!ok) {
-      x = (Math.random() - 0.5) * 2.6;
-      y = (Math.random() - 0.5) * 3.2;
-      const r = Math.hypot(x, (y - 0.7) * 1.3);
-      const inHead = r < 0.6;
-      const inBust = y < 0.05 && Math.abs(x) < (0.95 + (0.05 - y) * 0.6) && y > -1.3;
-      if (inHead || inBust) ok = true;
+      y = Math.random() * (Y_TOP - Y_BASE) + Y_BASE;
+      const t = (y - Y_BASE) / (Y_TOP - Y_BASE); // 0 base → 1 tip
+      // flame width: 0.95 at base, narrows non-linearly to ~0.1 at tip
+      const width = 0.1 + 0.9 * Math.pow(1.0 - t, 1.6);
+      x = (Math.random() - 0.5) * width * 2.2;
+      // soft density falloff toward the edge of the flame
+      const nx = Math.abs(x) / Math.max(width, 0.01);
+      const inside = (1.0 - nx) > Math.random() * 1.0;
+      // also pinch the base inward a touch
+      const baseFade = t < 0.05 ? Math.random() < t / 0.05 : true;
+      if (inside && baseFade) ok = true;
     }
-    z = (Math.random() - 0.5) * 1.4; // deeper depth so the cloud feels volumetric
-    // wider jitter so the placeholder reads as a loose cloud of points,
-    // not a solid silhouette
-    pos[i*3 + 0] = x + (Math.random() - 0.5) * 0.45;
-    pos[i*3 + 1] = y + (Math.random() - 0.5) * 0.45;
+    z = (Math.random() - 0.5) * 0.7;
+    pos[i*3 + 0] = x;
+    pos[i*3 + 1] = y;
     pos[i*3 + 2] = z;
   }
   return pos;
 }
 const portraitGeo = new THREE.BufferGeometry();
-portraitGeo.setAttribute('position', new THREE.BufferAttribute(buildPlaceholderShape(1200), 3));
+portraitGeo.setAttribute('position', new THREE.BufferAttribute(buildPlaceholderShape(1400), 3));
 
 const portraitMat = new THREE.ShaderMaterial({
   transparent: true,
@@ -678,16 +685,28 @@ const portraitMat = new THREE.ShaderMaterial({
     uniform float uTime;
     uniform float uDissolve;
     varying float vDist;
+    varying float vTop;
     void main(){
       vec3 p = position;
-      // gentle floating
-      p.x += sin(uTime * 0.6 + position.y * 4.0) * 0.04;
-      p.y += cos(uTime * 0.5 + position.x * 5.0) * 0.04;
-      // dissolve: push particles outward
+      // 0 at base, 1 at tip — drives how strongly each particle "flickers"
+      float topness = clamp((position.y + 1.7) / 3.6, 0.0, 1.0);
+
+      // upward drift — the flame rises
+      float t = uTime;
+      p.y += sin(t * 0.9 + position.x * 3.0) * 0.06 * (0.3 + topness * 1.4);
+      // sideways sway — stronger at the tip, like a real flame's tail
+      p.x += sin(t * 1.2 + position.y * 2.0) * 0.10 * topness;
+      p.x += sin(t * 0.5 + position.y * 5.0) * 0.04;
+      // tiny breathing of the depth so it doesn't look perfectly flat
+      p.z += sin(t * 0.7 + position.x * 4.0) * 0.04;
+
+      // dissolve: push particles outward (used when scrolling toward the top)
       vec3 dir = normalize(p + vec3(0.001));
       p += dir * uDissolve * 2.5;
+
       vec4 mv = modelViewMatrix * vec4(p, 1.0);
       vDist = -mv.z;
+      vTop = topness;
       gl_PointSize = (0.6 + 0.9 * (1.0 - uDissolve)) * (220.0 / -mv.z);
       gl_Position = projectionMatrix * mv;
     }
@@ -696,13 +715,17 @@ const portraitMat = new THREE.ShaderMaterial({
     uniform float uDissolve;
     uniform float uOpacity;
     varying float vDist;
+    varying float vTop;
     void main(){
       vec2 q = gl_PointCoord - 0.5;
       float d = length(q);
       float a = smoothstep(0.5, 0.0, d);
-      a *= (1.0 - uDissolve * 0.85) * uOpacity;
-      // soft white with a hint of blue (matches glass flame)
-      vec3 col = mix(vec3(0.85, 0.9, 1.0), vec3(1.0), a);
+      // tip particles fade more: makes the flame's top dissolve into the dark
+      a *= (1.0 - uDissolve * 0.85) * uOpacity * (1.0 - vTop * 0.45);
+      // colour: hot white-blue at the base, cool blue-violet at the tip
+      vec3 cBase = vec3(0.95, 0.98, 1.0);
+      vec3 cTip  = vec3(0.55, 0.65, 1.0);
+      vec3 col = mix(cBase, cTip, vTop);
       gl_FragColor = vec4(col, a);
     }
   `,
