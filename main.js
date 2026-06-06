@@ -711,33 +711,53 @@ aboutScene.add(portrait);
 
 // ---------- About scroll → staircase rotation + portrait dissolve ----------
 let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
+let __prevAboutScroll = 0;
+let __scrollDir = 1; // +1 = scrolling down, -1 = up
 const stepEls = () => document.querySelectorAll('.step');
 function updateAboutScroll() {
   if (!aboutScroll) return;
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
   aboutScrollProgress = Math.min(1, Math.max(0, aboutScroll.scrollTop / max));
 
-  // DNA spiral: rotor rotates 300° (matching step 1 → step 6 angular gap) while
-  // translating downward by 550px (= total spiral height). The combined motion makes
-  // each numbered panel arrive face-on at the centre as the user scrolls, like
-  // climbing a double helix.
+  // track direction so we can reveal only the panel arriving from that side
+  const cur = aboutScroll.scrollTop;
+  if (cur > __prevAboutScroll + 0.5) __scrollDir = 1;
+  else if (cur < __prevAboutScroll - 0.5) __scrollDir = -1;
+  __prevAboutScroll = cur;
+
+  // DNA spiral motion (unchanged)
   const TOTAL_RY = -300;
-  const START_TY = -275; // step 1 (lowest) starts at the centre
-  const END_TY   =  275; // step 6 (highest) ends at the centre
+  const START_TY = -275;
+  const END_TY   =  275;
   const deg = aboutScrollProgress * TOTAL_RY;
   if (staircaseRotor) {
     const ty  = START_TY + aboutScrollProgress * (END_TY - START_TY);
     staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${deg}deg)`;
   }
 
-  // figure out which step is currently facing the camera. each step is 60° apart.
-  // step.--ry === -deg → that step's world rotation is 0 → faces user.
-  const focusIdx = Math.max(0, Math.min(5, Math.round((-deg) / 60)));
-  stepEls().forEach((s, i) => s.classList.toggle('current', i === focusIdx));
+  // current = panel facing camera (closest to -deg / 60 multiple)
+  // approaching = the NEXT panel in the user's scroll direction; that's the one
+  //   fading IN. Panels behind (already passed) fade out automatically because
+  //   they're neither current nor approaching.
+  const focusF = (-deg) / 60;
+  const focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
+  const approachIdx = Math.max(0, Math.min(5, focusIdx + __scrollDir));
+  // continuous reveal: how far along we are toward the approaching panel (0..1)
+  const approachAmount = Math.min(1, Math.max(0, Math.abs(focusF - focusIdx) * 2));
+  stepEls().forEach((s, i) => {
+    const isCurrent = (i === focusIdx);
+    const isApproaching = (i === approachIdx && approachIdx !== focusIdx);
+    s.classList.toggle('current', isCurrent);
+    s.classList.toggle('approaching', isApproaching);
+    if (isApproaching) {
+      s.style.setProperty('--approach', approachAmount.toFixed(3));
+    } else {
+      s.style.removeProperty('--approach');
+    }
+  });
 
   // dissolve the portrait gradually
   portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);
-  // hide the scroll hint once the user moves
   if (aboutScrollProgress > 0.03 && aboutHint) aboutHint.classList.add('faded');
 }
 

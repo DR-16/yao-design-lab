@@ -118,6 +118,9 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
 
 /* ================================================================
    ABOUT VIEW — opens when user clicks the top cylinder ring (WHO I AM)
+   Transition is a cinematic "camera push": hero scales up + blurs out
+   (feels like you're flying INTO the ring), then the about view emerges
+   from a slight scale-up + blur and resolves to focus.
    ================================================================ */
 .about-view {
   position: fixed;
@@ -125,37 +128,76 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
   z-index: 60;
   opacity: 0;
   pointer-events: none;
-  /* black frosted backdrop */
-  background:
-    radial-gradient(120% 80% at 50% 50%, rgba(8, 8, 18, 0.92) 0%, rgba(0, 0, 0, 0.98) 70%),
-    rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(40px) saturate(120%);
-  -webkit-backdrop-filter: blur(40px) saturate(120%);
-  transition: opacity 0.7s cubic-bezier(0.7, 0, 0.2, 1);
+  background: #050308;
+  transform: scale(1.12);
+  filter: blur(24px);
+  transition:
+    opacity 0.85s cubic-bezier(0.55, 0, 0.18, 1),
+    transform 0.85s cubic-bezier(0.55, 0, 0.18, 1),
+    filter 0.85s cubic-bezier(0.55, 0, 0.18, 1);
 }
 .about-view.active {
   opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
   pointer-events: auto;
 }
-/* faint frosted noise overlay so the black doesn't feel flat */
+
+/* Frosted backdrop layer — sits behind the canvas (z-index: 0 under the canvas at 1).
+   Multi-layer: deep radial gradient + chromatic glow blobs + film-grain noise.
+   Heavily blurred so it feels like soft-focus glass without touching the centre subject. */
 .about-view::before {
   content: "";
   position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 3px 3px;
-  mix-blend-mode: screen;
+  background:
+    radial-gradient(140% 90% at 50% 50%, rgba(20, 16, 32, 0.6) 0%, rgba(0, 0, 0, 0.95) 75%),
+    radial-gradient(circle at 18% 24%, rgba(120, 70, 200, 0.22), transparent 38%),
+    radial-gradient(circle at 82% 78%, rgba(60, 120, 220, 0.20), transparent 42%),
+    radial-gradient(circle at 50% 110%, rgba(180, 70, 110, 0.16), transparent 45%),
+    radial-gradient(circle at 65% 10%, rgba(80, 200, 220, 0.14), transparent 38%);
+  filter: blur(90px) saturate(140%);
   pointer-events: none;
+  z-index: 0;
 }
-/* hide the main hero stripes/cursor when about is active, keep language switch visible */
+/* Second frosted layer: high-frequency noise grain that makes the black surface
+   read as ground glass, not painted-flat colour. Very low opacity so it doesn't
+   compete with the central subject. */
+.about-view::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+    radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hero exits with its own "push past the camera" motion: scale up, blur, fade out.
+   Combined with the about-view's "pull in" entry, the cut feels like a dolly-zoom
+   into the cylinder ring instead of a simple crossfade. */
 body.mode-about #bg,
 body.mode-about .topbar,
 body.mode-about .hero-text,
 body.mode-about .categories,
-body.mode-about .work,
-body.mode-about #stage {
+body.mode-about .work {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.55s ease;
+}
+body.mode-about #stage {
+  opacity: 0;
+  transform: scale(1.5);
+  filter: blur(28px);
+  transform-origin: 50% 55%;
+  pointer-events: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.5, 0, 0.2, 1),
+    transform 0.7s cubic-bezier(0.5, 0, 0.2, 1),
+    filter 0.7s cubic-bezier(0.5, 0, 0.2, 1);
 }
 
 .about-stage {
@@ -272,14 +314,15 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
     translateY(var(--ty, 0px))
     translateZ(var(--tz, 360px));
   opacity: 0;
-  transition: opacity 0.45s cubic-bezier(0.5, 0, 0.2, 1);
+  transition: opacity 0.5s cubic-bezier(0.5, 0, 0.2, 1);
 }
 /* The focused step (closest to camera) is always visible. */
 .step.current { opacity: 1; }
-/* While the user is actively scrolling the about view, reveal every step
-   so they can see the whole spiral; idle for ~380ms → fade back to focus-only. */
-body.about-scrolling .step { opacity: 0.85; }
-body.about-scrolling .step.current { opacity: 1; }
+/* The "approaching" step is the one entering the focus from the scroll direction.
+   Its opacity tracks --approach (set by JS): 0 just after the previous panel
+   left, climbing to 1 as it slides into focus. The panel that just scrolled past
+   has no class → opacity 0 → fades out automatically. */
+.step.approaching { opacity: calc(var(--approach, 0) * 0.85); }
 .step .step-num {
   font-family: "Times New Roman", serif;
   font-style: italic;
