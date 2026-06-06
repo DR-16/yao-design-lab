@@ -716,10 +716,17 @@ function updateAboutScroll() {
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
   aboutScrollProgress = Math.min(1, Math.max(0, aboutScroll.scrollTop / max));
 
-  // rotate the staircase rotor — 360° × 1.5 turns over the full scroll for "spiral staircase" feel
+  // DNA spiral: rotor rotates 300° (matching step 1 → step 6 angular gap) while
+  // translating downward by 550px (= total spiral height). The combined motion makes
+  // each numbered panel arrive face-on at the centre as the user scrolls, like
+  // climbing a double helix.
   if (staircaseRotor) {
-    const deg = aboutScrollProgress * -540;
-    staircaseRotor.style.transform = `rotateY(${deg}deg) translateY(${aboutScrollProgress * -80}px)`;
+    const TOTAL_RY = -300;
+    const START_TY = -275; // step 1 (lowest) starts at the centre
+    const END_TY   =  275; // step 6 (highest) ends at the centre
+    const deg = aboutScrollProgress * TOTAL_RY;
+    const ty  = START_TY + aboutScrollProgress * (END_TY - START_TY);
+    staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${deg}deg)`;
   }
   // dissolve the portrait gradually
   portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);

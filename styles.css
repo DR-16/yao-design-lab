@@ -250,9 +250,9 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
 .step {
   position: absolute;
   left: 0; top: 0;
-  width: 360px;
-  margin-left: -180px;
-  margin-top: -110px;
+  width: 340px;
+  margin-left: -170px;
+  margin-top: -100px;
   padding: 22px 26px;
   background: rgba(12, 10, 22, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -261,9 +261,17 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
   -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.88);
   transform-style: preserve-3d;
-  /* radial layout: rotate around Y, then push out along Z. Each step's --ry comes from inline style. */
-  transform: rotateY(var(--ry)) translateZ(420px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  /* DNA-style spiral layout per panel:
+     - rotateY(--ry): angle around the central axis (set per panel)
+     - translateY(--ty): vertical offset → makes each panel sit at a different height
+     - translateZ(--tz): how far out from the axis (default 360px)
+     The container (.staircase-rotor) then animates rotateY+translateY on scroll
+     so the camera feels like it's climbing the spiral. */
+  transform:
+    rotateY(var(--ry))
+    translateY(var(--ty, 0px))
+    translateZ(var(--tz, 360px));
+  transition: opacity 0.35s ease;
 }
 .step .step-num {
   font-family: "Times New Roman", serif;

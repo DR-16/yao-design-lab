@@ -111,47 +111,49 @@
         <!-- spiral staircase of text panels; rotateY set per panel, container rotateY animated on scroll -->
         <div class="staircase" id="staircase">
          <div class="staircase-rotor" id="staircaseRotor">
-          <div class="step" style="--ry: 0deg">
+          <!-- DNA spiral: each step rises 110px and rotates 60° from the previous one.
+               step 1 sits lowest, step 6 sits highest. Container scrolls + rotates together. -->
+          <div class="step" style="--ry: 0deg;   --ty: 275px">
             <p class="step-num">01</p>
             <h3 data-lang="en">Placeholder heading one</h3>
             <h3 data-lang="cn">占位标题一</h3>
-            <p data-lang="en">Placeholder paragraph — replace with your own copy when ready. This panel sits at 0° around the central flame.</p>
-            <p data-lang="cn">占位段落——你提供文案后我替换。本面板位于火焰中心轴的 0° 方向。</p>
+            <p data-lang="en">Placeholder paragraph — replace with your own copy when ready. Bottom of the spiral.</p>
+            <p data-lang="cn">占位段落——你提供文案后我替换。位于螺旋的最底端。</p>
           </div>
-          <div class="step" style="--ry: 60deg">
+          <div class="step" style="--ry: 60deg;  --ty: 165px">
             <p class="step-num">02</p>
             <h3 data-lang="en">Placeholder heading two</h3>
             <h3 data-lang="cn">占位标题二</h3>
-            <p data-lang="en">Placeholder paragraph two. 60° around.</p>
-            <p data-lang="cn">占位段落二，60° 方向。</p>
+            <p data-lang="en">Placeholder paragraph two. One step up the helix.</p>
+            <p data-lang="cn">占位段落二，沿螺旋上升一格。</p>
           </div>
-          <div class="step" style="--ry: 120deg">
+          <div class="step" style="--ry: 120deg; --ty: 55px">
             <p class="step-num">03</p>
             <h3 data-lang="en">Placeholder heading three</h3>
             <h3 data-lang="cn">占位标题三</h3>
-            <p data-lang="en">Placeholder paragraph three. 120° around.</p>
-            <p data-lang="cn">占位段落三，120° 方向。</p>
+            <p data-lang="en">Placeholder paragraph three. Halfway up.</p>
+            <p data-lang="cn">占位段落三，到达半路。</p>
           </div>
-          <div class="step" style="--ry: 180deg">
+          <div class="step" style="--ry: 180deg; --ty: -55px">
             <p class="step-num">04</p>
             <h3 data-lang="en">Placeholder heading four</h3>
             <h3 data-lang="cn">占位标题四</h3>
-            <p data-lang="en">Placeholder paragraph four. 180° around — the back of the spiral.</p>
-            <p data-lang="cn">占位段落四，180° 方向——螺旋的背面。</p>
+            <p data-lang="en">Placeholder paragraph four. Past the midpoint.</p>
+            <p data-lang="cn">占位段落四，越过中点。</p>
           </div>
-          <div class="step" style="--ry: 240deg">
+          <div class="step" style="--ry: 240deg; --ty: -165px">
             <p class="step-num">05</p>
             <h3 data-lang="en">Placeholder heading five</h3>
             <h3 data-lang="cn">占位标题五</h3>
-            <p data-lang="en">Placeholder paragraph five. 240° around.</p>
-            <p data-lang="cn">占位段落五，240° 方向。</p>
+            <p data-lang="en">Placeholder paragraph five. Almost at the top.</p>
+            <p data-lang="cn">占位段落五，接近顶端。</p>
           </div>
-          <div class="step" style="--ry: 300deg">
+          <div class="step" style="--ry: 300deg; --ty: -275px">
             <p class="step-num">06</p>
             <h3 data-lang="en">Placeholder heading six</h3>
             <h3 data-lang="cn">占位标题六</h3>
-            <p data-lang="en">Placeholder paragraph six. 300° around. Scroll down to keep rotating; the photo at centre dissolves as you go.</p>
-            <p data-lang="cn">占位段落六，300° 方向。继续往下滑会继续旋转；中央照片随之溶散。</p>
+            <p data-lang="en">Placeholder paragraph six. Top of the spiral — the photo at centre has dissolved.</p>
+            <p data-lang="cn">占位段落六，螺旋顶端——中央照片此时已完全溶散。</p>
           </div>
          </div>
         </div>
