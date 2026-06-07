@@ -910,68 +910,87 @@ function updateAboutScroll() {
   else if (cur < __prevAboutScroll - 0.5) __scrollDir = -1;
   __prevAboutScroll = cur;
 
-  // DNA spiral motion across 12 panels (6 scene A + 6 scene B).
-  // Total angular travel = 11 × 60° = 660° (≈ 1.83 turns of the helix).
-  // Total vertical travel = panel 1 at +275 ↓ to panel 12 at -990 = 1265px down.
-  const TOTAL_RY = -660;
+  // ===== SCENE A vs SCENE B =====
+  // The scroll is split into two regions:
+  //   progress 0    → ~0.6   = scene A (6-panel DNA helix)
+  //   progress ~0.6 → 1      = scene B (4-panel left/right corridor)
+  // At the boundary, the last scene-A ring keeps flying upward off-screen,
+  // the staircase follows it out of frame, and the corridor glides in from
+  // the depths.
+  const SCENE_A_FRACTION = 0.6;
+  const progressA = Math.min(1, aboutScrollProgress / SCENE_A_FRACTION);
+  const progressB = Math.max(0, Math.min(1, (aboutScrollProgress - SCENE_A_FRACTION) / (1 - SCENE_A_FRACTION)));
+
+  // ---- Scene A: staircase rotor (driven only while we're in A) ----
+  const TOTAL_RY = -300;
   const START_TY = -275;
-  const END_TY   =  990;
-  const deg = aboutScrollProgress * TOTAL_RY;
-  if (staircaseRotor) {
-    const ty  = START_TY + aboutScrollProgress * (END_TY - START_TY);
-    staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${deg}deg)`;
+  const END_TY   =  275;
+  const degA = progressA * TOTAL_RY;
+  // Only push the rotor transform while we haven't passed into scene B —
+  // once scene B is active, the CSS rule on body.scene-b takes over and
+  // flies the rotor up + out of frame.
+  if (staircaseRotor && progressB <= 0.001) {
+    const ty = START_TY + progressA * (END_TY - START_TY);
+    staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
   }
 
-  // current = panel facing camera (closest to -deg / 60 multiple)
-  // approaching = the NEXT panel in the user's scroll direction; that's the one
-  //   fading IN. Panels behind (already passed) fade out automatically because
-  //   they're neither current nor approaching.
-  const focusF = (-deg) / 60;
-  const focusIdx = Math.max(0, Math.min(11, Math.round(focusF)));
-  const approachIdx = Math.max(0, Math.min(11, focusIdx + __scrollDir));
+  // ---- Scene B: corridor (driven only while progressB > 0) ----
+  const corridorTrack = document.getElementById('corridorTrack');
+  if (corridorTrack) {
+    // pull the whole corridor toward the camera as the user scrolls
+    const zOffset = progressB * 1800;
+    corridorTrack.style.transform = `translateZ(${zOffset}px)`;
+  }
 
-  // Track scene (A: panels 0-5, B: panels 6-11) and flip the body class
-  // so the eyebrow + future styles update.
-  const inSceneB = focusIdx >= 6;
+  // ---- Compute focus ----
+  // global focusIdx: 0..5 = scene A panels, 6..9 = scene B panels (4 corridor panels).
+  let focusIdx, approachAmount;
+  if (progressB <= 0.001) {
+    const focusF = (-degA) / 60;
+    focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
+    approachAmount = Math.min(1, Math.abs(focusF - focusIdx) * 2);
+  } else {
+    // 4 panels at z = -300, -800, -1300, -1800; spacing 500.
+    // panel k is closest to camera when offset = -panelZ[k], i.e. when
+    // progressB = 300/1800 + k * 500/1800 = (300 + 500k) / 1800.
+    const localF = (progressB * 1800 - 300) / 500;
+    const localIdx = Math.max(0, Math.min(3, Math.round(localF)));
+    focusIdx = 6 + localIdx;
+    approachAmount = Math.min(1, Math.abs(localF - localIdx) * 2);
+  }
+  const approachIdx = Math.max(0, Math.min(9, focusIdx + __scrollDir));
+
+  // Track scene (A: panels 0-5, B: panels 6-9) and flip the body class
+  const inSceneB = focusIdx >= 6 || progressB > 0.05;
   document.body.classList.toggle('scene-b', inSceneB);
 
-  // when the focused panel changes (you've actually arrived at a new step),
-  // burst a ring of coloured particles in the scroll direction
+  // When the focused panel changes, fire ONE coloured ring (no scene-cross
+  // explosion). At the A↔B boundary the ring naturally streaks upward and
+  // off-screen — that's the visual cue the camera is "chasing" it into the
+  // next scene.
   if (typeof updateAboutScroll.lastFocus === 'undefined') updateAboutScroll.lastFocus = focusIdx;
   if (focusIdx !== updateAboutScroll.lastFocus) {
-    // ENHANCED TRANSITION between scene A and B: panel 6 marks the threshold.
-    // When the user crosses 5↔6 in either direction, fire multiple staggered
-    // rings to simulate the camera "drilling" through a portal between floors.
-    const crossing = (updateAboutScroll.lastFocus < 6 && focusIdx >= 6) ||
-                     (updateAboutScroll.lastFocus >= 6 && focusIdx < 6);
-    if (crossing) {
-      emitRing(__scrollDir);
-      setTimeout(() => emitRing(__scrollDir), 80);
-      setTimeout(() => emitRing(__scrollDir), 160);
-      setTimeout(() => emitShockwave(), 120); // 3D burst of colour as you punch through
-      // brief CSS flag to add motion-blur on the panels during the transit
-      document.body.classList.add('scene-crossing');
-      clearTimeout(updateAboutScroll.__crossTimer);
-      updateAboutScroll.__crossTimer = setTimeout(() => {
-        document.body.classList.remove('scene-crossing');
-      }, 700);
-    } else {
-      emitRing(__scrollDir);
-    }
+    emitRing(__scrollDir);
     updateAboutScroll.lastFocus = focusIdx;
   }
-  // continuous reveal: how far along we are toward the approaching panel (0..1)
-  const approachAmount = Math.min(1, Math.max(0, Math.abs(focusF - focusIdx) * 2));
-  stepEls().forEach((s, i) => {
+  // Update scene-A panels (.step, indices 0..5) and scene-B panels (.corridor-step,
+  // global indices 6..9) — only the matching one shows as current.
+  document.querySelectorAll('.step').forEach((s, i) => {
     const isCurrent = (i === focusIdx);
-    const isApproaching = (i === approachIdx && approachIdx !== focusIdx);
+    const isApproaching = (i === approachIdx && approachIdx < 6 && approachIdx !== focusIdx);
     s.classList.toggle('current', isCurrent);
     s.classList.toggle('approaching', isApproaching);
-    if (isApproaching) {
-      s.style.setProperty('--approach', approachAmount.toFixed(3));
-    } else {
-      s.style.removeProperty('--approach');
-    }
+    if (isApproaching) s.style.setProperty('--approach', approachAmount.toFixed(3));
+    else s.style.removeProperty('--approach');
+  });
+  document.querySelectorAll('.corridor-step').forEach((s, i) => {
+    const g = 6 + i;
+    const isCurrent = (g === focusIdx);
+    const isApproaching = (g === approachIdx && approachIdx >= 6 && approachIdx !== focusIdx);
+    s.classList.toggle('current', isCurrent);
+    s.classList.toggle('approaching', isApproaching);
+    if (isApproaching) s.style.setProperty('--approach', approachAmount.toFixed(3));
+    else s.style.removeProperty('--approach');
   });
 
   // dissolve the portrait gradually
@@ -1035,10 +1054,9 @@ function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
   // jump straight to the appropriate panel start. Half-scroll point = panel 7 (scene B).
   aboutScroll.scrollTop = 0;
   if (startSceneIdx === 1) {
-    // wait one tick so scrollHeight is correct after the layout settles
     requestAnimationFrame(() => {
       const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
-      aboutScroll.scrollTop = max * (6 / 11); // panel 7 of 12 (0-indexed 6 of 11)
+      aboutScroll.scrollTop = max * 0.63; // just past the SCENE_A boundary (0.6) — lands on scene B panel 1
       updateAboutScroll();
     });
   }

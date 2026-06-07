@@ -270,9 +270,9 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
 }
 .about-scroll::-webkit-scrollbar { display: none; }
 .about-scroll-inner {
-  /* tall scrollable area — 12 panels (6 scene A + 6 scene B) at ~110vh each
-     so the camera travels ~1320vh climbing through both helix floors */
-  height: 1400vh;
+  /* total scroll height: scene A (helix, 6 panels) + scene B (corridor, 4 panels)
+     ≈ 660vh + 440vh = 1100vh */
+  height: 1100vh;
   position: relative;
 }
 
@@ -353,16 +353,80 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
   text-align: center;
 }
 
-/* Scene-A → Scene-B crossing: a brief blur + zoom on the whole staircase
-   simulates the camera punching through a portal between floors. */
-@keyframes scene-cross-punch {
-  0%   { filter: blur(0px);  transform: scale(1.0); }
-  35%  { filter: blur(14px); transform: scale(0.93); }
-  60%  { filter: blur(10px); transform: scale(1.04); }
-  100% { filter: blur(0px);  transform: scale(1.0); }
+/* ---- SCENE A → SCENE B transition ----
+   When the user scrolls past panel 6, the staircase rotor flies upward —
+   carried by the same ring particles that were emitted at panel 6's exit —
+   while the camera tilts up to "chase" them. After the rotor leaves frame,
+   the corridor track glides in from the depths. */
+.staircase-rotor {
+  will-change: transform, opacity, filter;
 }
-body.scene-crossing .staircase {
-  animation: scene-cross-punch 0.7s cubic-bezier(0.45, 0, 0.3, 1);
+body.scene-b .staircase-rotor {
+  /* shoots up + back, motion-blurred, like the camera is left behind for a moment */
+  transform: translateY(-180vh) scale(0.4) !important;
+  opacity: 0;
+  filter: blur(28px);
+  transition:
+    transform 0.95s cubic-bezier(0.55, 0, 0.5, 1),
+    opacity 0.6s ease-out,
+    filter 0.6s ease-out;
+}
+
+/* ---- CORRIDOR (Scene B) ---- */
+.corridor-track {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  /* hidden in scene A; transform driven by JS */
+  transition: opacity 0.6s ease;
+}
+body.scene-b .corridor-track {
+  opacity: 1;
+  transition: opacity 0.6s ease 0.35s; /* delay so rotor leaves first */
+}
+.corridor-step {
+  position: absolute;
+  left: 0; top: 0;
+  width: 380px;
+  margin-left: -190px;
+  margin-top: -110px;
+  padding: 22px 26px;
+  background: rgba(28, 14, 38, 0.55);
+  border: 1px dashed rgba(192, 38, 211, 0.45);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.88);
+  transform-style: preserve-3d;
+  transform: translateX(var(--tx, 0)) translateZ(var(--tz, 0));
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.5, 0, 0.2, 1);
+  /* face the camera regardless of where they sit along Z */
+}
+.corridor-step.current { opacity: 1; }
+.corridor-step.approaching { opacity: calc(var(--approach, 0) * 0.85); }
+.corridor-step .step-num {
+  font-family: "Times New Roman", serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  opacity: 0.55;
+  margin-bottom: 10px;
+}
+.corridor-step .step-placeholder {
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+  padding: 18px 0;
+  text-align: center;
 }
 .step h3 {
   font-family: "Times New Roman", "Songti SC", serif;
