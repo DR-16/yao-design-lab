@@ -895,6 +895,9 @@ function tickRingParticles(dt) {
 }
 
 // ---------- About scroll → staircase rotation + portrait dissolve ----------
+// Fraction of the about-view's scroll range that belongs to scene A.
+// The remainder (1 - SCENE_A_FRACTION) drives scene B's corridor.
+const SCENE_A_FRACTION = 0.6;
 let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
 let __prevAboutScroll = 0;
 let __scrollDir = 1; // +1 = scrolling down, -1 = up
@@ -912,12 +915,11 @@ function updateAboutScroll() {
 
   // ===== SCENE A vs SCENE B =====
   // The scroll is split into two regions:
-  //   progress 0    → ~0.6   = scene A (6-panel DNA helix)
-  //   progress ~0.6 → 1      = scene B (4-panel left/right corridor)
-  // At the boundary, the last scene-A ring keeps flying upward off-screen,
-  // the staircase follows it out of frame, and the corridor glides in from
-  // the depths.
-  const SCENE_A_FRACTION = 0.6;
+  //   progress 0    → SCENE_A_FRACTION = scene A (6-panel DNA helix)
+  //   progress >    → 1                = scene B (4-panel left/right corridor)
+  // At the boundary, the staircase rotor is carried up-and-right off-frame
+  // (the horizontal stroke of an "L"), while the corridor stage rises from
+  // below (the vertical stroke of the L).
   const progressA = Math.min(1, aboutScrollProgress / SCENE_A_FRACTION);
   const progressB = Math.max(0, Math.min(1, (aboutScrollProgress - SCENE_A_FRACTION) / (1 - SCENE_A_FRACTION)));
 
@@ -1008,9 +1010,67 @@ function markScrolling() {
     document.body.classList.remove('about-scrolling');
   }, 380);
 }
+
+// ---------- Snap-to-panel ("damping pull") ----------
+// When the user stops scrolling, smoothly pull the scroll position to the
+// nearest panel's natural centre so panels always settle face-on. The
+// movement is short and cubic-eased so it doesn't fight the user nor disrupt
+// the fade-in/out — they keep transitioning naturally as scrollTop animates.
+
+let __snapTimer = null;
+let __snappingActive = false;
+
+function panelTargetProgress(curProgress) {
+  if (curProgress < SCENE_A_FRACTION) {
+    // 6 sceneA panels at local progress k/5 for k=0..5
+    const local = curProgress / SCENE_A_FRACTION;
+    const k = Math.max(0, Math.min(5, Math.round(local * 5)));
+    return (k / 5) * SCENE_A_FRACTION;
+  }
+  // 4 sceneB panels: panel k (0..3) sits at local progress (300 + 500k)/1800
+  const localB = (curProgress - SCENE_A_FRACTION) / (1 - SCENE_A_FRACTION);
+  const k = Math.max(0, Math.min(3, Math.round((localB * 1800 - 300) / 500)));
+  const localTarget = (300 + 500 * k) / 1800;
+  return SCENE_A_FRACTION + localTarget * (1 - SCENE_A_FRACTION);
+}
+
+function smoothScrollAbout(targetTop, duration = 360) {
+  const startTop = aboutScroll.scrollTop;
+  const delta = targetTop - startTop;
+  if (Math.abs(delta) < 1.5) return;
+  const startTime = performance.now();
+  __snappingActive = true;
+  function tick() {
+    const t = Math.min(1, (performance.now() - startTime) / duration);
+    // cubic ease-out — soft pull, no hard stop
+    const eased = 1 - Math.pow(1 - t, 3);
+    aboutScroll.scrollTop = startTop + delta * eased;
+    if (t < 1) requestAnimationFrame(tick);
+    else __snappingActive = false;
+  }
+  requestAnimationFrame(tick);
+}
+
+function maybeSnap() {
+  clearTimeout(__snapTimer);
+  __snapTimer = setTimeout(() => {
+    if (__snappingActive) return;
+    const max = aboutScroll.scrollHeight - aboutScroll.clientHeight;
+    if (max <= 0) return;
+    const cur = aboutScroll.scrollTop / max;
+    const target = panelTargetProgress(cur);
+    // only snap if we're meaningfully off-centre — otherwise leave alone
+    const targetTop = target * max;
+    if (Math.abs(targetTop - aboutScroll.scrollTop) > 6) {
+      smoothScrollAbout(targetTop, 380);
+    }
+  }, 220);
+}
+
 aboutScroll?.addEventListener('scroll', () => {
   markScrolling();
   updateAboutScroll();
+  if (!__snappingActive) maybeSnap();
 }, { passive: true });
 
 // ---------- Enter / exit transitions ----------

@@ -353,27 +353,32 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
   text-align: center;
 }
 
-/* ---- SCENE A → SCENE B transition ----
-   When the user scrolls past panel 6, the staircase rotor flies upward —
-   carried by the same ring particles that were emitted at panel 6's exit —
-   while the camera tilts up to "chase" them. After the rotor leaves frame,
-   the corridor track glides in from the depths. */
+/* ---- SCENE A → SCENE B transition: an "L"-shaped camera path ----
+   sceneA's helix is the horizontal stroke of the L. At the corner, the
+   camera turns 90° upward to enter sceneB's vertical corridor.
+   Visually:
+     - the staircase rotor flies UP-AND-RIGHT off-frame (away along the L's
+       outward direction), as if the camera left it behind on the floor;
+     - the corridor stage rises from below, sliding into the centre while
+       the camera tilts back into a forward view. */
 .staircase-rotor {
   will-change: transform, opacity, filter;
 }
 body.scene-b .staircase-rotor {
-  /* shoots up + back, motion-blurred, like the camera is left behind for a moment */
-  transform: translateY(-180vh) scale(0.4) !important;
+  transform: translateX(85vw) translateY(-95vh) rotate(8deg) scale(0.45) !important;
   opacity: 0;
-  filter: blur(28px);
+  filter: blur(26px);
   transition:
-    transform 0.95s cubic-bezier(0.55, 0, 0.5, 1),
-    opacity 0.6s ease-out,
-    filter 0.6s ease-out;
+    transform 1.05s cubic-bezier(0.55, 0, 0.45, 1),
+    opacity 0.7s ease-out,
+    filter 0.7s ease-out;
 }
 
-/* ---- CORRIDOR (Scene B) ---- */
-.corridor-track {
+/* ---- CORRIDOR (Scene B) ----
+   .corridor-stage handles the entry animation (rises from below);
+   .corridor-track is positioned by JS via translateZ for the scroll-driven
+   forward push along the corridor's depth axis. */
+.corridor-stage {
   position: fixed;
   left: 50%;
   top: 50%;
@@ -384,12 +389,19 @@ body.scene-b .staircase-rotor {
   pointer-events: none;
   z-index: 6;
   opacity: 0;
-  /* hidden in scene A; transform driven by JS */
-  transition: opacity 0.6s ease;
+  /* entry pose: pushed below the viewport, slightly back */
+  transform: translateY(85vh) translateZ(-200px) scale(0.7);
+  transition:
+    transform 1.05s cubic-bezier(0.4, 0, 0.25, 1),
+    opacity 0.6s ease 0.35s;
 }
-body.scene-b .corridor-track {
+body.scene-b .corridor-stage {
   opacity: 1;
-  transition: opacity 0.6s ease 0.35s; /* delay so rotor leaves first */
+  transform: translateY(0) translateZ(0) scale(1);
+}
+.corridor-track {
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 .corridor-step {
   position: absolute;
