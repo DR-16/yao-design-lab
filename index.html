@@ -161,24 +161,26 @@
          </div>
 
          <!-- ===== SCENE B: WHY THIS LAB EXISTS =====
-              4-panel corridor alternating left/right. Wrapped in a .corridor-stage
-              that handles entry (rises from below) so JS can keep driving the
-              inner .corridor-track translateZ for scroll-driven depth motion. -->
-         <div class="corridor-stage" id="corridorStage">
-          <div class="corridor-track" id="corridorTrack">
-           <div class="corridor-step" style="--tx: -300px; --tz: -300px">
+              After the camera passes through the portal, you arrive in a
+              vertical narrative stream — 4 panels stacked centrally so the
+              user reads them like turning pages in a book. JS drives a
+              translateY on the track to slide the panels into view one
+              after another. -->
+         <div class="narrative-stage" id="narrativeStage">
+          <div class="narrative-track" id="narrativeTrack">
+           <div class="narrative-step" style="--y: 0px">
              <p class="step-num">01</p>
              <p class="step-placeholder">Panel 01 · placeholder</p>
            </div>
-           <div class="corridor-step" style="--tx:  300px; --tz: -800px">
+           <div class="narrative-step" style="--y: 480px">
              <p class="step-num">02</p>
              <p class="step-placeholder">Panel 02 · placeholder</p>
            </div>
-           <div class="corridor-step" style="--tx: -300px; --tz: -1300px">
+           <div class="narrative-step" style="--y: 960px">
              <p class="step-num">03</p>
              <p class="step-placeholder">Panel 03 · placeholder</p>
            </div>
-           <div class="corridor-step" style="--tx:  300px; --tz: -1800px">
+           <div class="narrative-step" style="--y: 1440px">
              <p class="step-num">04</p>
              <p class="step-placeholder">Panel 04 · placeholder</p>
            </div>

@@ -825,6 +825,51 @@ const ringMat = new THREE.ShaderMaterial({
 const ringParticles = new THREE.Points(ringGeo, ringMat);
 aboutScene.add(ringParticles);
 
+// ---------- Portal ring mesh ----------
+// A real 3D ring (TorusGeometry) the camera physically passes through during
+// the A → B transition. It emerges above the centre, rises while expanding,
+// and the camera tracks it. When the camera punches through its centre,
+// scene B's narrative track is revealed on the other side.
+const portalGeo = new THREE.TorusGeometry(1.6, 0.07, 24, 96);
+const portalMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    uTime: { value: 0 },
+    uOpacity: { value: 0 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform float uTime;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main(){
+      // colour drifts around the ring — picks up hero stripe palette tones
+      float a = uOpacity;
+      float t = uTime * 0.6 + vUv.x * 6.2831;
+      vec3 c1 = vec3(0.75, 0.15, 0.83); // violet
+      vec3 c2 = vec3(0.20, 0.45, 0.95); // blue
+      vec3 c3 = vec3(0.98, 0.75, 0.14); // yellow
+      vec3 c = c1 * (0.5 + 0.5 * sin(t))
+             + c2 * (0.5 + 0.5 * sin(t + 2.094))
+             + c3 * (0.5 + 0.5 * sin(t + 4.188));
+      c *= 0.65;
+      gl_FragColor = vec4(c, a);
+    }
+  `,
+});
+const portalMesh = new THREE.Mesh(portalGeo, portalMat);
+portalMesh.visible = false;
+portalMesh.position.set(0, 1.0, 0);
+aboutScene.add(portalMesh);
+
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
 // dead, take the ones nearest to death (the ones the user would barely
@@ -895,9 +940,14 @@ function tickRingParticles(dt) {
 }
 
 // ---------- About scroll → staircase rotation + portrait dissolve ----------
-// Fraction of the about-view's scroll range that belongs to scene A.
-// The remainder (1 - SCENE_A_FRACTION) drives scene B's corridor.
-const SCENE_A_FRACTION = 0.6;
+// Three scroll regions:
+//   [ 0,        SCENE_A_END  ) — scene A (DNA helix)
+//   [ SCENE_A_END, PORTAL_END ) — portal phase (camera rises through 3D portal)
+//   [ PORTAL_END, 1          ] — scene B (vertical narrative)
+const SCENE_A_END  = 0.50;
+const PORTAL_END   = 0.72;
+// Legacy alias kept so snap-to-panel and the hero-ring jump-to-B path still work.
+const SCENE_A_FRACTION = SCENE_A_END;
 let aboutScrollProgress = 0; // 0 at top, 1 at full scroll
 let __prevAboutScroll = 0;
 let __scrollDir = 1; // +1 = scrolling down, -1 = up
@@ -913,58 +963,83 @@ function updateAboutScroll() {
   else if (cur < __prevAboutScroll - 0.5) __scrollDir = -1;
   __prevAboutScroll = cur;
 
-  // ===== SCENE A vs SCENE B =====
-  // The scroll is split into two regions:
-  //   progress 0    → SCENE_A_FRACTION = scene A (6-panel DNA helix)
-  //   progress >    → 1                = scene B (4-panel left/right corridor)
-  // At the boundary, the staircase rotor is carried up-and-right off-frame
-  // (the horizontal stroke of an "L"), while the corridor stage rises from
-  // below (the vertical stroke of the L).
-  const progressA = Math.min(1, aboutScrollProgress / SCENE_A_FRACTION);
-  const progressB = Math.max(0, Math.min(1, (aboutScrollProgress - SCENE_A_FRACTION) / (1 - SCENE_A_FRACTION)));
+  // ===== THREE SCROLL REGIONS =====
+  const progressA = Math.min(1, aboutScrollProgress / SCENE_A_END);
+  const portalProgress = Math.max(0, Math.min(1, (aboutScrollProgress - SCENE_A_END) / (PORTAL_END - SCENE_A_END)));
+  const progressB = Math.max(0, Math.min(1, (aboutScrollProgress - PORTAL_END) / (1 - PORTAL_END)));
+  const inPortal = portalProgress > 0 && progressB <= 0;
+  const inSceneB = progressB > 0;
 
-  // ---- Scene A: staircase rotor (driven only while we're in A) ----
+  // ---- Scene A: staircase rotor (driven only while we're fully in A) ----
   const TOTAL_RY = -300;
   const START_TY = -275;
   const END_TY   =  275;
   const degA = progressA * TOTAL_RY;
-  // Only push the rotor transform while we haven't passed into scene B —
-  // once scene B is active, the CSS rule on body.scene-b takes over and
-  // flies the rotor up + out of frame.
-  if (staircaseRotor && progressB <= 0.001) {
+  if (staircaseRotor && portalProgress <= 0.001) {
     const ty = START_TY + progressA * (END_TY - START_TY);
     staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
   }
 
-  // ---- Scene B: corridor (driven only while progressB > 0) ----
-  const corridorTrack = document.getElementById('corridorTrack');
-  if (corridorTrack) {
-    // pull the whole corridor toward the camera as the user scrolls
-    const zOffset = progressB * 1800;
-    corridorTrack.style.transform = `translateZ(${zOffset}px)`;
+  // ---- Portal: a real 3D ring the camera tracks and passes through ----
+  // portalProgress 0.0 → 0.3: portal emerges (opacity up, slight expansion)
+  // 0.3 → 0.8: portal rises while camera climbs to chase it, ring expands fast
+  // 0.8 → 1.0: camera enters the ring (it fills the frame, opacity fades as we pass it)
+  if (portalProgress > 0) {
+    portalMesh.visible = true;
+    // 0 at start, smoothly to 1 then back to 0 near the end as we punch through
+    const emerge = Math.min(1, portalProgress / 0.3);
+    const fadeOut = portalProgress > 0.85 ? (1 - (portalProgress - 0.85) / 0.15) : 1;
+    portalMat.uniforms.uOpacity.value = emerge * fadeOut * 0.95;
+    // position: starts at y=1, rises to y=4 then we pass through
+    portalMesh.position.y = 1.0 + portalProgress * 3.5;
+    // scale: small at first (1) → very large (8) as we approach to punch through
+    const sc = 1 + Math.pow(portalProgress, 1.8) * 7;
+    portalMesh.scale.setScalar(sc);
+    // a gentle roll for life
+    portalMesh.rotation.z = portalProgress * 0.5;
+  } else {
+    portalMesh.visible = false;
+    portalMat.uniforms.uOpacity.value = 0;
+  }
+
+  // ---- Camera tracking ----
+  // Default sceneA camera position handled by aboutTick (orbits gently).
+  // During portal phase we override Y so the camera climbs after the portal.
+  // After portal, sceneB has its own (settled, slightly higher) camera pose.
+  aboutCam.userData.portalY = portalProgress > 0 ? portalProgress * 4.0 : null;
+  aboutCam.userData.sceneBSettle = progressB > 0;
+
+  // ---- Scene B: narrative track ----
+  const narrativeTrack = document.getElementById('narrativeTrack');
+  if (narrativeTrack) {
+    // each panel is 480px apart, panels at --y 0, 480, 960, 1440.
+    // slide the whole track upward so panel k arrives at viewport centre
+    // when progressB = k/3.
+    const yOffset = -progressB * 1440;
+    narrativeTrack.style.transform = `translateY(${yOffset}px)`;
   }
 
   // ---- Compute focus ----
-  // global focusIdx: 0..5 = scene A panels, 6..9 = scene B panels (4 corridor panels).
+  // global focusIdx: 0..5 = scene A panels, 6..9 = scene B narrative panels.
   let focusIdx, approachAmount;
   if (progressB <= 0.001) {
     const focusF = (-degA) / 60;
     focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
     approachAmount = Math.min(1, Math.abs(focusF - focusIdx) * 2);
   } else {
-    // 4 panels at z = -300, -800, -1300, -1800; spacing 500.
-    // panel k is closest to camera when offset = -panelZ[k], i.e. when
-    // progressB = 300/1800 + k * 500/1800 = (300 + 500k) / 1800.
-    const localF = (progressB * 1800 - 300) / 500;
+    // 4 narrative panels; panel k at progressB k/3
+    const localF = progressB * 3;
     const localIdx = Math.max(0, Math.min(3, Math.round(localF)));
     focusIdx = 6 + localIdx;
     approachAmount = Math.min(1, Math.abs(localF - localIdx) * 2);
   }
   const approachIdx = Math.max(0, Math.min(9, focusIdx + __scrollDir));
 
-  // Track scene (A: panels 0-5, B: panels 6-9) and flip the body class
-  const inSceneB = focusIdx >= 6 || progressB > 0.05;
-  document.body.classList.toggle('scene-b', inSceneB);
+  // Body class state machine — eyebrow flips to scene B once the camera is past
+  // the portal's mid-point (portalProgress > 0.5), so by the time the user lands
+  // in scene B the title already says "WHY THIS LAB EXISTS".
+  document.body.classList.toggle('in-portal', inPortal);
+  document.body.classList.toggle('scene-b', inSceneB || portalProgress > 0.5);
 
   // When the focused panel changes, fire ONE coloured ring (no scene-cross
   // explosion). At the A↔B boundary the ring naturally streaks upward and
@@ -985,7 +1060,7 @@ function updateAboutScroll() {
     if (isApproaching) s.style.setProperty('--approach', approachAmount.toFixed(3));
     else s.style.removeProperty('--approach');
   });
-  document.querySelectorAll('.corridor-step').forEach((s, i) => {
+  document.querySelectorAll('.narrative-step').forEach((s, i) => {
     const g = 6 + i;
     const isCurrent = (g === focusIdx);
     const isApproaching = (g === approachIdx && approachIdx >= 6 && approachIdx !== focusIdx);
@@ -1021,17 +1096,22 @@ let __snapTimer = null;
 let __snappingActive = false;
 
 function panelTargetProgress(curProgress) {
-  if (curProgress < SCENE_A_FRACTION) {
+  if (curProgress < SCENE_A_END) {
     // 6 sceneA panels at local progress k/5 for k=0..5
-    const local = curProgress / SCENE_A_FRACTION;
+    const local = curProgress / SCENE_A_END;
     const k = Math.max(0, Math.min(5, Math.round(local * 5)));
-    return (k / 5) * SCENE_A_FRACTION;
+    return (k / 5) * SCENE_A_END;
   }
-  // 4 sceneB panels: panel k (0..3) sits at local progress (300 + 500k)/1800
-  const localB = (curProgress - SCENE_A_FRACTION) / (1 - SCENE_A_FRACTION);
-  const k = Math.max(0, Math.min(3, Math.round((localB * 1800 - 300) / 500)));
-  const localTarget = (300 + 500 * k) / 1800;
-  return SCENE_A_FRACTION + localTarget * (1 - SCENE_A_FRACTION);
+  if (curProgress < PORTAL_END) {
+    // user is paused in the portal phase — pull them through to scene B's first
+    // panel, or back to scene A's last, whichever is closer
+    const midPortal = (SCENE_A_END + PORTAL_END) / 2;
+    return curProgress < midPortal ? SCENE_A_END : PORTAL_END;
+  }
+  // 4 narrative panels at progressB = k/3
+  const localB = (curProgress - PORTAL_END) / (1 - PORTAL_END);
+  const k = Math.max(0, Math.min(3, Math.round(localB * 3)));
+  return PORTAL_END + (k / 3) * (1 - PORTAL_END);
 }
 
 function smoothScrollAbout(targetTop, duration = 360) {
@@ -1175,11 +1255,28 @@ function aboutTick() {
     __aboutLastT = t;
     glassUniforms.uTime.value = t;
     portraitMat.uniforms.uTime.value = t;
+    portalMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
-    // gentle camera orbit so the portrait + flame feel "alive"
-    aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
-    aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
-    aboutCam.lookAt(0, 0, 0);
+
+    // Camera behaviour by phase:
+    //   Scene A:      gentle floating orbit
+    //   Portal phase: rises with the portal (tracking target), aimed at portal
+    //   Scene B:      settled overhead pose so narrative panels read clean
+    if (aboutCam.userData.portalY != null) {
+      const py = aboutCam.userData.portalY;
+      aboutCam.position.x += (0 - aboutCam.position.x) * 0.12;
+      aboutCam.position.y += (py - aboutCam.position.y) * 0.12;
+      aboutCam.lookAt(0, portalMesh.position.y, 0);
+    } else if (aboutCam.userData.sceneBSettle) {
+      aboutCam.position.x += (0 - aboutCam.position.x) * 0.08;
+      aboutCam.position.y += (1.5 - aboutCam.position.y) * 0.08;
+      aboutCam.lookAt(0, 1.5, 0);
+    } else {
+      aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
+      aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
+      aboutCam.lookAt(0, 0, 0);
+    }
+
     aboutRenderer.render(aboutScene, aboutCam);
   }
   requestAnimationFrame(aboutTick);

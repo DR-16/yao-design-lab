@@ -353,91 +353,85 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
   text-align: center;
 }
 
-/* ---- SCENE A → SCENE B transition: an "L"-shaped camera path ----
-   sceneA's helix is the horizontal stroke of the L. At the corner, the
-   camera turns 90° upward to enter sceneB's vertical corridor.
-   Visually:
-     - the staircase rotor flies UP-AND-RIGHT off-frame (away along the L's
-       outward direction), as if the camera left it behind on the floor;
-     - the corridor stage rises from below, sliding into the centre while
-       the camera tilts back into a forward view. */
+/* ---- SCENE A → PORTAL transition ----
+   During the portal phase, sceneA's staircase fades + falls back in space
+   (the camera is rising upward following the ring, so the helix appears to
+   sink and recede). No L-shaped fly-out — the camera is the moving thing,
+   not the panels. */
 .staircase-rotor {
   will-change: transform, opacity, filter;
-}
-body.scene-b .staircase-rotor {
-  transform: translateX(85vw) translateY(-95vh) rotate(8deg) scale(0.45) !important;
-  opacity: 0;
-  filter: blur(26px);
   transition:
-    transform 1.05s cubic-bezier(0.55, 0, 0.45, 1),
-    opacity 0.7s ease-out,
-    filter 0.7s ease-out;
+    opacity 0.6s ease,
+    filter 0.6s ease;
+}
+body.in-portal .staircase-rotor,
+body.scene-b .staircase-rotor {
+  opacity: 0;
+  filter: blur(18px);
 }
 
-/* ---- CORRIDOR (Scene B) ----
-   .corridor-stage handles the entry animation (rises from below);
-   .corridor-track is positioned by JS via translateZ for the scroll-driven
-   forward push along the corridor's depth axis. */
-.corridor-stage {
+/* ---- NARRATIVE TRACK (Scene B) ----
+   A vertical reading stream — 4 panels stacked centrally, JS slides the
+   track upward on scroll so each panel arrives at the centre in turn.
+   Hidden until the portal phase completes. */
+.narrative-stage {
   position: fixed;
   left: 50%;
   top: 50%;
   width: 0;
   height: 0;
-  perspective: 1400px;
-  transform-style: preserve-3d;
   pointer-events: none;
   z-index: 6;
   opacity: 0;
-  /* entry pose: pushed below the viewport, slightly back */
-  transform: translateY(85vh) translateZ(-200px) scale(0.7);
+  transform: scale(0.95);
   transition:
-    transform 1.05s cubic-bezier(0.4, 0, 0.25, 1),
-    opacity 0.6s ease 0.35s;
+    opacity 0.7s ease 0.25s,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.25, 1) 0.15s;
 }
-body.scene-b .corridor-stage {
+body.scene-b .narrative-stage {
   opacity: 1;
-  transform: translateY(0) translateZ(0) scale(1);
+  transform: scale(1);
 }
-.corridor-track {
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.corridor-step {
+.narrative-track {
   position: absolute;
   left: 0; top: 0;
-  width: 380px;
-  margin-left: -190px;
-  margin-top: -110px;
-  padding: 22px 26px;
-  background: rgba(28, 14, 38, 0.55);
-  border: 1px dashed rgba(192, 38, 211, 0.45);
+  will-change: transform;
+}
+.narrative-step {
+  position: absolute;
+  /* place the panel centred on (0,0) of the track — its origin already sits
+     at the viewport centre via the .narrative-stage parent. JS adds a vertical
+     offset via translateY on the track to slide them through. */
+  left: -230px;
+  top:  -120px;
+  width: 460px;
+  padding: 26px 32px;
+  background: rgba(18, 12, 26, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.88);
-  transform-style: preserve-3d;
-  transform: translateX(var(--tx, 0)) translateZ(var(--tz, 0));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.92);
+  transform: translateY(var(--y, 0));
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.5, 0, 0.2, 1);
-  /* face the camera regardless of where they sit along Z */
 }
-.corridor-step.current { opacity: 1; }
-.corridor-step.approaching { opacity: calc(var(--approach, 0) * 0.85); }
-.corridor-step .step-num {
+.narrative-step.current { opacity: 1; }
+.narrative-step.approaching { opacity: calc(var(--approach, 0) * 0.85); }
+.narrative-step .step-num {
   font-family: "Times New Roman", serif;
   font-style: italic;
   font-size: 12px;
   letter-spacing: 0.3em;
   opacity: 0.55;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
-.corridor-step .step-placeholder {
+.narrative-step .step-placeholder {
   font-style: italic;
   font-size: 13px;
   letter-spacing: 0.12em;
   opacity: 0.55;
-  padding: 18px 0;
+  padding: 20px 0;
   text-align: center;
 }
 .step h3 {
