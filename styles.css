@@ -252,7 +252,12 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
   letter-spacing: 0.4em;
   color: rgba(255, 255, 255, 0.55);
   pointer-events: none;
+  transition: color 0.6s ease;
 }
+/* Eyebrow text per scene — only the matching one is visible */
+body:not(.scene-b) .about-eyebrow .eb-b { display: none; }
+body.scene-b .about-eyebrow .eb-a { display: none; }
+body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
 
 /* internal scroller that drives the staircase rotation */
 .about-scroll {
@@ -265,8 +270,9 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
 }
 .about-scroll::-webkit-scrollbar { display: none; }
 .about-scroll-inner {
-  /* tall scrollable area — 6 panels × ~110vh each so we travel ~660vh while rotating */
-  height: 700vh;
+  /* tall scrollable area — 12 panels (6 scene A + 6 scene B) at ~110vh each
+     so the camera travels ~1320vh climbing through both helix floors */
+  height: 1400vh;
   position: relative;
 }
 
@@ -331,6 +337,32 @@ body.lang-cn .about-close { letter-spacing: 0.12em; text-transform: none; }
   letter-spacing: 0.3em;
   opacity: 0.55;
   margin-bottom: 10px;
+}
+/* Scene B placeholder panels — visually marked as "to be filled" so they read
+   as a different chapter while the user still understands they're navigable. */
+.step.step-b {
+  background: rgba(28, 14, 38, 0.5);
+  border: 1px dashed rgba(192, 38, 211, 0.45);
+}
+.step .step-placeholder {
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+  padding: 18px 0;
+  text-align: center;
+}
+
+/* Scene-A → Scene-B crossing: a brief blur + zoom on the whole staircase
+   simulates the camera punching through a portal between floors. */
+@keyframes scene-cross-punch {
+  0%   { filter: blur(0px);  transform: scale(1.0); }
+  35%  { filter: blur(14px); transform: scale(0.93); }
+  60%  { filter: blur(10px); transform: scale(1.04); }
+  100% { filter: blur(0px);  transform: scale(1.0); }
+}
+body.scene-crossing .staircase {
+  animation: scene-cross-punch 0.7s cubic-bezier(0.45, 0, 0.3, 1);
 }
 .step h3 {
   font-family: "Times New Roman", "Songti SC", serif;

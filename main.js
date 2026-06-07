@@ -910,10 +910,12 @@ function updateAboutScroll() {
   else if (cur < __prevAboutScroll - 0.5) __scrollDir = -1;
   __prevAboutScroll = cur;
 
-  // DNA spiral motion (unchanged)
-  const TOTAL_RY = -300;
+  // DNA spiral motion across 12 panels (6 scene A + 6 scene B).
+  // Total angular travel = 11 × 60° = 660° (≈ 1.83 turns of the helix).
+  // Total vertical travel = panel 1 at +275 ↓ to panel 12 at -990 = 1265px down.
+  const TOTAL_RY = -660;
   const START_TY = -275;
-  const END_TY   =  275;
+  const END_TY   =  990;
   const deg = aboutScrollProgress * TOTAL_RY;
   if (staircaseRotor) {
     const ty  = START_TY + aboutScrollProgress * (END_TY - START_TY);
@@ -925,14 +927,37 @@ function updateAboutScroll() {
   //   fading IN. Panels behind (already passed) fade out automatically because
   //   they're neither current nor approaching.
   const focusF = (-deg) / 60;
-  const focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
-  const approachIdx = Math.max(0, Math.min(5, focusIdx + __scrollDir));
+  const focusIdx = Math.max(0, Math.min(11, Math.round(focusF)));
+  const approachIdx = Math.max(0, Math.min(11, focusIdx + __scrollDir));
+
+  // Track scene (A: panels 0-5, B: panels 6-11) and flip the body class
+  // so the eyebrow + future styles update.
+  const inSceneB = focusIdx >= 6;
+  document.body.classList.toggle('scene-b', inSceneB);
 
   // when the focused panel changes (you've actually arrived at a new step),
   // burst a ring of coloured particles in the scroll direction
   if (typeof updateAboutScroll.lastFocus === 'undefined') updateAboutScroll.lastFocus = focusIdx;
   if (focusIdx !== updateAboutScroll.lastFocus) {
-    emitRing(__scrollDir);
+    // ENHANCED TRANSITION between scene A and B: panel 6 marks the threshold.
+    // When the user crosses 5↔6 in either direction, fire multiple staggered
+    // rings to simulate the camera "drilling" through a portal between floors.
+    const crossing = (updateAboutScroll.lastFocus < 6 && focusIdx >= 6) ||
+                     (updateAboutScroll.lastFocus >= 6 && focusIdx < 6);
+    if (crossing) {
+      emitRing(__scrollDir);
+      setTimeout(() => emitRing(__scrollDir), 80);
+      setTimeout(() => emitRing(__scrollDir), 160);
+      setTimeout(() => emitShockwave(), 120); // 3D burst of colour as you punch through
+      // brief CSS flag to add motion-blur on the panels during the transit
+      document.body.classList.add('scene-crossing');
+      clearTimeout(updateAboutScroll.__crossTimer);
+      updateAboutScroll.__crossTimer = setTimeout(() => {
+        document.body.classList.remove('scene-crossing');
+      }, 700);
+    } else {
+      emitRing(__scrollDir);
+    }
     updateAboutScroll.lastFocus = focusIdx;
   }
   // continuous reveal: how far along we are toward the approaching panel (0..1)
@@ -972,13 +997,51 @@ aboutScroll?.addEventListener('scroll', () => {
 // ---------- Enter / exit transitions ----------
 let mode = 'hero'; // 'hero' | 'about'
 
-function enterAbout() {
+// 360° outward-burst particle ring — used when the camera "drills through"
+// the portal between scene A (WHO I AM) and scene B (WHY THIS LAB EXISTS).
+function emitShockwave() {
+  const slots = pickRingSlots(Math.min(RING_COUNT, 160));
+  for (let k = 0; k < slots.length; k++) {
+    const i = slots[k];
+    const theta = (k / slots.length) * Math.PI * 2;
+    const phi = (Math.random() - 0.5) * Math.PI * 0.7;
+    const r = 0.4 + Math.random() * 0.3;
+    const cphi = Math.cos(phi);
+    ringPos[i*3+0] = Math.cos(theta) * cphi * r;
+    ringPos[i*3+1] = Math.sin(phi) * r;
+    ringPos[i*3+2] = Math.sin(theta) * cphi * r;
+    const speed = 3.0 + Math.random() * 1.4;
+    ringVel[i*3+0] = Math.cos(theta) * cphi * speed;
+    ringVel[i*3+1] = Math.sin(phi) * speed;
+    ringVel[i*3+2] = Math.sin(theta) * cphi * speed;
+    const c = RING_PALETTE[Math.floor(Math.random() * RING_PALETTE.length)];
+    const jitter = 0.85 + Math.random() * 0.3;
+    ringColor[i*3+0] = c[0] * jitter;
+    ringColor[i*3+1] = c[1] * jitter;
+    ringColor[i*3+2] = c[2] * jitter;
+    ringLife[i] = 1.0;
+  }
+  ringGeo.attributes.position.needsUpdate = true;
+  ringGeo.attributes.color.needsUpdate    = true;
+  ringGeo.attributes.life.needsUpdate     = true;
+}
+
+function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
   if (mode === 'about') return;
   mode = 'about';
   document.body.classList.add('mode-about');
   aboutView.classList.add('active');
   aboutView.setAttribute('aria-hidden', 'false');
+  // jump straight to the appropriate panel start. Half-scroll point = panel 7 (scene B).
   aboutScroll.scrollTop = 0;
+  if (startSceneIdx === 1) {
+    // wait one tick so scrollHeight is correct after the layout settles
+    requestAnimationFrame(() => {
+      const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+      aboutScroll.scrollTop = max * (6 / 11); // panel 7 of 12 (0-indexed 6 of 11)
+      updateAboutScroll();
+    });
+  }
   updateAboutScroll();
 }
 function exitAbout() {
@@ -1009,10 +1072,11 @@ window.addEventListener('pointerup', (e) => {
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(rings.map(r => r.mesh), false);
   if (!hits.length) return;
-  // For now, clicking ANY ring opens the About view (only WHO I AM's
-  // content is built). When you finish ring 1 / ring 2, branch on
-  // `rings.findIndex(r => r.mesh === hits[0].object)`.
-  enterAbout();
+  // ring 0 (top, WHO I AM) → about scene A; ring 1 (middle, WHY THIS LAB
+  // EXISTS) → about scene B (jumps directly to panel 7). ring 2 falls back
+  // to scene A for now (scene C not built).
+  const idx = rings.findIndex(r => r.mesh === hits[0].object);
+  enterAbout(idx === 1 ? 1 : 0);
 });
 
 // ---------- About scene resize ----------
