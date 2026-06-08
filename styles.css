@@ -368,6 +368,47 @@ body.scene-b .staircase-rotor {
   filter: blur(18px);
 }
 
+/* ---- SCENE B centre lines ----
+   Four poetic lines stacked at viewport centre. They appear progressively as
+   the user moves through the corridor: panel 1 → line 1, panel 4 → all four.
+   Hidden while sceneA is active; the whole container fades with the
+   body.scene-b state, and individual lines toggle their own opacity. */
+.scene-b-lines {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  text-align: center;
+  font-family: "Times New Roman", "Songti SC", serif;
+  font-size: clamp(20px, 2.2vw, 30px);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow:
+    0 0 18px rgba(180, 140, 255, 0.35),
+    0 0 36px rgba(80, 60, 140, 0.25);
+  transition: opacity 0.6s ease;
+  width: max-content;
+  max-width: 80vw;
+}
+body.scene-b .scene-b-lines { opacity: 1; }
+.scene-b-lines p {
+  margin: 0;
+  padding: 6px 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.7s cubic-bezier(0.5, 0, 0.2, 1),
+              transform 0.7s cubic-bezier(0.5, 0, 0.2, 1);
+}
+.scene-b-lines p.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ---- CORRIDOR TRACK (Scene B) ----
    4 panels alternating left/right along the depth axis. The outer stage
    handles fade-in; the inner track is translated on Z by JS to pull each

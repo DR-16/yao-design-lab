@@ -1372,6 +1372,13 @@ function updateAboutScroll() {
     else s.style.removeProperty('--approach');
   });
 
+  // SceneB centre lines: panel 1 (focusIdx 6) → 1 line, panel 4 (focusIdx 9) → 4 lines.
+  // Scrolling back removes lines (toggle .show off).
+  const sceneBLines = document.querySelectorAll('.scene-b-lines p');
+  let visibleLines = 0;
+  if (focusIdx >= 6) visibleLines = Math.min(4, focusIdx - 6 + 1);
+  sceneBLines.forEach((p, i) => p.classList.toggle('show', i < visibleLines));
+
   // dissolve the portrait gradually
   portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);
   if (aboutScrollProgress > 0.03 && aboutHint) aboutHint.classList.add('faded');

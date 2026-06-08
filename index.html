@@ -168,6 +168,16 @@
       </div>
     </div>
 
+    <!-- SceneB centre lines: 4 lines that accumulate as the user advances
+         through corridor panels 1→4. Panel 1 → line 1; panel 4 → all 4 lines.
+         Scrolling back removes lines. -->
+    <div class="scene-b-lines" id="sceneBLines" aria-hidden="true">
+      <p>Too Many Ideas&hellip;</p>
+      <p>Not Everything Becomes Reality</p>
+      <p>However The Process Changed Me</p>
+      <p>So I Built This Lab</p>
+    </div>
+
     <!-- ===== SCENE B: WHY THIS LAB EXISTS =====
          Lives at the top level of the about view (NOT inside .staircase) so
          its `position: fixed` resolves against the viewport, not against the
@@ -175,19 +185,19 @@
          track is pulled forward via translateZ on scroll. -->
     <div class="corridor-stage" id="corridorStage">
       <div class="corridor-track" id="corridorTrack">
-        <div class="corridor-step" style="--tx: -280px; --tz: -300px">
+        <div class="corridor-step" style="--tx: -420px; --tz: -300px">
           <p class="step-num">01</p>
           <p class="step-placeholder">Panel 01 · placeholder</p>
         </div>
-        <div class="corridor-step" style="--tx:  280px; --tz: -800px">
+        <div class="corridor-step" style="--tx:  420px; --tz: -800px">
           <p class="step-num">02</p>
           <p class="step-placeholder">Panel 02 · placeholder</p>
         </div>
-        <div class="corridor-step" style="--tx: -280px; --tz: -1300px">
+        <div class="corridor-step" style="--tx: -420px; --tz: -1300px">
           <p class="step-num">03</p>
           <p class="step-placeholder">Panel 03 · placeholder</p>
         </div>
-        <div class="corridor-step" style="--tx:  280px; --tz: -1800px">
+        <div class="corridor-step" style="--tx:  420px; --tz: -1800px">
           <p class="step-num">04</p>
           <p class="step-placeholder">Panel 04 · placeholder</p>
         </div>
