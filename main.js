@@ -1083,26 +1083,45 @@ function updateAboutScroll() {
   const inPortal = portalProgress > 0 && progressB <= 0;
   const inSceneB = progressB > 0;
 
-  // ---- Scene A: staircase rotor (driven only while we're fully in A) ----
+  // ---- Scene A: helix laid out manually in JS each frame ----
+  // Each step orbits a vertical axis at radius 360, with progressA driving
+  // a global rotation. Steps always face the camera (no rotateY on the
+  // element itself) so the focused panel reads dead-on, no tilt, no offset.
   const TOTAL_RY = -300;
   const START_TY = -275;
   const END_TY   =  275;
-  const degA = progressA * TOTAL_RY;
+  const effA = Math.min(1, progressA);
+  const rotorRyDeg = effA * TOTAL_RY;
+  const rotorTy    = START_TY + effA * (END_TY - START_TY);
+  const rotorRyRad = rotorRyDeg * Math.PI / 180;
+  const cosR = Math.cos(rotorRyRad);
+  const sinR = Math.sin(rotorRyRad);
+
   if (staircaseRotor) {
+    // rotor element itself no longer rotates; opacity/blur driven by portal
     if (portalProgress <= 0.001) {
-      const ty = START_TY + progressA * (END_TY - START_TY);
-      staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
       staircaseRotor.style.opacity = '';
       staircaseRotor.style.filter = '';
     } else {
-      // Staircase has to vanish as soon as the portal starts — drive opacity
-      // and blur directly so even a tiny scroll past SCENE_A_END snaps the
-      // last panel out of view (no "stuck panel 6" while the wormhole plays).
-      const fade = Math.min(1, portalProgress / 0.08); // fully gone by portalProgress 0.08
+      const fade = Math.min(1, portalProgress / 0.08);
       staircaseRotor.style.opacity = String(Math.max(0, 1 - fade));
       staircaseRotor.style.filter = `blur(${(fade * 22).toFixed(1)}px)`;
     }
   }
+  document.querySelectorAll('.step').forEach((s, i) => {
+    // step's natural slot on the helix
+    const stepRyDeg = i * 60;
+    const stepTy    = 275 - i * 110;
+    const stepRyRad = stepRyDeg * Math.PI / 180;
+    const baseX = 360 * Math.sin(stepRyRad);
+    const baseZ = 360 * Math.cos(stepRyRad);
+    // apply rotor's rotation around Y to (baseX, baseZ)
+    const x = baseX * cosR + baseZ * sinR;
+    const z = -baseX * sinR + baseZ * cosR;
+    const y = stepTy + rotorTy;
+    s.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) translate(-50%, -50%)`;
+  });
+  const degA = rotorRyDeg; // alias used below for focus calc
 
   // ---- Wormhole tunnel ----
   // Tunnel rings sit along negative Z, face-on. The camera physically flies

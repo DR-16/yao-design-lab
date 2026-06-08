@@ -294,8 +294,6 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
   position: absolute;
   left: 0; top: 0;
   width: 340px;
-  margin-left: -170px;
-  margin-top: -100px;
   padding: 22px 26px;
   background: rgba(12, 10, 22, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -304,16 +302,20 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
   -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.88);
   transform-style: preserve-3d;
-  /* DNA-style spiral layout per panel:
-     - rotateY(--ry): angle around the central axis (set per panel)
-     - translateY(--ty): vertical offset → makes each panel sit at a different height
-     - translateZ(--tz): how far out from the axis (default 360px)
-     The container (.staircase-rotor) then animates rotateY+translateY on scroll
-     so the camera feels like it's climbing the spiral. */
-  transform:
-    rotateY(var(--ry))
-    translateY(var(--ty, 0px))
-    translateZ(var(--tz, 360px));
+  /* transform-origin pinned to (0,0,0) of step (which coincides with rotor's
+     origin) so all rotations happen around the rotor axis. Then translate
+     (-50%, -50%) inside the transform-list centres the panel on that axis
+     before the spiral positioning kicks in. Without this, the default
+     transform-origin sits at the step's own centre — offset from the rotor
+     axis — and rotor's rotateY does NOT cancel step's rotateY, so panel 6
+     would render tilted/off-centre. */
+  /* Position is driven by JS every frame — each step is given a translate3d
+     that places it on the helix while always facing the camera. The rotor
+     no longer rotates; this keeps the math reliable across browsers (CSS
+     transform-origin composition with nested 3D rotations was producing
+     subtle tilt that left panel 6 off-centre at progressA=1). */
+  transform-origin: 0 0 0;
+  transform: translate(-50%, -50%);
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.5, 0, 0.2, 1);
 }
