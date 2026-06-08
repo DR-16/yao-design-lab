@@ -1366,12 +1366,40 @@ function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
     }
   }, 480);
 }
+// Reverse of playCameraPushToRing — eases the hero camera from wherever it
+// landed (right up against a cylinder ring) back to its home pose so the
+// next time the user looks at the hero, the cylinder is at full distance
+// again. ease-out so the move feels like a graceful retreat, not a snap.
+function playCameraReturnToHero(duration, done) {
+  const startPos = camera.position.clone();
+  const targetPos = new THREE.Vector3(0, 0, responsiveCamZ);
+  __heroTransiting = true;
+  const t0 = performance.now();
+  function tick() {
+    const t = Math.min(1, (performance.now() - t0) / duration);
+    const k = 1 - Math.pow(1 - t, 3); // cubic ease-out
+    camera.position.lerpVectors(startPos, targetPos, k);
+    camera.lookAt(0, 0, 0);
+    if (t < 1) requestAnimationFrame(tick);
+    else {
+      __heroTransiting = false;
+      if (done) done();
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
 function exitAbout() {
   if (mode === 'hero') return;
   mode = 'hero';
   document.body.classList.remove('mode-about');
+  document.body.classList.remove('scene-b');
+  document.body.classList.remove('in-portal');
   aboutView.classList.remove('active');
   aboutView.setAttribute('aria-hidden', 'true');
+  // pull the hero camera back to its starting position so the hero page
+  // looks the same as it did before the user opened about
+  playCameraReturnToHero(600);
 }
 aboutClose?.addEventListener('click', exitAbout);
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitAbout(); });
