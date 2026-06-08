@@ -1360,7 +1360,10 @@ const PANEL_DATA_B = [
 ];
 const ALL_PANEL_DATA = PANEL_DATA.concat(PANEL_DATA_B);
 const PANEL_ARC = 1.05;             // radians of circumference each panel spans
-const PANEL_H   = 5.4;
+// 16:9 frame: width = (ROOM_R-0.06)*PANEL_ARC ≈ 6.76, so height = 6.76*9/16 ≈
+// 3.80. Matching the 1280×720 (16:9) texture means the content is no longer
+// vertically stretched.
+const PANEL_H   = 3.8;
 // Character-level wrap that also handles CJK (which has no spaces): Latin runs
 // break at the last space, CJK breaks per glyph, so Chinese never overflows.
 function wrapText(x, text, maxW) {
