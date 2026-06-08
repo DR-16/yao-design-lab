@@ -1056,7 +1056,7 @@ __aboutPMREM.dispose();
 // head. Scroll dollies the camera up through the shaft, framing each panel.
 // References: Apple Vision Pro stage, teamLab chamber, sci-fi museum hall.
 const ROOM_R = 6.5;                 // ≈13 m diameter
-const ROOM_H = 56;                  // tall shaft to travel up through
+const ROOM_H = 70;                  // tall shaft to travel up through (10 panels)
 const FLOOR_Y = -ROOM_H / 2;
 const HERO_HEX = [0xc026d3, 0x4b7dff, 0xfbbf24, 0xff3030];
 const HERO_CSS = ['#c026d3', '#4b7dff', '#fbbf24', '#ff3030'];
@@ -1340,6 +1340,24 @@ const PANEL_DATA = [
     en: { h: 'This Is Daniel Rong', p: 'A young creator · A persistent builder · A 16 years old from West Vancouver.  Still learning, still exploring, still building.' },
     cn: { h: '他是 Daniel Rong', p: '一个年轻的创作者 · 一个执着的建造者 · 一个来自西温哥华的 16 岁少年。仍在学习，仍在探索，仍在创造。' } },
 ];
+// SceneB content frames — four empty panels the user will fill with copy.
+// They continue the spiral above the six SceneA panels (a new chapter, marked
+// with a "WHY THIS LAB EXISTS" eyebrow) and carry placeholder text for now.
+const PANEL_DATA_B = [
+  { tag: 'WHY THIS LAB EXISTS · 01',
+    en: { h: 'Section One', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
+    cn: { h: '板块一', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+  { tag: 'WHY THIS LAB EXISTS · 02',
+    en: { h: 'Section Two', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
+    cn: { h: '板块二', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+  { tag: 'WHY THIS LAB EXISTS · 03',
+    en: { h: 'Section Three', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
+    cn: { h: '板块三', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+  { tag: 'WHY THIS LAB EXISTS · 04',
+    en: { h: 'Section Four', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
+    cn: { h: '板块四', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+];
+const ALL_PANEL_DATA = PANEL_DATA.concat(PANEL_DATA_B);
 const PANEL_ARC = 1.05;             // radians of circumference each panel spans
 const PANEL_H   = 5.4;
 function wrapText(x, text, maxW) {
@@ -1376,12 +1394,19 @@ function drawPanelTexture(canvas, data, idx, lang) {
   // web font loads, then the panels are redrawn).
   const d = data[lang] || data.en;
   x.textBaseline = 'top';
+  let yy = 150;
+  // optional eyebrow tag (SceneB chapter marker)
+  if (data.tag) {
+    x.fillStyle = accent;
+    x.font = '700 34px "Helvetica Neue", Arial, sans-serif';
+    x.fillText(data.tag, L, 116);
+    yy = 196;
+  }
   x.fillStyle = '#f1f3fa';
   const headFont = (lang === 'cn')
     ? '500 96px "Songti SC", "Times New Roman", serif'
     : 'italic 104px "Instrument Serif", Georgia, serif';
   x.font = headFont;
-  let yy = 150;
   for (const line of wrapText(x, d.h, W - L - 130)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 106 : 100); }
   // body
   yy += 30;
@@ -1394,19 +1419,20 @@ function drawPanelTexture(canvas, data, idx, lang) {
 }
 const aboutPanels = [];
 let __aboutLang = (document.body.classList.contains('lang-cn')) ? 'cn' : 'en';
-for (let i = 0; i < PANEL_DATA.length; i++) {
+const PANEL_COUNT = ALL_PANEL_DATA.length;             // 6 SceneA + 4 SceneB
+for (let i = 0; i < PANEL_COUNT; i++) {
   const cv = document.createElement('canvas');
   cv.width = 1280; cv.height = 720;
-  drawPanelTexture(cv, PANEL_DATA[i], i, __aboutLang);
+  drawPanelTexture(cv, ALL_PANEL_DATA[i], i, __aboutLang);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
   // mirror horizontally: a BackSide cylinder segment flips U, so pre-flip here
   tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = -1; tex.offset.x = 1;
-  const angle = i * (Math.PI * 2 / PANEL_DATA.length);   // spiral around
-  // Panels occupy the lower ~62% of the shaft; the top quarter is reserved
-  // for the SceneB doubt-voice swarm and the central resolution lines.
-  const py = FLOOR_Y + 6 + i * ((ROOM_H * 0.60) / (PANEL_DATA.length - 1));
+  const angle = i * (Math.PI * 2 / 6);                  // keep 60° spiral step
+  // All ten panels occupy the lower ~62% of the shaft; the top is the SceneB
+  // doubt-voice swarm + the reflective ceiling.
+  const py = FLOOR_Y + 6 + i * ((ROOM_H * 0.62) / (PANEL_COUNT - 1));
   const geo = new THREE.CylinderGeometry(
     ROOM_R - 0.06, ROOM_R - 0.06, PANEL_H, 48, 1, true,
     angle - PANEL_ARC / 2, PANEL_ARC
@@ -1419,13 +1445,13 @@ for (let i = 0; i < PANEL_DATA.length; i++) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = py;
   aboutScene.add(mesh);
-  aboutPanels.push({ mesh, canvas: cv, tex, angle, y: py });
+  aboutPanels.push({ mesh, canvas: cv, tex, angle, y: py, data: ALL_PANEL_DATA[i] });
 }
 // redraw all panels on language switch (called from setLang)
 function redrawAboutPanels(lang) {
   __aboutLang = (lang === 'cn') ? 'cn' : 'en';
   for (let i = 0; i < aboutPanels.length; i++) {
-    drawPanelTexture(aboutPanels[i].canvas, PANEL_DATA[i], i, __aboutLang);
+    drawPanelTexture(aboutPanels[i].canvas, aboutPanels[i].data, i, __aboutLang);
     aboutPanels[i].tex.needsUpdate = true;
   }
   // also redraw the SceneB theme sentences engraved into the metal ceiling
@@ -1487,7 +1513,7 @@ function makeTextTexture(text, opts) {
 }
 
 // ---- Doubt voices ----------------------------------------------------------
-const DOUBT_ZONE_Y0 = FLOOR_Y + 6 + ROOM_H * 0.60 + 3;   // just above top panel
+const DOUBT_ZONE_Y0 = FLOOR_Y + 6 + ROOM_H * 0.62 + 4;   // just above top panel
 const DOUBT_ZONE_Y1 = CEIL_Y - 4;
 const DOUBT_WORDS = [
   { t: 'Too young',            ci: 0 },
@@ -2133,23 +2159,14 @@ let __snapTimer = null;
 let __snappingActive = false;
 
 function panelTargetProgress(curProgress) {
-  if (curProgress < SCENE_A_END) {
-    // 6 sceneA panels at local progress k/5 for k=0..5
-    const local = curProgress / SCENE_A_END;
-    const k = Math.max(0, Math.min(5, Math.round(local * 5)));
-    return (k / 5) * SCENE_A_END;
+  // snap to the nearest of the ten panel stops (+ doubt-swarm + final page)
+  const stops = buildScrollStops();
+  let best = stops[0], bd = Infinity;
+  for (const s of stops) {
+    const d = Math.abs(s - curProgress);
+    if (d < bd) { bd = d; best = s; }
   }
-  if (curProgress < PORTAL_END) {
-    // user is paused in the portal phase — pull them through to scene B's first
-    // panel, or back to scene A's last, whichever is closer
-    const midPortal = (SCENE_A_END + PORTAL_END) / 2;
-    return curProgress < midPortal ? SCENE_A_END : PORTAL_END;
-  }
-  // 4 corridor panels at progressB = (300+500k)/1800
-  const localB = (curProgress - PORTAL_END) / (1 - PORTAL_END);
-  const k = Math.max(0, Math.min(3, Math.round((localB * 1800 - 300) / 500)));
-  const localTarget = (300 + 500 * k) / 1800;
-  return PORTAL_END + localTarget * (1 - PORTAL_END);
+  return best;
 }
 
 function smoothScrollAbout(targetTop, duration = 360) {
@@ -2200,12 +2217,13 @@ aboutScroll?.addEventListener('scroll', () => {
 //   index 6..9  → scene B panel 1..4 (corridor)
 // The 5↔6 transition is the wormhole — it gets a longer duration.
 function buildScrollStops() {
+  // 10 wall panels framed across the first 66% of scroll, then a pause in the
+  // doubt swarm and the final reflective-ceiling page.
   const arr = [];
-  for (let k = 0; k < 6; k++) arr.push((k / 5) * SCENE_A_END);
-  for (let k = 0; k < 4; k++) {
-    const localTarget = (300 + 500 * k) / 1800;
-    arr.push(PORTAL_END + localTarget * (1 - PORTAL_END));
-  }
+  const N = 10, P1 = 0.66;
+  for (let i = 0; i < N; i++) arr.push((i / (N - 1)) * P1);
+  arr.push(0.82);
+  arr.push(0.985);
   return arr;
 }
 
@@ -2435,17 +2453,17 @@ function aboutTick() {
     }
 
     // TRAVEL CAMERA — the operator rides UP the cylindrical shaft.
-    // Phase 1 (scroll 0→0.55): frame the six wall panels one by one. The eye
-    // sits off-centre opposite each panel so the curved wall wraps around it.
-    // Phase 2 (0.55→1): leave the wall, drift to the central axis and rise
-    // through the doubt-voice swarm, then up toward the skylight as the four
-    // resolution lines light along the axis ahead.
+    // Phase 1 (scroll 0→0.66): frame the ten wall panels one by one (6 SceneA +
+    // 4 SceneB). The eye sits off-centre opposite each panel so the curved wall
+    // wraps around it. Phase 2 (0.66→1): drift to the central axis and rise
+    // through the doubt-voice swarm, then up to the reflective ceiling.
     const sp = aboutScrollProgress;
     const N = aboutPanels.length;
     const bob = Math.sin(t * 0.5) * 0.12;
+    const PHASE1_END = 0.66;
 
     // ---- panel-framing pose ----
-    const travel = Math.min(1, sp / 0.55);
+    const travel = Math.min(1, sp / PHASE1_END);
     const fIdx = travel * (N - 1);
     const i0 = Math.floor(fIdx);
     const i1 = Math.min(N - 1, i0 + 1);
@@ -2462,7 +2480,7 @@ function aboutTick() {
     // settled "final page" where the camera holds a fixed pose looking up into
     // the skylight with the four theme sentences framed inside the white disc.
     const spc = Math.min(sp, 0.92);
-    const a = Math.max(0, Math.min(1, (spc - 0.55) / 0.37));   // 0.55 → 0.92
+    const a = Math.max(0, Math.min(1, (spc - PHASE1_END) / (0.92 - PHASE1_END)));
     const aE = a * a * (3 - 2 * a);
     const spiral = a * Math.PI * 1.1;                  // scroll-driven, freezes
     const aRad = 1.9;
@@ -2481,7 +2499,7 @@ function aboutTick() {
     // Pose blend resolves fast (camera is on the central axis by ~sp 0.73) so
     // the viewer is inside the doubt swarm well before it materialises; the
     // vertical rise (riseY, via aE) keeps climbing gradually after that.
-    const kk = Math.max(0, Math.min(1, (sp - 0.55) / 0.18));
+    const kk = Math.max(0, Math.min(1, (sp - PHASE1_END) / 0.14));
     const k = kk * kk * (3 - 2 * kk);
     aboutCam.position.set(
       pPosX + (aPosX - pPosX) * k,
