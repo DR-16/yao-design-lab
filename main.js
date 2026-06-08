@@ -1057,9 +1057,20 @@ function updateAboutScroll() {
   const START_TY = -275;
   const END_TY   =  275;
   const degA = progressA * TOTAL_RY;
-  if (staircaseRotor && portalProgress <= 0.001) {
-    const ty = START_TY + progressA * (END_TY - START_TY);
-    staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
+  if (staircaseRotor) {
+    if (portalProgress <= 0.001) {
+      const ty = START_TY + progressA * (END_TY - START_TY);
+      staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
+      staircaseRotor.style.opacity = '';
+      staircaseRotor.style.filter = '';
+    } else {
+      // Staircase has to vanish as soon as the portal starts — drive opacity
+      // and blur directly so even a tiny scroll past SCENE_A_END snaps the
+      // last panel out of view (no "stuck panel 6" while the wormhole plays).
+      const fade = Math.min(1, portalProgress / 0.08); // fully gone by portalProgress 0.08
+      staircaseRotor.style.opacity = String(Math.max(0, 1 - fade));
+      staircaseRotor.style.filter = `blur(${(fade * 22).toFixed(1)}px)`;
+    }
   }
 
   // ---- Wormhole tunnel ----
