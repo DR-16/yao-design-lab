@@ -1342,19 +1342,20 @@ function drawPanelTexture(canvas, data, idx, lang) {
   x.strokeStyle = 'rgba(150,165,200,0.25)'; x.lineWidth = 2;
   x.strokeRect(70, 70, W - 140, H - 140);
   const L = 130;
-  // step number
-  x.fillStyle = accent;
-  x.font = '600 64px Georgia, "Times New Roman", serif';
-  x.textBaseline = 'top';
-  x.fillText(data.num, L, 110);
-  // heading
+  // heading — no step number; an editorial "Instrument Serif" display face
+  // for a more artistic, high-fashion feel (falls back to Georgia until the
+  // web font loads, then the panels are redrawn).
   const d = data[lang] || data.en;
-  x.fillStyle = '#eef1f8';
-  x.font = '600 70px Georgia, "Times New Roman", serif';
-  let yy = 200;
-  for (const line of wrapText(x, d.h, W - L - 130)) { x.fillText(line, L, yy); yy += 84; }
+  x.textBaseline = 'top';
+  x.fillStyle = '#f1f3fa';
+  const headFont = (lang === 'cn')
+    ? '500 96px "Songti SC", "Times New Roman", serif'
+    : 'italic 104px "Instrument Serif", Georgia, serif';
+  x.font = headFont;
+  let yy = 150;
+  for (const line of wrapText(x, d.h, W - L - 130)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 106 : 100); }
   // body
-  yy += 24;
+  yy += 30;
   x.fillStyle = 'rgba(206,214,232,0.82)';
   x.font = '400 40px "Helvetica Neue", Arial, sans-serif';
   for (const line of wrapText(x, d.p, W - L - 130)) { x.fillText(line, L, yy); yy += 58; }
@@ -1404,6 +1405,14 @@ function redrawAboutPanels(lang) {
   }
 }
 window.__redrawAboutPanels = redrawAboutPanels;
+// Redraw the panels (and centre lines) once the artistic web fonts finish
+// loading, so the headings pick up Instrument Serif rather than the fallback.
+if (document.fonts && document.fonts.load) {
+  Promise.all([
+    document.fonts.load("italic 104px 'Instrument Serif'"),
+    document.fonts.load("400 60px 'Instrument Serif'"),
+  ]).then(() => redrawAboutPanels(__aboutLang)).catch(() => {});
+}
 
 // The HTML staircase + portrait centrepiece are retired — content now lives on
 // the wall, so the room is never blocked by a floating figure or glass card.
@@ -1533,7 +1542,7 @@ function drawResoTexture(idx, lang) {
   x.arcTo(pad, pad, w - pad, pad, r);
   x.closePath(); x.fill();
   // glowing text — maxWidth keeps even the longest line inside the pill
-  x.font = lang === 'cn' ? '500 66px "Songti SC", serif' : '500 italic 66px Georgia, serif';
+  x.font = lang === 'cn' ? '500 70px "Songti SC", serif' : 'italic 82px "Instrument Serif", Georgia, serif';
   x.textAlign = 'center'; x.textBaseline = 'middle';
   x.shadowColor = 'rgba(180,205,255,0.85)'; x.shadowBlur = 24;
   x.fillStyle = '#f4f7ff';
@@ -1551,20 +1560,22 @@ for (let i = 0; i < RESO_DATA.length; i++) drawResoTexture(i, __aboutLang);
 
 // Materialise + billboard SceneB text each frame, driven by scroll progress.
 function tickSceneB(sp, t) {
+  // The four theme sentences fade in together at the final page (appear); the
+  // doubt voices fade OUT as that happens, so the ending settles to just the
+  // resolved sentences inside the skylight.
+  const appear = Math.max(0, Math.min(1, (sp - 0.84) / 0.06));
   for (const v of doubtVoices) {
     const k = Math.max(0, Math.min(1, (sp - v.appearAt) / 0.10));
-    v.mesh.material.opacity = k * 0.95;
+    v.mesh.material.opacity = k * 0.95 * (1 - appear);
     v.mesh.position.y = v.baseY + Math.sin(t * v.drift + v.phase) * 0.25;
     v.mesh.scale.setScalar(0.6 + k * 0.4);
     if (k > 0) v.mesh.quaternion.copy(aboutCam.quaternion);  // billboard
   }
-  // Lines light up in turn (k), then dissolve into the skylight during the
-  // final emergence (fade) — which also hides the camera-pitch reshuffle.
-  const fade = Math.max(0, Math.min(1, (sp - 0.93) / 0.055));
+  // All four theme sentences fade in TOGETHER (not one-by-one) and stay lit
+  // inside the skylight disc on the final page.
   for (const r of resoLines) {
-    const k = Math.max(0, Math.min(1, (sp - r.appearAt) / 0.06));
-    r.mesh.material.opacity = k * (1 - fade);
-    if (k > 0) r.mesh.quaternion.copy(aboutCam.quaternion);
+    r.mesh.material.opacity = appear;
+    if (appear > 0) r.mesh.quaternion.copy(aboutCam.quaternion);
   }
 }
 
@@ -1722,20 +1733,24 @@ function loadImageParticles(url, idx) {
     // Tens of thousands of tiny coloured points where the photo reads from
     // sheer density, with a soft noisy edge mask so the cloud doesn't end
     // in a hard rectangle.
-    const MAX_W = 360;
-    const w = MAX_W;
-    const h = Math.round(MAX_W * img.height / img.width);
+    // CENTRE-CROP to a 3:4 portrait that keeps the human subject (bias the
+    // crop slightly upward so heads aren't clipped), then sample that.
+    const w = 300, h = 400;            // portrait 3:4 working canvas
+    const targetAR = w / h;
+    let cw = img.width, ch = img.height;
+    if (cw / ch > targetAR) cw = ch * targetAR; else ch = cw / targetAR;
+    const sx = (img.width - cw) / 2;
+    const sy = (img.height - ch) * 0.32;   // bias up → keep faces
     const cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
+    ctx.drawImage(img, sx, sy, cw, ch, 0, 0, w, h);
     const data = ctx.getImageData(0, 0, w, h).data;
 
     const positions = [], colors = [];
-    const STEP = 1; // every pixel → ~130k particles per image at 360 × ~480
-    // smaller image footprint so it doesn't dominate the screen
-    const worldW = 2.4;
-    const worldH = worldW * h / w;
+    const STEP = 1;
+    const worldW = 2.1;
+    const worldH = worldW * h / w;             // portrait 3:4
     for (let py = 0; py < h; py += STEP) {
       for (let px = 0; px < w; px += STEP) {
         const i = (py * w + px) * 4;
@@ -1745,22 +1760,29 @@ function loadImageParticles(url, idx) {
         const a = data[i+3] / 255;
         if (a < 0.05) continue;
 
-        // === SOFT IRREGULAR EDGE MASK ===
-        // distance from centre (0 at centre, ~0.71 at corners)
+        // === SOFT IRREGULAR EDGE MASK (taller ellipse to keep the figure) ===
         const cx = px / w - 0.5;
-        const cy = py / h - 0.5;
+        const cy = (py / h - 0.5) * 0.78;       // squash vertically → portrait oval
         const dist = Math.sqrt(cx * cx + cy * cy);
-        // start fading from 0.32 outward, fully gone past 0.46. Multiply with
-        // per-pixel noise so the edge breaks up into a jagged, organic shape.
-        const fade = 1 - Math.max(0, (dist - 0.32) / 0.14);
+        const fade = 1 - Math.max(0, (dist - 0.34) / 0.13);
         const noise = 0.65 + Math.random() * 0.7;
         if (fade * noise < 0.5) continue;
 
-        const x = cx * worldW;
-        const y = -cy * worldH;
+        const x = (px / w - 0.5) * worldW;
+        const y = -(py / h - 0.5) * worldH;
         positions.push(x, y, 0);
-        // soften pure black so the cloud doesn't disappear against the background
-        colors.push(Math.max(0.08, r), Math.max(0.08, g), Math.max(0.08, b));
+
+        // === AVANT-GARDE METALLIC RE-STYLE ===
+        // collapse to luminance, push contrast, then remap onto a cool liquid-
+        // silver ramp (shadow → polished highlight) so every portrait reads as
+        // chromed metal and unifies with the chamber.
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        let Lc = (lum - 0.5) * 1.4 + 0.5;
+        Lc = Lc < 0 ? 0 : Lc > 1 ? 1 : Lc;
+        const rr = 0.06 + 0.88 * Lc;
+        const gg = 0.075 + 0.90 * Lc;
+        const bb = 0.11 + 0.96 * Lc;            // cool blue-silver in highlights
+        colors.push(rr, gg, bb);
       }
     }
     const geo = new THREE.BufferGeometry();
@@ -2471,23 +2493,24 @@ function aboutTick() {
     const pLookX = Math.sin(pAng) * ROOM_R, pLookY = pY, pLookZ = Math.cos(pAng) * ROOM_R;
 
     // ---- central rising pose (doubt zone → skylight) ----
-    const a = Math.max(0, Math.min(1, (sp - 0.55) / 0.45));
+    // Motion is FROZEN after sp 0.92 (spc clamp): the last 8% of scroll is the
+    // settled "final page" where the camera holds a fixed pose looking up into
+    // the skylight with the four theme sentences framed inside the white disc.
+    const spc = Math.min(sp, 0.92);
+    const a = Math.max(0, Math.min(1, (spc - 0.55) / 0.37));   // 0.55 → 0.92
     const aE = a * a * (3 - 2 * a);
-    const spiral = t * 0.06 + a * Math.PI * 1.1;
+    const spiral = a * Math.PI * 1.1;                  // scroll-driven, freezes
     const aRad = 1.9;
     const topY = aboutPanels[N - 1].y;
-    // Rise tops out at CEIL_Y-5 so the camera stays below the resolution lines
-    // and reads them at eye level while ascending.
-    const riseY = topY + aE * ((CEIL_Y - 5) - topY) + bob;
+    const riseY = topY + aE * ((CEIL_Y - 9) - topY) + bob * 0.4;
     const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
-    // Keep the gaze near-LEVEL through the whole doubt + resolution climb so
-    // the voices drift through frame and each central line is framed in turn;
-    // only in the final 8% tilt UP into the skylight for the emergence.
-    const finale = Math.max(0, (sp - 0.92) / 0.08);    // 0 until sp 0.92, →1 at end
+    // Pitch UP into the skylight, completing by sp 0.92, so the gaze is settled
+    // and stable while the viewer reads the final sentences.
+    const finale = Math.max(0, Math.min(1, (spc - 0.74) / 0.18));  // 0.74 → 0.92
     const fE = finale * finale;
     const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
     const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
-    const aLookY = riseY + 1.4 + fE * (CEIL_Y + 1 - riseY);
+    const aLookY = riseY + 1.4 + fE * (CEIL_Y + 2 - riseY);
 
     // ---- blend the two poses ----
     // Pose blend resolves fast (camera is on the central axis by ~sp 0.73) so
@@ -2522,24 +2545,21 @@ function aboutTick() {
       PANEL_CLOUD_TARGET_OP[i] = near * (1 - k) * 0.95; // hide once in doubt zone
     }
 
-    // Park the four resolution lines as a stack a few metres in front of the
-    // camera, in its view plane, so each is framed and legible as it lights up
-    // regardless of camera pose. Robust up-basis (avoids the degenerate cross
-    // product when the gaze nears vertical) and a ceiling clamp (so the stack
-    // never pushes through the opaque ceiling disc and gets occluded).
-    if (sp > 0.74) {
-      const fwd = new THREE.Vector3();
-      aboutCam.getWorldDirection(fwd);
-      const ref = Math.abs(fwd.y) > 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
-      const right = new THREE.Vector3().crossVectors(fwd, ref).normalize();
-      const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
-      const D = 6.4;
-      const center = aboutCam.position.clone().add(fwd.multiplyScalar(D));
+    // Park the four theme sentences as a stack a few metres in front of the
+    // camera, in its VIEW plane, so they sit inside the bright skylight disc
+    // the camera is looking up into. The basis comes straight from the camera's
+    // world matrix (always orthonormal — no degenerate cross product even when
+    // the gaze is near-vertical), so the stack never scatters.
+    if (sp > 0.80) {
+      aboutCam.updateMatrixWorld();
+      const e = aboutCam.matrixWorld.elements;
+      const up = new THREE.Vector3(e[4], e[5], e[6]);          // camera Y (screen up)
+      const fwd = new THREE.Vector3(-e[8], -e[9], -e[10]);     // camera -Z (forward)
+      const D = 6.6;
+      const center = aboutCam.position.clone().addScaledVector(fwd, D);
       for (let i = 0; i < resoLines.length; i++) {
-        const off = (1.5 - i) * 1.0;                   // line0 top → line3 bottom
-        const p = center.clone().addScaledVector(up, off);
-        if (p.y > CEIL_Y - 1.5) p.y = CEIL_Y - 1.5;    // stay below the ceiling
-        resoLines[i].mesh.position.copy(p);
+        const off = (1.5 - i) * 1.02;                  // line0 top → line3 bottom
+        resoLines[i].mesh.position.copy(center).addScaledVector(up, off);
       }
     }
 
