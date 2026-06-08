@@ -825,50 +825,68 @@ const ringMat = new THREE.ShaderMaterial({
 const ringParticles = new THREE.Points(ringGeo, ringMat);
 aboutScene.add(ringParticles);
 
-// ---------- Portal ring mesh ----------
-// A real 3D ring (TorusGeometry) the camera physically passes through during
-// the A → B transition. It emerges above the centre, rises while expanding,
-// and the camera tracks it. When the camera punches through its centre,
-// scene B's narrative track is revealed on the other side.
-const portalGeo = new THREE.TorusGeometry(1.6, 0.07, 24, 96);
-const portalMat = new THREE.ShaderMaterial({
+// ---------- Portal ring (made of particles, NOT a separate mesh) ----------
+// This is the same coloured light-halo that's been hovering above the flame
+// in scene A; we re-organise its particles into a ring on the horizontal
+// plane and let it serve as the portal we pass through. Camera physically
+// moves toward it and punches through its centre.
+const PORTAL_RING_COUNT = 120;
+const portalRingPos   = new Float32Array(PORTAL_RING_COUNT * 3);
+const portalRingColor = new Float32Array(PORTAL_RING_COUNT * 3);
+const portalRingGeo   = new THREE.BufferGeometry();
+portalRingGeo.setAttribute('position', new THREE.BufferAttribute(portalRingPos, 3));
+portalRingGeo.setAttribute('color',    new THREE.BufferAttribute(portalRingColor, 3));
+// arrange particles on a unit ring lying flat in XZ plane (so the ring's
+// "hole" points up along +Y, which is where the camera will rise through)
+for (let i = 0; i < PORTAL_RING_COUNT; i++) {
+  const a = (i / PORTAL_RING_COUNT) * Math.PI * 2;
+  portalRingPos[i*3+0] = Math.cos(a);
+  portalRingPos[i*3+1] = 0;
+  portalRingPos[i*3+2] = Math.sin(a);
+  const c = RING_PALETTE[i % RING_PALETTE.length];
+  const jitter = 0.85 + ((i * 0.137) % 1) * 0.3;
+  portalRingColor[i*3+0] = c[0] * jitter;
+  portalRingColor[i*3+1] = c[1] * jitter;
+  portalRingColor[i*3+2] = c[2] * jitter;
+}
+const portalRingMat = new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
   blending: THREE.AdditiveBlending,
-  uniforms: {
-    uTime: { value: 0 },
-    uOpacity: { value: 0 },
-  },
+  uniforms: { uOpacity: { value: 0 }, uTime: { value: 0 } },
   vertexShader: /* glsl */`
-    varying vec2 vUv;
+    attribute vec3 color;
+    uniform float uTime;
+    varying vec3 vColor;
     void main(){
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      vColor = color;
+      vec3 p = position;
+      // subtle in-place flicker so the ring feels alive
+      float a = atan(p.z, p.x);
+      p.y += sin(a * 8.0 + uTime * 1.3) * 0.04;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_PointSize = 12.0 * (300.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
     }
   `,
   fragmentShader: /* glsl */`
-    uniform float uTime;
     uniform float uOpacity;
-    varying vec2 vUv;
+    varying vec3 vColor;
     void main(){
-      // colour drifts around the ring — picks up hero stripe palette tones
-      float a = uOpacity;
-      float t = uTime * 0.6 + vUv.x * 6.2831;
-      vec3 c1 = vec3(0.75, 0.15, 0.83); // violet
-      vec3 c2 = vec3(0.20, 0.45, 0.95); // blue
-      vec3 c3 = vec3(0.98, 0.75, 0.14); // yellow
-      vec3 c = c1 * (0.5 + 0.5 * sin(t))
-             + c2 * (0.5 + 0.5 * sin(t + 2.094))
-             + c3 * (0.5 + 0.5 * sin(t + 4.188));
-      c *= 0.65;
-      gl_FragColor = vec4(c, a);
+      vec2 q = gl_PointCoord - 0.5;
+      float d = length(q);
+      float a = smoothstep(0.5, 0.0, d) * uOpacity;
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor, a);
     }
   `,
 });
-const portalMesh = new THREE.Mesh(portalGeo, portalMat);
-portalMesh.visible = false;
-portalMesh.position.set(0, 1.0, 0);
-aboutScene.add(portalMesh);
+const portalRing = new THREE.Points(portalRingGeo, portalRingMat);
+// Wrapped in a group so we move/scale the ring as one unit during the portal.
+const portalGroup = new THREE.Group();
+portalGroup.add(portalRing);
+portalGroup.visible = false;
+aboutScene.add(portalGroup);
 
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
@@ -980,33 +998,64 @@ function updateAboutScroll() {
     staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
   }
 
-  // ---- Portal: a real 3D ring the camera tracks and passes through ----
-  // portalProgress 0.0 → 0.3: portal emerges (opacity up, slight expansion)
-  // 0.3 → 0.8: portal rises while camera climbs to chase it, ring expands fast
-  // 0.8 → 1.0: camera enters the ring (it fills the frame, opacity fades as we pass it)
-  if (portalProgress > 0) {
-    portalMesh.visible = true;
-    // 0 at start, smoothly to 1 then back to 0 near the end as we punch through
-    const emerge = Math.min(1, portalProgress / 0.3);
-    const fadeOut = portalProgress > 0.85 ? (1 - (portalProgress - 0.85) / 0.15) : 1;
-    portalMat.uniforms.uOpacity.value = emerge * fadeOut * 0.95;
-    // position: starts at y=1, rises to y=4 then we pass through
-    portalMesh.position.y = 1.0 + portalProgress * 3.5;
-    // scale: small at first (1) → very large (8) as we approach to punch through
-    const sc = 1 + Math.pow(portalProgress, 1.8) * 7;
-    portalMesh.scale.setScalar(sc);
-    // a gentle roll for life
-    portalMesh.rotation.z = portalProgress * 0.5;
+  // ---- Portal phase ----
+  // The "portal" is the same coloured ring that's been hovering above the
+  // flame all along. As scene A reaches its end (progressA approaches 1),
+  // the ring starts to emerge; then in the portal phase it rises, expands
+  // and the camera physically moves up + forward to pass through it.
+  // Tail of scene A also previews the ring so the appearance is continuous,
+  // not a sudden pop.
+  const ringPreview = Math.max(0, Math.min(1, (progressA - 0.92) / 0.08));
+  const portalActive = portalProgress > 0 || ringPreview > 0;
+  if (portalActive) {
+    portalGroup.visible = true;
+    // ring base position above the flame
+    const ringY = 1.2 + portalProgress * 2.2;
+    const ringR = 1.4 + portalProgress * 1.8;
+    portalGroup.position.set(0, ringY, 0);
+    portalGroup.scale.set(ringR, ringR, ringR);
+    // opacity: fades in from preview, fades out as camera moves past the ring
+    const inOpacity = portalProgress > 0
+      ? Math.min(1, portalProgress / 0.15)
+      : ringPreview * 0.6;
+    const outOpacity = portalProgress > 0.85 ? (1 - (portalProgress - 0.85) / 0.15) : 1;
+    portalRingMat.uniforms.uOpacity.value = inOpacity * outOpacity * 0.95;
   } else {
-    portalMesh.visible = false;
-    portalMat.uniforms.uOpacity.value = 0;
+    portalGroup.visible = false;
+    portalRingMat.uniforms.uOpacity.value = 0;
   }
 
-  // ---- Camera tracking ----
-  // Default sceneA camera position handled by aboutTick (orbits gently).
-  // During portal phase we override Y so the camera climbs after the portal.
-  // After portal, sceneB has its own (settled, slightly higher) camera pose.
-  aboutCam.userData.portalY = portalProgress > 0 ? portalProgress * 4.0 : null;
+  // ---- Camera physical motion (the heart of the transition) ----
+  // We hand-roll the camera target position+aim for each phase and let
+  // aboutTick smoothly approach it (snap-springy easing in the tick loop).
+  if (portalProgress <= 0) {
+    aboutCam.userData.target = null; // sceneA: aboutTick uses the gentle orbit
+  } else {
+    // Phase 1 (0→0.55): camera climbs from y=0 to y=1, recedes a bit on Z, so
+    //   the world looks like it's pulling back from a flat plate into space.
+    // Phase 2 (0.55→0.85): camera pushes forward (Z decreases), keeps climbing
+    //   to align with ring centre — feeling of accelerating toward a target.
+    // Phase 3 (0.85→1): camera punches through the ring centre; Z reaches 0
+    //   then negative — we are now beyond the ring, looking into the new space.
+    let camY, camZ;
+    if (portalProgress < 0.55) {
+      const k = portalProgress / 0.55;
+      camY = k * 1.0;
+      camZ = 9.0 + k * 0.8;        // ease back slightly to feel the depth
+    } else if (portalProgress < 0.85) {
+      const k = (portalProgress - 0.55) / 0.30;
+      camY = 1.0 + k * 1.6;
+      camZ = 9.8 - k * 6.2;        // push toward / into the ring
+    } else {
+      const k = (portalProgress - 0.85) / 0.15;
+      camY = 2.6 + k * 0.8;
+      camZ = 3.6 - k * 4.5;        // punch through, end at -0.9 (behind ring)
+    }
+    aboutCam.userData.target = {
+      x: 0, y: camY, z: camZ,
+      look: { x: 0, y: 1.2 + portalProgress * 1.2, z: -0.5 },
+    };
+  }
   aboutCam.userData.sceneBSettle = progressB > 0;
 
   // ---- Scene B: narrative track ----
@@ -1255,25 +1304,29 @@ function aboutTick() {
     __aboutLastT = t;
     glassUniforms.uTime.value = t;
     portraitMat.uniforms.uTime.value = t;
-    portalMat.uniforms.uTime.value = t;
+    portalRingMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
 
     // Camera behaviour by phase:
-    //   Scene A:      gentle floating orbit
-    //   Portal phase: rises with the portal (tracking target), aimed at portal
-    //   Scene B:      settled overhead pose so narrative panels read clean
-    if (aboutCam.userData.portalY != null) {
-      const py = aboutCam.userData.portalY;
-      aboutCam.position.x += (0 - aboutCam.position.x) * 0.12;
-      aboutCam.position.y += (py - aboutCam.position.y) * 0.12;
-      aboutCam.lookAt(0, portalMesh.position.y, 0);
+    //   Scene A:      gentle floating orbit (no userData.target)
+    //   Portal phase: smoothly chase the precomputed target position/look —
+    //                 real physical movement: rises along Y, pushes through on Z
+    //   Scene B:      settle into the narrative pose
+    const tg = aboutCam.userData.target;
+    if (tg) {
+      aboutCam.position.x += (tg.x - aboutCam.position.x) * 0.12;
+      aboutCam.position.y += (tg.y - aboutCam.position.y) * 0.12;
+      aboutCam.position.z += (tg.z - aboutCam.position.z) * 0.12;
+      aboutCam.lookAt(tg.look.x, tg.look.y, tg.look.z);
     } else if (aboutCam.userData.sceneBSettle) {
       aboutCam.position.x += (0 - aboutCam.position.x) * 0.08;
-      aboutCam.position.y += (1.5 - aboutCam.position.y) * 0.08;
-      aboutCam.lookAt(0, 1.5, 0);
+      aboutCam.position.y += (1.8 - aboutCam.position.y) * 0.08;
+      aboutCam.position.z += (-0.5 - aboutCam.position.z) * 0.08; // stay on the far side
+      aboutCam.lookAt(0, 1.8, -2);
     } else {
       aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
       aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
+      aboutCam.position.z = 9;
       aboutCam.lookAt(0, 0, 0);
     }
 
