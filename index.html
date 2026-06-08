@@ -160,34 +160,36 @@
 
          </div>
 
-         <!-- ===== SCENE B: WHY THIS LAB EXISTS =====
-              After passing through the wormhole, 4 panels alternate left/right
-              along the depth axis. JS pulls the track forward via translateZ
-              so panels glide past one at a time, switching sides for rhythm. -->
-         <div class="corridor-stage" id="corridorStage">
-          <div class="corridor-track" id="corridorTrack">
-           <div class="corridor-step" style="--tx: -280px; --tz: -300px">
-             <p class="step-num">01</p>
-             <p class="step-placeholder">Panel 01 · placeholder</p>
-           </div>
-           <div class="corridor-step" style="--tx:  280px; --tz: -800px">
-             <p class="step-num">02</p>
-             <p class="step-placeholder">Panel 02 · placeholder</p>
-           </div>
-           <div class="corridor-step" style="--tx: -280px; --tz: -1300px">
-             <p class="step-num">03</p>
-             <p class="step-placeholder">Panel 03 · placeholder</p>
-           </div>
-           <div class="corridor-step" style="--tx:  280px; --tz: -1800px">
-             <p class="step-num">04</p>
-             <p class="step-placeholder">Panel 04 · placeholder</p>
-           </div>
-          </div>
-         </div>
         </div>
         <div class="about-end">
           <p data-lang="en">— End of section. Scroll up to revisit, or close to return.</p>
           <p data-lang="cn">— 段落结束。向上滚动可重看，或点关闭返回主页。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCENE B: WHY THIS LAB EXISTS =====
+         Lives at the top level of the about view (NOT inside .staircase) so
+         its `position: fixed` resolves against the viewport, not against the
+         staircase's transform context. 4 panels alternating left/right; the
+         track is pulled forward via translateZ on scroll. -->
+    <div class="corridor-stage" id="corridorStage">
+      <div class="corridor-track" id="corridorTrack">
+        <div class="corridor-step" style="--tx: -280px; --tz: -300px">
+          <p class="step-num">01</p>
+          <p class="step-placeholder">Panel 01 · placeholder</p>
+        </div>
+        <div class="corridor-step" style="--tx:  280px; --tz: -800px">
+          <p class="step-num">02</p>
+          <p class="step-placeholder">Panel 02 · placeholder</p>
+        </div>
+        <div class="corridor-step" style="--tx: -280px; --tz: -1300px">
+          <p class="step-num">03</p>
+          <p class="step-placeholder">Panel 03 · placeholder</p>
+        </div>
+        <div class="corridor-step" style="--tx:  280px; --tz: -1800px">
+          <p class="step-num">04</p>
+          <p class="step-placeholder">Panel 04 · placeholder</p>
         </div>
       </div>
     </div>
