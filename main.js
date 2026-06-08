@@ -1297,6 +1297,82 @@ aboutScroll?.addEventListener('scroll', () => {
   if (!__snappingActive) maybeSnap();
 }, { passive: true });
 
+// ---------- Step-locked scroll ----------
+// One wheel/swipe = one panel. We intercept wheel events, jump exactly to the
+// neighbouring stop, then ignore further input until the animation finishes —
+// so a long flick can't tear through multiple panels in a single gesture.
+// Stops:
+//   index 0..5  → scene A panel 1..6
+//   index 6..9  → scene B panel 1..4 (corridor)
+// The 5↔6 transition is the wormhole — it gets a longer duration.
+function buildScrollStops() {
+  const arr = [];
+  for (let k = 0; k < 6; k++) arr.push((k / 5) * SCENE_A_END);
+  for (let k = 0; k < 4; k++) {
+    const localTarget = (300 + 500 * k) / 1800;
+    arr.push(PORTAL_END + localTarget * (1 - PORTAL_END));
+  }
+  return arr;
+}
+
+let __wheelLocked = false;
+let __wheelLockTimer = null;
+
+function nearestStopIndex(curProg) {
+  const stops = buildScrollStops();
+  let idx = 0, best = Infinity;
+  for (let i = 0; i < stops.length; i++) {
+    const d = Math.abs(stops[i] - curProg);
+    if (d < best) { best = d; idx = i; }
+  }
+  return idx;
+}
+
+function onAboutWheel(e) {
+  e.preventDefault();
+  if (__wheelLocked) return;
+  const stops = buildScrollStops();
+  const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+  const curProg = aboutScroll.scrollTop / max;
+  const curIdx = nearestStopIndex(curProg);
+  const dir = e.deltaY > 0 ? 1 : -1;
+  const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
+  if (nextIdx === curIdx) return;
+  // crossing the wormhole (sceneA last panel ↔ sceneB first panel) takes longer
+  const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
+  const duration = crossing ? 1500 : 500;
+  __wheelLocked = true;
+  clearTimeout(__wheelLockTimer);
+  smoothScrollAbout(stops[nextIdx] * max, duration);
+  __wheelLockTimer = setTimeout(() => { __wheelLocked = false; }, duration + 90);
+}
+aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
+
+// Touch swipe → same step-locked behaviour (vertical drag only)
+let __touchStartY = null;
+aboutScroll?.addEventListener('touchstart', (e) => {
+  __touchStartY = e.touches[0]?.clientY ?? null;
+}, { passive: true });
+aboutScroll?.addEventListener('touchmove', (e) => {
+  if (__wheelLocked || __touchStartY == null) { e.preventDefault(); return; }
+  const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
+  if (Math.abs(dy) < 30) return; // need enough flick to count as a swipe
+  e.preventDefault();
+  const stops = buildScrollStops();
+  const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+  const curIdx = nearestStopIndex(aboutScroll.scrollTop / max);
+  const dir = dy > 0 ? 1 : -1;
+  const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
+  if (nextIdx === curIdx) return;
+  const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
+  const duration = crossing ? 1500 : 500;
+  __wheelLocked = true;
+  __touchStartY = null;
+  clearTimeout(__wheelLockTimer);
+  smoothScrollAbout(stops[nextIdx] * max, duration);
+  __wheelLockTimer = setTimeout(() => { __wheelLocked = false; }, duration + 90);
+}, { passive: false });
+
 // ---------- Enter / exit transitions ----------
 let mode = 'hero'; // 'hero' | 'about'
 
