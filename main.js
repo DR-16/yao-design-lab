@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Reflector } from 'https://unpkg.com/three@0.160.0/examples/jsm/objects/Reflector.js';
 
 // ---------- Setup ----------
 const canvas = document.getElementById('stage');
@@ -974,77 +975,60 @@ function buildAboutEnvTexture() {
   c.height = 1024;
   const ctx = c.getContext('2d');
 
-  // IRIDESCENT OIL-SLICK ENVIRONMENT.
-  // Per the reference: a dark/black field with flowing high-saturation
-  // colour blobs (violet → magenta → blue → cyan → amber → orange). The
-  // chrome cylinder reflects this, so the metal reads as holographic
-  // liquid-metal rather than a flat grey showroom. Colour mixing is done
-  // with the 'lighter' (additive) composite op so overlapping blobs blend
-  // into smooth iridescent hue transitions.
-
-  // Near-black base with a faint violet-to-blue vertical drift.
+  // NEUTRAL SILVER STUDIO ENVIRONMENT.
+  // The room must read as polished SILVER aluminium, so the reflected world is
+  // a clean bright studio: a light upper "sky", a softbox-lit mid, a darker
+  // floor band, plus a few bright softbox pools and vertical light strips that
+  // give the metal something crisp to mirror. Colour is intentionally absent
+  // here — all hue in the room comes from the emissive neon columns and the
+  // random colour light lines, never from tinting the metal itself.
   const g = ctx.createLinearGradient(0, 0, 0, 1024);
-  g.addColorStop(0.00, '#08060e');
-  g.addColorStop(0.50, '#050308');
-  g.addColorStop(1.00, '#070510');
+  g.addColorStop(0.00, '#eef1f7');   // bright sky
+  g.addColorStop(0.40, '#c4c9d4');
+  g.addColorStop(0.62, '#878d9c');
+  g.addColorStop(1.00, '#2b2f3a');   // darker ground
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 2048, 1024);
 
-  // Large soft colour blobs across the 360° strip. Each is a radial
-  // gradient fading to transparent; additive blending lets adjacent hues
-  // melt together. Placed at varied v so reflections sweep top-to-bottom
-  // as the camera turns and moves down the tube.
+  // Bright softbox pools across the upper band — crisp highlights on the metal.
   ctx.globalCompositeOperation = 'lighter';
-  const blobs = [
-    // u (0-1), v (0-1), radius px, [r,g,b], peak alpha
-    { u: 0.05, v: 0.34, r: 520, col: [192,  38, 211], a: 0.62 }, // violet
-    { u: 0.13, v: 0.62, r: 460, col: [255,  79, 216], a: 0.50 }, // magenta
-    { u: 0.21, v: 0.28, r: 500, col: [ 75, 125, 255], a: 0.58 }, // blue
-    { u: 0.30, v: 0.70, r: 430, col: [ 54, 224, 255], a: 0.44 }, // cyan
-    { u: 0.38, v: 0.40, r: 540, col: [192,  38, 211], a: 0.56 }, // violet
-    { u: 0.47, v: 0.66, r: 470, col: [ 75, 125, 255], a: 0.52 }, // blue
-    { u: 0.55, v: 0.30, r: 500, col: [255,  79, 216], a: 0.48 }, // magenta
-    { u: 0.63, v: 0.58, r: 510, col: [251, 191,  36], a: 0.50 }, // amber
-    { u: 0.71, v: 0.36, r: 440, col: [255, 122,  26], a: 0.46 }, // orange
-    { u: 0.79, v: 0.64, r: 520, col: [192,  38, 211], a: 0.58 }, // violet
-    { u: 0.87, v: 0.32, r: 470, col: [ 75, 125, 255], a: 0.54 }, // blue
-    { u: 0.95, v: 0.60, r: 460, col: [255,  79, 216], a: 0.50 }, // magenta
-    // a couple of warm accents low-down so the floor glows amber
-    { u: 0.42, v: 0.88, r: 420, col: [255, 122,  26], a: 0.40 },
-    { u: 0.68, v: 0.90, r: 400, col: [255,  48,  48], a: 0.36 },
+  const softboxes = [
+    { u: 0.12, v: 0.20, rx: 240, ry: 90 },
+    { u: 0.37, v: 0.15, rx: 200, ry: 80 },
+    { u: 0.60, v: 0.22, rx: 250, ry: 95 },
+    { u: 0.84, v: 0.16, rx: 210, ry: 82 },
   ];
-  for (const b of blobs) {
-    const cx = b.u * 2048;
-    const cy = b.v * 1024;
-    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, b.r);
-    const [r, gg, bb] = b.col;
-    rg.addColorStop(0.00, `rgba(${r},${gg},${bb},${b.a})`);
-    rg.addColorStop(0.45, `rgba(${r},${gg},${bb},${b.a * 0.35})`);
-    rg.addColorStop(1.00, `rgba(${r},${gg},${bb},0)`);
-    ctx.fillStyle = rg;
-    ctx.fillRect(0, 0, 2048, 1024);
-  }
-
-  // Bright specular glints — small near-white hotspots inside the colour
-  // field. On the glossy chrome these become sharp liquid-metal sparkles
-  // and give the highlights that "wet" oil-slick sheen.
-  const glints = [
-    { u: 0.18, v: 0.30, r: 70 },
-    { u: 0.36, v: 0.44, r: 60 },
-    { u: 0.54, v: 0.34, r: 75 },
-    { u: 0.66, v: 0.56, r: 64 },
-    { u: 0.82, v: 0.36, r: 70 },
-    { u: 0.92, v: 0.58, r: 58 },
-  ];
-  for (const gl of glints) {
-    const cx = gl.u * 2048;
-    const cy = gl.v * 1024;
-    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, gl.r);
+  for (const sb of softboxes) {
+    const cx = sb.u * 2048, cy = sb.v * 1024;
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(sb.rx, sb.ry) * 1.5);
     rg.addColorStop(0.00, 'rgba(255,255,255,0.95)');
-    rg.addColorStop(0.30, 'rgba(255,250,240,0.45)');
+    rg.addColorStop(0.40, 'rgba(255,255,255,0.45)');
     rg.addColorStop(1.00, 'rgba(255,255,255,0)');
     ctx.fillStyle = rg;
-    ctx.fillRect(0, 0, 2048, 1024);
+    ctx.beginPath(); ctx.ellipse(cx, cy, sb.rx, sb.ry, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // Tall vertical light strips — reflect as bright machined rails on the wall.
+  const strips = [0.04, 0.27, 0.50, 0.73, 0.96];
+  for (const u of strips) {
+    const cx = u * 2048;
+    const rg = ctx.createLinearGradient(cx - 26, 0, cx + 26, 0);
+    rg.addColorStop(0.0, 'rgba(255,255,255,0)');
+    rg.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+    rg.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(cx - 26, 120, 52, 620);
+  }
+  // A whisper of the four brand colours, very faint, low on the wall only.
+  const tints = [
+    { x: 256,  c: 'rgba(192,38,211,0.06)' },
+    { x: 768,  c: 'rgba(75,125,255,0.07)' },
+    { x: 1280, c: 'rgba(251,191,36,0.05)' },
+    { x: 1792, c: 'rgba(255,60,60,0.05)' },
+  ];
+  for (const tn of tints) {
+    const rg = ctx.createRadialGradient(tn.x, 820, 0, tn.x, 820, 360);
+    rg.addColorStop(0, tn.c); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, 2048, 1024);
   }
 
   ctx.globalCompositeOperation = 'source-over';
@@ -1062,101 +1046,326 @@ __aboutEnvSrc.dispose();
 __aboutPMREM.dispose();
 
 // =============================================================================
-// VERTICAL MIRROR CYLINDER ROOM
-// A real architectural space, not a flat backdrop. The camera stands INSIDE a
-// giant polished-metal cylinder: walls curve continuously through 360°, a
-// mirror floor reflects the whole chamber, a dark ceiling cap holds a bright
-// emissive light ring that pours a soft volumetric shaft down the centre.
+// CYLINDRICAL METAL LABORATORY  —  a real architectural interior
+// The camera stands INSIDE a tall brushed-aluminium cylinder. The wall is not
+// a smooth mirror (which only ever reflects a flat gradient) — it is a STRUCT-
+// URED surface: vertical panel mullions, horizontal level rings, and embedded
+// hero-colour neon columns, so curvature and depth are unmistakable. Six text
+// panels are mounted ON the wall, spiralling up; a true planar-reflector floor
+// throws the whole room back; the top opens to a bright light source far over-
+// head. Scroll dollies the camera up through the shaft, framing each panel.
 // References: Apple Vision Pro stage, teamLab chamber, sci-fi museum hall.
-// radius 7.5 (≈15 m diameter), height 26 (≈20 m). Axis is vertical (Y), so
-// looking up the cylinder climbs away and looking down the floor mirrors back.
-const ROOM_R = 7.5;
-const ROOM_H = 26;
+const ROOM_R = 6.5;                 // ≈13 m diameter
+const ROOM_H = 56;                  // tall shaft to travel up through
+const FLOOR_Y = -ROOM_H / 2;
+const HERO_HEX = [0xc026d3, 0x4b7dff, 0xfbbf24, 0xff3030];
+const HERO_CSS = ['#c026d3', '#4b7dff', '#fbbf24', '#ff3030'];
 
-// Curved wall — pure mirror chrome reflecting the iridescent env field.
-// metalness 1.0 = no diffuse, all colour comes from the reflection; low
-// roughness keeps it sharp but lets the colour bands smear into liquid flow.
+// ---- Wall colour texture: brushed steel + mullion seams + level rings -------
+function buildWallColorTex() {
+  const c = document.createElement('canvas');
+  c.width = 2048; c.height = 4096;
+  const x = c.getContext('2d');
+  // brushed steel base
+  const g = x.createLinearGradient(0, 0, 0, 4096);
+  g.addColorStop(0.0, '#aeb4c2');
+  g.addColorStop(0.5, '#cdd2dd');
+  g.addColorStop(1.0, '#9aa0b0');
+  x.fillStyle = g; x.fillRect(0, 0, 2048, 4096);
+  // fine vertical brushed streaks
+  for (let i = 0; i < 1400; i++) {
+    const px = Math.random() * 2048;
+    x.strokeStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
+    x.lineWidth = Math.random() * 1.5;
+    x.beginPath(); x.moveTo(px, 0); x.lineTo(px + (Math.random() - 0.5) * 6, 4096); x.stroke();
+  }
+  // 12 vertical mullion seams (panel divisions around the circumference)
+  const cols = 12;
+  for (let i = 0; i < cols; i++) {
+    const px = (i / cols) * 2048;
+    const sg = x.createLinearGradient(px - 14, 0, px + 14, 0);
+    sg.addColorStop(0.0, 'rgba(60,66,80,0)');
+    sg.addColorStop(0.42, 'rgba(40,44,56,0.85)');
+    sg.addColorStop(0.5, 'rgba(20,22,30,0.95)');
+    sg.addColorStop(0.58, 'rgba(40,44,56,0.85)');
+    sg.addColorStop(1.0, 'rgba(60,66,80,0)');
+    x.fillStyle = sg; x.fillRect(px - 14, 0, 28, 4096);
+    // bright highlight rail just left of each seam (machined edge)
+    x.fillStyle = 'rgba(255,255,255,0.5)';
+    x.fillRect(px - 17, 0, 2, 4096);
+  }
+  // horizontal level rings (structural floor bands)
+  const rings = 9;
+  for (let i = 1; i < rings; i++) {
+    const py = (i / rings) * 4096;
+    const rg = x.createLinearGradient(0, py - 10, 0, py + 10);
+    rg.addColorStop(0.0, 'rgba(60,66,80,0)');
+    rg.addColorStop(0.5, 'rgba(22,24,32,0.9)');
+    rg.addColorStop(1.0, 'rgba(60,66,80,0)');
+    x.fillStyle = rg; x.fillRect(0, py - 10, 2048, 20);
+    x.fillStyle = 'rgba(255,255,255,0.45)';
+    x.fillRect(0, py - 13, 2048, 2);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+// ---- Wall emissive texture: hero-colour neon columns set into seams ---------
+function buildWallEmissiveTex() {
+  const c = document.createElement('canvas');
+  c.width = 2048; c.height = 4096;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, 2048, 4096);
+  // 4 tall neon columns, one per hero colour, recessed into 4 of the seams
+  const seams = [1, 4, 7, 10];
+  for (let k = 0; k < 4; k++) {
+    const px = (seams[k] / 12) * 2048;
+    const sg = x.createLinearGradient(px - 8, 0, px + 8, 0);
+    sg.addColorStop(0.0, 'rgba(0,0,0,0)');
+    sg.addColorStop(0.5, HERO_CSS[k]);
+    sg.addColorStop(1.0, 'rgba(0,0,0,0)');
+    x.fillStyle = sg;
+    x.globalAlpha = 0.9;
+    x.fillRect(px - 8, 60, 16, 4096 - 120);
+    x.globalAlpha = 1;
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 const wallMat = new THREE.MeshStandardMaterial({
-  color: 0xf2f3fa,
-  metalness: 1.0,
-  roughness: 0.12,
-  envMapIntensity: 2.2,
+  map: buildWallColorTex(),
+  metalness: 0.95,
+  roughness: 0.17,                  // polished aluminium — structure still reads
+  envMapIntensity: 1.5,
+  emissive: 0xffffff,
+  emissiveMap: buildWallEmissiveTex(),
+  emissiveIntensity: 1.25,          // neon columns are accents, not the mood
   side: THREE.BackSide,
 });
 const roomWall = new THREE.Mesh(
-  new THREE.CylinderGeometry(ROOM_R, ROOM_R, ROOM_H, 160, 1, true),
+  new THREE.CylinderGeometry(ROOM_R, ROOM_R, ROOM_H, 200, 1, true),
   wallMat
 );
 aboutScene.add(roomWall);
 
-// Mirror floor — sharper (lower roughness) so it reads as a wet reflective
-// surface throwing the whole room back at the viewer when they look down.
-const floorMat = new THREE.MeshStandardMaterial({
-  color: 0xeef0f8,
-  metalness: 1.0,
-  roughness: 0.06,
-  envMapIntensity: 2.4,
-});
-const roomFloor = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R, 160), floorMat);
-roomFloor.rotation.x = -Math.PI / 2;        // lay flat, normal pointing up
-roomFloor.position.y = -ROOM_H / 2;
-aboutScene.add(roomFloor);
+// ---- Floor: true planar mirror (Reflector) reflecting the whole room --------
+const reflectorFloor = new Reflector(
+  new THREE.CircleGeometry(ROOM_R, 128),
+  { clipBias: 0.003, textureWidth: 1024, textureHeight: 1024, color: 0x6b7280 }
+);
+reflectorFloor.rotation.x = -Math.PI / 2;
+reflectorFloor.position.y = FLOOR_Y + 0.01;
+aboutScene.add(reflectorFloor);
+// faint concentric grid laid over the mirror so it reads as a real surface
+function buildFloorGridTex() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1024;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 1024, 1024);
+  x.strokeStyle = 'rgba(180,195,225,0.5)';
+  for (let r = 1; r <= 7; r++) {
+    x.lineWidth = r === 7 ? 4 : 1.5;
+    x.beginPath(); x.arc(512, 512, (r / 7) * 500, 0, Math.PI * 2); x.stroke();
+  }
+  x.strokeStyle = 'rgba(180,195,225,0.32)';
+  x.lineWidth = 1.2;
+  for (let a = 0; a < 24; a++) {
+    const ang = (a / 24) * Math.PI * 2;
+    x.beginPath(); x.moveTo(512, 512);
+    x.lineTo(512 + Math.cos(ang) * 500, 512 + Math.sin(ang) * 500); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const floorGrid = new THREE.Mesh(
+  new THREE.CircleGeometry(ROOM_R, 128),
+  new THREE.MeshBasicMaterial({
+    map: buildFloorGridTex(), transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  })
+);
+floorGrid.rotation.x = -Math.PI / 2;
+floorGrid.position.y = FLOOR_Y + 0.02;
+aboutScene.add(floorGrid);
 
-// Dark metal ceiling cap so the top reads as a real lid, not open sky.
-const ceilMat = new THREE.MeshStandardMaterial({
-  color: 0x10121a,
-  metalness: 1.0,
-  roughness: 0.35,
-  envMapIntensity: 0.8,
-  side: THREE.BackSide,
-});
-const roomCeil = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R, 160), ceilMat);
-roomCeil.rotation.x = Math.PI / 2;          // normal pointing down
-roomCeil.position.y = ROOM_H / 2;
-aboutScene.add(roomCeil);
-
-// Bright emissive light ring set into the ceiling — the room's key light.
-const ringLightMat = new THREE.MeshBasicMaterial({
-  color: 0xeaf2ff,
-  transparent: true,
-  opacity: 0.95,
-  blending: THREE.AdditiveBlending,
-  side: THREE.DoubleSide,
-  depthWrite: false,
-});
+// ---- Ceiling: bright opening far overhead + key light + volumetric shaft ----
+const CEIL_Y = ROOM_H / 2;
+// Dark metal ceiling cap with a circular OCULUS opening in the centre. The
+// opening glows bright (the light source far overhead) but is modest in size,
+// so looking up reads as "a distant skylight" rather than a wall of white.
+const ceilCap = new THREE.Mesh(
+  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R, 96),
+  new THREE.MeshStandardMaterial({
+    color: 0x161922, metalness: 0.9, roughness: 0.4,
+    envMapIntensity: 0.7, side: THREE.DoubleSide,
+  })
+);
+ceilCap.rotation.x = Math.PI / 2;
+ceilCap.position.y = CEIL_Y;
+aboutScene.add(ceilCap);
+const ceilGlow = new THREE.Mesh(
+  new THREE.CircleGeometry(ROOM_R * 0.40, 96),
+  new THREE.MeshBasicMaterial({
+    color: 0xeef4ff, transparent: true, opacity: 0.98,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
+  })
+);
+ceilGlow.rotation.x = Math.PI / 2;
+ceilGlow.position.y = CEIL_Y - 0.1;
+aboutScene.add(ceilGlow);
 const ceilRing = new THREE.Mesh(
-  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R * 0.60, 96),
-  ringLightMat
+  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R * 0.50, 96),
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
+  })
 );
 ceilRing.rotation.x = Math.PI / 2;
-ceilRing.position.y = ROOM_H / 2 - 0.06;
+ceilRing.position.y = CEIL_Y - 0.05;
 aboutScene.add(ceilRing);
-
-// Real point light at the ceiling ring — this is the actual illumination the
-// chrome and floor pick up (the env map is ambient fill; this is the key).
-const ceilKey = new THREE.PointLight(0xdfeaff, 2.6, ROOM_H * 2.4, 1.4);
-ceilKey.position.set(0, ROOM_H / 2 - 1.0, 0);
+const ceilKey = new THREE.PointLight(0xeaf2ff, 3.0, ROOM_H * 2.6, 1.3);
+ceilKey.position.set(0, CEIL_Y - 1.5, 0);
 aboutScene.add(ceilKey);
-
-// Soft VOLUMETRIC SHAFT — a faint additive cone widening downward from the
-// ceiling ring, reading as light falling through the chamber's dusty air.
-const shaftMat = new THREE.MeshBasicMaterial({
-  color: 0xbcd0ff,
-  transparent: true,
-  opacity: 0.05,
-  blending: THREE.AdditiveBlending,
-  side: THREE.DoubleSide,
-  depthWrite: false,
-});
+const fillKey = new THREE.PointLight(0xbfd0ff, 0.8, ROOM_H * 1.2, 1.6);
+fillKey.position.set(0, 0, 0);
+aboutScene.add(fillKey);
+// volumetric shaft cone widening down from the opening
 const lightShaft = new THREE.Mesh(
-  new THREE.CylinderGeometry(ROOM_R * 0.50, ROOM_R * 0.94, ROOM_H, 64, 1, true),
-  shaftMat
+  new THREE.CylinderGeometry(ROOM_R * 0.55, ROOM_R * 0.99, ROOM_H, 64, 1, true),
+  new THREE.MeshBasicMaterial({
+    color: 0xc4d6ff, transparent: true, opacity: 0.045,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
+  })
 );
 aboutScene.add(lightShaft);
 
-// Illumination = ceiling key light + iridescent env reflection + the random
-// colour light lines (each carries its own PointLight). Together they give the
-// chamber real volumetric light and true environment reflections.
+// =============================================================================
+// WALL-MOUNTED CONTENT PANELS  —  the six SceneA steps, embedded in the wall
+// Each is a curved cylinder-segment screen flush to the inner wall, carrying a
+// canvas texture (step number + heading + body + accent edge). They spiral up
+// the shaft so the travelling camera frames them one by one. The wall itself
+// is the information carrier — no floating cards.
+const PANEL_DATA = [
+  { num: '01',
+    en: { h: 'Turning Ideas Into Things', p: 'Most of my projects begin as simple thoughts. Building them helps me understand what works, what fails.' },
+    cn: { h: '把想法变成事物', p: '我的大多数项目，都从一个简单的想法开始。把它们做出来，才能看清什么行得通、什么不行。' } },
+  { num: '02',
+    en: { h: 'Curiosity Has Always Been My Motivation', p: 'Business, technology, design, and psychology are the areas of mine. Exploring different areas often leads to unexpected connections and new possibilities.' },
+    cn: { h: '好奇心一直是我的动力', p: '商业、技术、设计与心理学，是我关切的几个领域。在它们之间穿行，常常带来意想不到的连接和崭新的可能。' } },
+  { num: '03',
+    en: { h: 'Creation Is How I Learn', p: 'I was born in 2009. Since the age of fifteen, creating value has become one of the ways I define myself.' },
+    cn: { h: '创造是我学习的方式', p: '我出生于 2009 年。从十五岁起，创造价值成为我定义自己的方式之一。' } },
+  { num: '04',
+    en: { h: '“Don’t Ever Leave Yourself Behind Today”', p: 'Each step forward helps build the future I want to live in, a world full of act, now I am better.' },
+    cn: { h: '“别把今天的自己留在身后”', p: '每一步向前，都在搭建我想要生活的未来——一个充满行动的世界。此刻的我，更好了。' } },
+  { num: '05',
+    en: { h: 'I Am Still Figuring Things Out', p: 'YAO FLAME LAB is here due to It is a record of exploration experimentation and continuous learning.' },
+    cn: { h: '我还在摸索', p: 'YAO FLAME LAB 之所以存在，因为它是一份关于探索、实验与持续学习的记录。' } },
+  { num: '06',
+    en: { h: 'This Is Daniel Rong', p: 'A young creator · A persistent builder · A 16 years old from West Vancouver.  Still learning, still exploring, still building.' },
+    cn: { h: '他是 Daniel Rong', p: '一个年轻的创作者 · 一个执着的建造者 · 一个来自西温哥华的 16 岁少年。仍在学习，仍在探索，仍在创造。' } },
+];
+const PANEL_ARC = 1.05;             // radians of circumference each panel spans
+const PANEL_H   = 5.4;
+function wrapText(x, text, maxW) {
+  const words = text.split(/(\s+)/);
+  const lines = []; let cur = '';
+  for (const w of words) {
+    if (x.measureText(cur + w).width > maxW && cur) { lines.push(cur.trimEnd()); cur = w.trimStart(); }
+    else cur += w;
+  }
+  if (cur.trim()) lines.push(cur.trimEnd());
+  return lines;
+}
+function drawPanelTexture(canvas, data, idx, lang) {
+  const x = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const accent = HERO_CSS[idx % 4];
+  // dark inset screen background
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#181b24'); g.addColorStop(1, '#0c0e14');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // subtle brushed sheen
+  for (let i = 0; i < 200; i++) {
+    x.strokeStyle = `rgba(255,255,255,${Math.random() * 0.025})`;
+    x.lineWidth = 1; const px = Math.random() * W;
+    x.beginPath(); x.moveTo(px, 0); x.lineTo(px, H); x.stroke();
+  }
+  // accent edge bar (left) + inner frame
+  x.fillStyle = accent; x.fillRect(70, 70, 12, H - 140);
+  x.strokeStyle = 'rgba(150,165,200,0.25)'; x.lineWidth = 2;
+  x.strokeRect(70, 70, W - 140, H - 140);
+  const L = 130;
+  // step number
+  x.fillStyle = accent;
+  x.font = '600 64px Georgia, "Times New Roman", serif';
+  x.textBaseline = 'top';
+  x.fillText(data.num, L, 110);
+  // heading
+  const d = data[lang] || data.en;
+  x.fillStyle = '#eef1f8';
+  x.font = '600 70px Georgia, "Times New Roman", serif';
+  let yy = 200;
+  for (const line of wrapText(x, d.h, W - L - 130)) { x.fillText(line, L, yy); yy += 84; }
+  // body
+  yy += 24;
+  x.fillStyle = 'rgba(206,214,232,0.82)';
+  x.font = '400 40px "Helvetica Neue", Arial, sans-serif';
+  for (const line of wrapText(x, d.p, W - L - 130)) { x.fillText(line, L, yy); yy += 58; }
+  // accent glow footer line
+  x.fillStyle = accent; x.globalAlpha = 0.7;
+  x.fillRect(L, H - 150, 220, 5); x.globalAlpha = 1;
+}
+const aboutPanels = [];
+let __aboutLang = (document.body.classList.contains('lang-cn')) ? 'cn' : 'en';
+for (let i = 0; i < PANEL_DATA.length; i++) {
+  const cv = document.createElement('canvas');
+  cv.width = 1280; cv.height = 720;
+  drawPanelTexture(cv, PANEL_DATA[i], i, __aboutLang);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  // mirror horizontally: a BackSide cylinder segment flips U, so pre-flip here
+  tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = -1; tex.offset.x = 1;
+  const angle = i * (Math.PI * 2 / PANEL_DATA.length);   // spiral around
+  const py = FLOOR_Y + 7 + i * ((ROOM_H - 16) / (PANEL_DATA.length - 1));
+  const geo = new THREE.CylinderGeometry(
+    ROOM_R - 0.06, ROOM_R - 0.06, PANEL_H, 48, 1, true,
+    angle - PANEL_ARC / 2, PANEL_ARC
+  );
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.85,
+    metalness: 0.1, roughness: 0.65, side: THREE.BackSide,
+    transparent: true,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = py;
+  aboutScene.add(mesh);
+  aboutPanels.push({ mesh, canvas: cv, tex, angle, y: py });
+}
+// redraw all panels on language switch (called from setLang)
+function redrawAboutPanels(lang) {
+  __aboutLang = (lang === 'cn') ? 'cn' : 'en';
+  for (let i = 0; i < aboutPanels.length; i++) {
+    drawPanelTexture(aboutPanels[i].canvas, PANEL_DATA[i], i, __aboutLang);
+    aboutPanels[i].tex.needsUpdate = true;
+  }
+}
+window.__redrawAboutPanels = redrawAboutPanels;
+
+// The HTML staircase + portrait centrepiece are retired — content now lives on
+// the wall, so the room is never blocked by a floating figure or glass card.
+const __staircaseEl = document.getElementById('staircase');
+if (__staircaseEl) __staircaseEl.style.display = 'none';
+glassFlame.visible = false;
+portrait.visible = false;
+
+// Illumination = ceiling key light + emissive neon columns + iridescent env
+// reflection + the random colour light lines. Real volumetric light + true
+// environment + planar floor reflection together sell the architectural space.
 
 // --- Random neon light line pool ---
 // Six simultaneous slots. Each holds an additive-blended cylinder mesh
@@ -1198,13 +1407,13 @@ function tickLightLines(t, dt) {
         ln.mesh.material.color.setHex(hex);
         ln.light.color.setHex(hex);
         // Random spawn inside the vertical room volume. Cylindrical coords:
-        // radius ≤ 6 (inset from the 7.5 wall), full height ±(ROOM_H*0.42)
-        // so neon bars hang at all levels of the chamber.
+        // radius ≤ 5 (inset from the 6.5 wall), spread up the full shaft so
+        // neon bars hang at all levels and their reflections streak the wall.
         const ang = Math.random() * Math.PI * 2;
-        const rad = Math.random() * 6;
+        const rad = Math.random() * 5;
         ln.mesh.position.set(
           Math.cos(ang) * rad,
-          (Math.random() - 0.5) * ROOM_H * 0.84,
+          (Math.random() - 0.5) * ROOM_H * 0.9,
           Math.sin(ang) * rad
         );
         ln.light.position.copy(ln.mesh.position);
@@ -2033,31 +2242,42 @@ function aboutTick() {
       pc.material.uniforms.uOpacity.value = PANEL_CLOUD_OP[i];
     }
 
-    // First-person operator standing INSIDE the vertical mirror room.
-    // The forward-flight tunnel narrative is retired — instead the camera
-    // walks a slow circular path near the centre, sweeping the curved walls.
-    // Scroll (aboutScrollProgress 0→1) drives a vertical RISE and a yaw
-    // sweep; idle time adds a gentle breathing bob so the space feels alive.
-    // Looking direction pitches UP as you rise (the cylinder climbs away);
-    // near the bottom it tips down so the mirror floor fills the lower frame.
+    // TRAVEL CAMERA — the operator rides UP the cylindrical shaft. Scroll
+    // (aboutScrollProgress 0→1) dollies the eye from floor level toward the
+    // ceiling opening, while the yaw tracks the wall panel at the current
+    // height so each of the six panels is framed head-on in turn. The camera
+    // sits a little off-centre on the OPPOSITE side of the target panel, so
+    // the panel reads across the room and the curved wall wraps around it.
     const sp = aboutScrollProgress;
-    const orbitR = 3.0;
-    const yaw    = t * 0.045 + sp * Math.PI * 1.3;     // auto-rotate + scroll sweep
-    const px = Math.sin(yaw) * orbitR;
-    const pz = Math.cos(yaw) * orbitR;
-    const eyeY = -ROOM_H * 0.30 + sp * ROOM_H * 0.52   // rise low → upper-mid
-               + Math.sin(t * 0.4) * 0.18;             // breathing bob
-    aboutCam.position.set(px, eyeY, pz);
+    const N = aboutPanels.length;
+    // Panels occupy the first 84% of the scroll; the last stretch ascends
+    // into the bright ceiling opening with a look-up.
+    const travel = Math.min(1, sp / 0.84);
+    const fIdx = travel * (N - 1);
+    const i0 = Math.floor(fIdx);
+    const i1 = Math.min(N - 1, i0 + 1);
+    const f  = fIdx - i0;
+    const ease = f * f * (3 - 2 * f);                  // smoothstep between panels
+    const ang  = aboutPanels[i0].angle + (aboutPanels[i1].angle - aboutPanels[i0].angle) * ease;
+    const tgtY = aboutPanels[i0].y + (aboutPanels[i1].y - aboutPanels[i0].y) * ease;
 
-    // Look ahead along the orbit tangent, pitched by scroll: down at the
-    // mirror floor when low, level mid-way, up at the ceiling ring when high.
-    const lookAng = yaw + 0.55;
-    const lookR   = orbitR * 1.5;
-    const pitch   = -0.35 + sp * 1.25;                 // -0.35 (down) → +0.9 (up)
+    const bob  = Math.sin(t * 0.5) * 0.12;
+    const camRad = 2.7;
+    const camAng = ang + Math.PI;                      // stand opposite the panel
+    const eyeY = tgtY + bob;
+    aboutCam.position.set(
+      Math.sin(camAng) * camRad,
+      eyeY,
+      Math.cos(camAng) * camRad
+    );
+
+    // End-of-scroll: pitch the look upward toward the ceiling opening so the
+    // viewer feels the full height of the shaft above them.
+    const upLook = Math.max(0, (sp - 0.84) / 0.16);    // 0 until 84%, →1 at end
     aboutCam.lookAt(
-      Math.sin(lookAng) * lookR,
-      eyeY + pitch * 6.0,
-      Math.cos(lookAng) * lookR
+      Math.sin(ang) * ROOM_R * (1 - upLook),
+      tgtY + upLook * (CEIL_Y - tgtY) * 0.9,
+      Math.cos(ang) * ROOM_R * (1 - upLook)
     );
 
     // Hard-hide the retired tunnel point cloud so it never floats in the room.
@@ -2076,6 +2296,7 @@ function setLang(lang) {
   document.body.classList.remove('lang-en', 'lang-cn');
   document.body.classList.add('lang-' + lang);
   document.documentElement.lang = (lang === 'cn') ? 'zh-CN' : 'en';
+  if (window.__redrawAboutPanels) window.__redrawAboutPanels(lang);
   document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
     b.classList.toggle('active', b.dataset.setLang === lang);
   });
