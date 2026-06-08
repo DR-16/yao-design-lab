@@ -911,3 +911,310 @@ main { position: relative; }
   .cat[data-cat="welfare"]  { left: 22%; top: 72%; }
   .cat[data-cat="creative"] { left: 78%; top: 68%; }
 }
+
+/* ============================================================
+   WORLD C — GALLERY EXHIBITION WALL-LABEL TREATMENT
+   ============================================================
+   Layered on top of the existing SceneA/SceneB without changing
+   their geometry, scroll logic, or transitions. Adds:
+   1. Editorial three-font system (Fraunces / Inter / Caveat)
+   2. Chapter Card overlays (full-screen 2.5s entry pages)
+   3. Faint hero-stripe echoes baked into A/B background
+   4. Bottom-right "stamp" emblem with brand wordmark
+   5. Per-panel metadata strip (exhibition wall-label style)
+   6. Signature placeholder spots (to be replaced with hand scans)
+   Reversible via `git reset --hard 3284570`.
+   ------------------------------------------------------------ */
+
+:root {
+  --font-display: "Fraunces", "Songti SC", "Times New Roman", serif;
+  --font-body:    "Fraunces", "Songti SC", "Times New Roman", serif;
+  --font-label:   "Inter", system-ui, -apple-system, sans-serif;
+  --font-hand:    "Caveat", "Brush Script MT", cursive;
+}
+
+/* ---- 1. Editorial typography overrides for A/B (does NOT touch hero) ---- */
+.about-view .step h3 {
+  font-family: var(--font-display);
+  font-weight: 350;
+  font-style: italic;
+  font-size: clamp(22px, 1.7vw, 26px);
+  letter-spacing: -0.005em;
+  line-height: 1.18;
+  margin-bottom: 12px;
+}
+.about-view .step p:not(.step-num):not(.step-meta) {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1.72;
+  letter-spacing: 0.005em;
+  opacity: 0.82;
+}
+.about-view .step .step-num,
+.about-view .corridor-step .step-num {
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-bottom: 6px;
+}
+.about-view .corridor-step .step-placeholder {
+  font-family: var(--font-display);
+  font-style: italic;
+}
+.about-view .scene-b-lines {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 350;
+}
+
+/* ---- 2. Step metadata strip — exhibition wall-label line ---- */
+.about-view .step .step-meta,
+.about-view .corridor-step .step-meta {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  line-height: 1.4;
+}
+.step-meta-id { color: rgba(255, 215, 130, 0.9); font-weight: 600; }
+.step-meta-section { font-style: italic; text-transform: none; letter-spacing: 0.04em; font-size: 11px; opacity: 0.85; }
+.step-meta-place { opacity: 0.6; }
+.step-meta-dot { opacity: 0.35; font-weight: 300; }
+
+/* ---- 3. Faint hero-stripe echoes in A/B background ----
+   Diagonal stripes at 4–6% opacity, positioned UNDER the WebGL canvas
+   (z 0, canvas is z 1). If aboutStage renderer was created with alpha,
+   these bleed through; otherwise they're hidden by the canvas — which
+   is fine because they still tint the chapter cards (which sit above
+   the canvas via z 50). */
+.about-stripes {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.about-stripe {
+  position: absolute;
+  left: -50vw;
+  width: 200vw;
+  height: 22vh;
+  will-change: transform;
+}
+.about-stripe-1 { top: 6%;  background: linear-gradient(180deg, transparent 0%, #c026d3 18%, #c026d3 82%, transparent 100%); opacity: 0.05; transform: rotate(-22deg); }
+.about-stripe-2 { top: 30%; background: linear-gradient(180deg, transparent 0%, #fbbf24 18%, #fbbf24 82%, transparent 100%); opacity: 0.04; transform: rotate(22deg); }
+.about-stripe-3 { top: 54%; background: linear-gradient(180deg, transparent 0%, #1e40af 18%, #1e40af 82%, transparent 100%); opacity: 0.06; transform: rotate(-22deg); }
+.about-stripe-4 { top: 78%; background: linear-gradient(180deg, transparent 0%, #7f1d1d 18%, #7f1d1d 82%, transparent 100%); opacity: 0.06; transform: rotate(22deg); }
+
+/* ---- 4. Bottom-right brand stamp — visible across A and B ---- */
+.about-stamp {
+  position: fixed;
+  bottom: 24px;
+  right: 30px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s ease 0.4s;
+  color: rgba(220, 220, 250, 0.65);
+}
+body.mode-about .about-stamp { opacity: 1; }
+.about-stamp-icon {
+  width: 32px;
+  height: 32px;
+  animation: stamp-spin 32s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(192, 38, 211, 0.18));
+}
+@keyframes stamp-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.about-stamp-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1;
+}
+.about-stamp-brand {
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.about-stamp-meta {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+
+/* ---- 5. Signature placeholder spots ----
+   Dashed-outlined caveat-font box marking where the user's handwritten
+   signature will be inserted. The `↓ SIGNATURE` micro-label above each
+   spot makes the development phase obvious so the user knows exactly
+   what to scan / where each scan will land. Remove the ::before label
+   once real scans are dropped in. */
+.signature-spot {
+  position: relative;
+  pointer-events: none;
+}
+.signature-spot--small {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: inline-block;
+}
+.signature-spot--small .sig-placeholder {
+  font-size: 18px;
+  padding: 2px 8px;
+}
+.signature-spot--card {
+  margin-top: 64px;
+  display: inline-block;
+}
+.signature-spot--card .sig-placeholder {
+  font-size: 38px;
+  padding: 8px 22px;
+}
+.signature-spot--final {
+  display: block;
+  margin-top: 22px;
+  text-align: center;
+}
+.signature-spot--final .sig-placeholder {
+  font-size: 32px;
+  padding: 6px 18px;
+}
+.signature-spot .sig-placeholder {
+  font-family: var(--font-hand);
+  font-weight: 500;
+  color: rgba(230, 220, 255, 0.62);
+  letter-spacing: 0.02em;
+  display: inline-block;
+  border: 1px dashed rgba(220, 200, 255, 0.22);
+  border-radius: 4px;
+  position: relative;
+  white-space: nowrap;
+  transform: rotate(-3deg);
+}
+.signature-spot .sig-placeholder::before {
+  content: "↓ SIGNATURE";
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%) rotate(3deg);
+  font-family: var(--font-label);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(255, 215, 110, 0.7);
+  white-space: nowrap;
+}
+
+/* ---- 6. Chapter Card overlays ----
+   Full-screen overlay with editorial typography. Fades in for ~2.5s
+   when entering A (Chapter 01) or B (Chapter 02), then fades out.
+   z-index 50 sits above the entire about-view content but below the
+   language switch / cursor at z 100+. */
+.chapter-card {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: radial-gradient(ellipse at center, rgba(15, 10, 25, 0.97), rgba(5, 3, 12, 1) 70%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.chapter-card.active { opacity: 1; }
+.chapter-card::before {
+  /* Diagonal stripe wash carrying hero colour DNA */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(112deg, transparent 8%, rgba(192, 38, 211, 0.06) 14%, rgba(192, 38, 211, 0.06) 18%, transparent 24%),
+    linear-gradient(68deg,  transparent 36%, rgba(251, 191, 36, 0.05) 40%, rgba(251, 191, 36, 0.05) 44%, transparent 50%),
+    linear-gradient(112deg, transparent 60%, rgba(75, 125, 255, 0.07) 64%, rgba(75, 125, 255, 0.07) 68%, transparent 74%),
+    linear-gradient(68deg,  transparent 84%, rgba(255, 60, 60, 0.06) 88%, rgba(255, 60, 60, 0.06) 92%, transparent 98%);
+  pointer-events: none;
+}
+.cc-inner {
+  position: relative;
+  text-align: center;
+  max-width: 780px;
+  padding: 0 40px;
+  color: rgba(245, 240, 255, 0.92);
+}
+.cc-eyebrow {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-bottom: 32px;
+  color: rgba(255, 215, 130, 0.9);
+}
+.cc-title {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(48px, 7vw, 96px);
+  line-height: 1.02;
+  margin: 0 0 24px;
+  letter-spacing: -0.015em;
+}
+.cc-subtitle {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 350;
+  font-size: clamp(17px, 1.5vw, 22px);
+  opacity: 0.72;
+  margin-bottom: 40px;
+  letter-spacing: 0.015em;
+  line-height: 1.5;
+}
+.cc-meta {
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+.cc-meta .cc-dot { opacity: 0.4; }
+.cc-meta .cc-time {
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+

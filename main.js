@@ -1310,7 +1310,15 @@ function updateAboutScroll() {
   // the portal's mid-point (portalProgress > 0.5), so by the time the user lands
   // in scene B the title already says "WHY THIS LAB EXISTS".
   document.body.classList.toggle('in-portal', inPortal);
-  document.body.classList.toggle('scene-b', inSceneB || portalProgress > 0.5);
+  const nowSceneB = inSceneB || portalProgress > 0.5;
+  const wasSceneB = updateAboutScroll.lastSceneB === true;
+  document.body.classList.toggle('scene-b', nowSceneB);
+  // Trigger Chapter Card 02 the first time scene-b becomes active in this
+  // session. showChapterCard internally gates via __chapterShown.b so this
+  // is safe to call on every transition; we still gate on the rising edge
+  // to avoid retriggering setTimeout work on every frame.
+  if (nowSceneB && !wasSceneB) showChapterCard('b');
+  updateAboutScroll.lastSceneB = nowSceneB;
 
   // When the focused panel changes, fire ONE coloured ring (no scene-cross
   // explosion). At the A↔B boundary the ring naturally streaks upward and
@@ -1599,6 +1607,26 @@ function emitShockwave() {
   ringGeo.attributes.life.needsUpdate     = true;
 }
 
+// === WORLD C — Chapter card system ===
+// Two full-screen entry cards sit above the about-view at z 50. Card 01
+// fires when the user enters via the WHO I AM ring (sceneA path). Card 02
+// fires the first time `body.scene-b` activates within a session. Both
+// auto-dismiss after CHAPTER_CARD_HOLD_MS. Flags reset in exitAbout() so a
+// fresh visit re-shows them.
+const CHAPTER_CARD_HOLD_MS = 2500;
+const __chapterShown = { a: false, b: false };
+function showChapterCard(which) {
+  const el = document.getElementById(which === 'a' ? 'chapterCard01' : 'chapterCard02');
+  if (!el || __chapterShown[which]) return;
+  __chapterShown[which] = true;
+  el.classList.add('active');
+  el.setAttribute('aria-hidden', 'false');
+  setTimeout(() => {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  }, CHAPTER_CARD_HOLD_MS);
+}
+
 function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
   if (mode === 'about') return;
   mode = 'about';
@@ -1633,6 +1661,11 @@ function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
     } else {
       aboutScroll.scrollTop = 0;
       updateAboutScroll();
+      // Ring 1 (WHO I AM) → SceneA entry. Show Chapter 01 card immediately so
+      // it fades in alongside the about-view's punch-in. Card 02 will fire
+      // later when the user scrolls into SceneB. (Ring 2 direct entry skips
+      // Card 01 and lets Card 02 fire when scene-b auto-activates.)
+      showChapterCard('a');
     }
   }, 480);
 }
@@ -1667,6 +1700,16 @@ function exitAbout() {
   document.body.classList.remove('in-portal');
   aboutView.classList.remove('active');
   aboutView.setAttribute('aria-hidden', 'true');
+  // Reset chapter-card session flags so a fresh visit re-shows them.
+  __chapterShown.a = false;
+  __chapterShown.b = false;
+  updateAboutScroll.lastSceneB = false;
+  // Also force-hide any card that's currently mid-display, otherwise it
+  // would still be visible on the hero after exit.
+  document.querySelectorAll('.chapter-card').forEach((el) => {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  });
   // pull the hero camera back to its starting position so the hero page
   // looks the same as it did before the user opened about
   playCameraReturnToHero(600);

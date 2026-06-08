@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yao Design Lab</title>
+  <!-- WORLD C — editorial three-font system. All free, no API key.
+       Fraunces: variable serif used at display sizes for chapter headers /
+                 step titles, and at text sizes for prose.
+       Inter:    grotesque sans for numerical labels, section meta, the
+                 wordmark in the corner stamp. Matches the hero nav font
+                 family direction (modernist).
+       Caveat:   handwriting placeholder for signatures, replaced when the
+                 user provides a scanned signature. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400..700&family=Caveat:wght@400..700&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="lang-en">
@@ -103,6 +114,33 @@
        a separate WebGL canvas for liquid-glass flame + particle portrait, and a
        CSS-3D "spiral staircase" of text that rotates as you scroll inside the view. -->
   <section id="aboutView" class="about-view" aria-hidden="true">
+    <!-- WORLD C: faint hero-stripe echoes living UNDER the WebGL canvas so
+         the four brand colours (violet/yellow/blue/red) bleed faintly into
+         the dark about-view background. Opacity 4–6% — almost invisible,
+         but the eye registers the colour DNA from the hero. -->
+    <div class="about-stripes" aria-hidden="true">
+      <div class="about-stripe about-stripe-1"></div>
+      <div class="about-stripe about-stripe-2"></div>
+      <div class="about-stripe about-stripe-3"></div>
+      <div class="about-stripe about-stripe-4"></div>
+    </div>
+
+    <!-- WORLD C: bottom-right brand stamp. Visible whenever about-view is
+         active, regardless of A vs B. The slowly-rotating three-ring SVG
+         echoes the hero's 3-layer cylinder. -->
+    <div class="about-stamp" aria-hidden="true">
+      <svg class="about-stamp-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1">
+        <circle cx="20" cy="20" r="16" />
+        <circle cx="20" cy="20" r="11" />
+        <circle cx="20" cy="20" r="6"  />
+        <line x1="20" y1="2"  x2="20" y2="38" stroke-width="0.5" opacity="0.4" />
+      </svg>
+      <div class="about-stamp-text">
+        <span class="about-stamp-brand">YAO DESIGN LAB</span>
+        <span class="about-stamp-meta">EXHIBITION I &nbsp;·&nbsp; 2025</span>
+      </div>
+    </div>
+
     <button class="about-close" type="button" id="aboutClose">
       <span class="about-close-arrow">←</span>
       <span class="about-close-label" data-lang="en">Back</span>
@@ -128,45 +166,130 @@
                step 1 sits lowest, step 6 sits highest. Container scrolls + rotates together. -->
           <div class="step" style="--ry: 0deg;   --ty: 275px">
             <p class="step-num">01</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 01 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">Turning Ideas Into Things</h3>
             <h3 data-lang="cn">把想法变成事物</h3>
             <p data-lang="en">Most of my projects begin as simple thoughts. Building them helps me understand what works, what fails.</p>
             <p data-lang="cn">我的大多数项目，都从一个简单的想法开始。把它们做出来，才能看清什么行得通、什么不行。</p>
+            <div class="signature-spot signature-spot--small" data-spot="step-01">
+              <span class="sig-placeholder">DR</span>
+            </div>
           </div>
           <div class="step" style="--ry: 60deg;  --ty: 165px">
             <p class="step-num">02</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 02 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">Curiosity Has Always Been My Motivation</h3>
             <h3 data-lang="cn">好奇心一直是我的动力</h3>
             <p data-lang="en">Business, technology, design, and psychology are the areas of mine. Exploring different areas often leads to unexpected connections and new possibilities.</p>
             <p data-lang="cn">商业、技术、设计与心理学，是我关切的几个领域。在它们之间穿行，常常带来意想不到的连接和崭新的可能。</p>
+            <div class="signature-spot signature-spot--small" data-spot="step-02">
+              <span class="sig-placeholder">DR</span>
+            </div>
           </div>
           <div class="step" style="--ry: 120deg; --ty: 55px">
             <p class="step-num">03</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 03 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">Creation Is How I Learn</h3>
             <h3 data-lang="cn">创造是我学习的方式</h3>
             <p data-lang="en">I was born in 2009. Since the age of fifteen, creating value has become one of the ways I define myself.</p>
             <p data-lang="cn">我出生于 2009 年。从十五岁起，创造价值成为我定义自己的方式之一。</p>
+            <div class="signature-spot signature-spot--small" data-spot="step-03">
+              <span class="sig-placeholder">DR</span>
+            </div>
           </div>
           <div class="step" style="--ry: 180deg; --ty: -55px">
             <p class="step-num">04</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 04 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">&ldquo;Don&rsquo;t Ever Leave Yourself Behind Today&rdquo;</h3>
             <h3 data-lang="cn">&ldquo;别把今天的自己留在身后&rdquo;</h3>
             <p data-lang="en">Each step forward helps build the future I want to live in, a world full of act, now i am better.</p>
             <p data-lang="cn">每一步向前，都在搭建我想要生活的未来——一个充满行动的世界。此刻的我，更好了。</p>
+            <div class="signature-spot signature-spot--small" data-spot="step-04">
+              <span class="sig-placeholder">DR</span>
+            </div>
           </div>
           <div class="step" style="--ry: 240deg; --ty: -165px">
             <p class="step-num">05</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 05 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">I Am Still Figuring Things Out</h3>
             <h3 data-lang="cn">我还在摸索</h3>
             <p data-lang="en">YAO FLAME LAB is here due to It is a record of exploration experimentation and continuous learning.</p>
             <p data-lang="cn">YAO FLAME LAB 之所以存在，因为它是一份关于探索、实验与持续学习的记录。</p>
+            <div class="signature-spot signature-spot--small" data-spot="step-05">
+              <span class="sig-placeholder">DR</span>
+            </div>
           </div>
           <div class="step step-final" style="--ry: 300deg; --ty: -275px">
             <p class="step-num">06</p>
+            <p class="step-meta">
+              <span class="step-meta-id">Step 06 / 06</span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-section">
+                <span data-lang="en">Who I Am</span><span data-lang="cn">我是谁</span>
+              </span>
+              <span class="step-meta-dot">·</span>
+              <span class="step-meta-place">
+                <span data-lang="en">West Vancouver, 2025</span><span data-lang="cn">西温哥华，2025</span>
+              </span>
+            </p>
             <h3 data-lang="en">This Is Daniel Rong</h3>
             <h3 data-lang="cn">他是 Daniel Rong</h3>
             <p data-lang="en">A young creator<br>A persistent builder<br>A 16 years old from West Vancouver<br><br>Still learning<br>Still exploring<br>Still building</p>
             <p data-lang="cn">一个年轻的创作者<br>一个执着的建造者<br>一个来自西温哥华的 16 岁少年<br><br>仍在学习<br>仍在探索<br>仍在创造</p>
+            <!-- Final panel gets the FULL signature placeholder, not just initials. -->
+            <div class="signature-spot signature-spot--final" data-spot="step-06-final">
+              <span class="sig-placeholder">Daniel Rong</span>
+            </div>
           </div>
 
          </div>
@@ -225,19 +348,123 @@
       <div class="corridor-track" id="corridorTrack">
         <div class="corridor-step" style="--tx: -420px; --tz: -300px">
           <p class="step-num">01</p>
+          <p class="step-meta">
+            <span class="step-meta-id">Step 01 / 04</span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-section">
+              <span data-lang="en">Why This Lab Exists</span><span data-lang="cn">本实验室为何存在</span>
+            </span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-place">2025</span>
+          </p>
           <p class="step-placeholder">Panel 01 · placeholder</p>
+          <div class="signature-spot signature-spot--small" data-spot="corridor-01">
+            <span class="sig-placeholder">DR</span>
+          </div>
         </div>
         <div class="corridor-step" style="--tx:  420px; --tz: -800px">
           <p class="step-num">02</p>
+          <p class="step-meta">
+            <span class="step-meta-id">Step 02 / 04</span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-section">
+              <span data-lang="en">Why This Lab Exists</span><span data-lang="cn">本实验室为何存在</span>
+            </span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-place">2025</span>
+          </p>
           <p class="step-placeholder">Panel 02 · placeholder</p>
+          <div class="signature-spot signature-spot--small" data-spot="corridor-02">
+            <span class="sig-placeholder">DR</span>
+          </div>
         </div>
         <div class="corridor-step" style="--tx: -420px; --tz: -1300px">
           <p class="step-num">03</p>
+          <p class="step-meta">
+            <span class="step-meta-id">Step 03 / 04</span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-section">
+              <span data-lang="en">Why This Lab Exists</span><span data-lang="cn">本实验室为何存在</span>
+            </span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-place">2025</span>
+          </p>
           <p class="step-placeholder">Panel 03 · placeholder</p>
+          <div class="signature-spot signature-spot--small" data-spot="corridor-03">
+            <span class="sig-placeholder">DR</span>
+          </div>
         </div>
         <div class="corridor-step" style="--tx:  420px; --tz: -1800px">
           <p class="step-num">04</p>
+          <p class="step-meta">
+            <span class="step-meta-id">Step 04 / 04</span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-section">
+              <span data-lang="en">Why This Lab Exists</span><span data-lang="cn">本实验室为何存在</span>
+            </span>
+            <span class="step-meta-dot">·</span>
+            <span class="step-meta-place">2025</span>
+          </p>
           <p class="step-placeholder">Panel 04 · placeholder</p>
+          <!-- Final B panel gets the FULL signature, not just initials. -->
+          <div class="signature-spot signature-spot--final" data-spot="corridor-04-final">
+            <span class="sig-placeholder">Daniel Rong</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORLD C: Chapter Card 01 — entry page for SceneA. Fades in for
+         ~2.5s when about-view first activates from ring 1 (WHO I AM), then
+         fades out. Treated as the "front matter" before the exhibition. -->
+    <div class="chapter-card" id="chapterCard01" aria-hidden="true">
+      <div class="cc-inner">
+        <div class="cc-eyebrow">Chapter 01</div>
+        <h1 class="cc-title">
+          <span data-lang="en">Who I Am</span>
+          <span data-lang="cn">我是谁</span>
+        </h1>
+        <div class="cc-subtitle">
+          <span data-lang="en">An exhibition of one creator&rsquo;s interior</span>
+          <span data-lang="cn">一位创作者内在世界的展览</span>
+        </div>
+        <div class="cc-meta">
+          <span>Daniel Rong</span>
+          <span class="cc-dot">·</span>
+          <span>West Vancouver</span>
+          <span class="cc-dot">·</span>
+          <span>2025</span>
+          <span class="cc-dot">·</span>
+          <span class="cc-time">04:32 read</span>
+        </div>
+        <div class="signature-spot signature-spot--card" data-spot="chapter-01">
+          <span class="sig-placeholder">Daniel Rong</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORLD C: Chapter Card 02 — entry page for SceneB. Same treatment,
+         fires once when scene-b first activates within an about-view session. -->
+    <div class="chapter-card" id="chapterCard02" aria-hidden="true">
+      <div class="cc-inner">
+        <div class="cc-eyebrow">Chapter 02</div>
+        <h1 class="cc-title">
+          <span data-lang="en">Why This Lab Exists</span>
+          <span data-lang="cn">本实验室为何存在</span>
+        </h1>
+        <div class="cc-subtitle">
+          <span data-lang="en">A short essay on doubt &amp; persistence</span>
+          <span data-lang="cn">一篇关于怀疑与坚持的小短文</span>
+        </div>
+        <div class="cc-meta">
+          <span>Daniel Rong</span>
+          <span class="cc-dot">·</span>
+          <span>2025</span>
+          <span class="cc-dot">·</span>
+          <span class="cc-time">02:18 read</span>
+        </div>
+        <div class="signature-spot signature-spot--card" data-spot="chapter-02">
+          <span class="sig-placeholder">Daniel Rong</span>
         </div>
       </div>
     </div>
