@@ -565,6 +565,12 @@ const aboutRenderer = new THREE.WebGLRenderer({
 aboutRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 aboutRenderer.setSize(window.innerWidth, window.innerHeight);
 aboutRenderer.outputColorSpace = THREE.SRGBColorSpace;
+// ACES filmic tone mapping — compresses HDR highlights into the displayable
+// range with a smooth roll-off. Critical for polished metal: without it,
+// bright env reflections clip hard to pure white and the chrome reads as
+// plastic. With ACES the highlights have natural cinematic falloff.
+aboutRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+aboutRenderer.toneMappingExposure = 1.0;
 
 const aboutScene  = new THREE.Scene();
 const aboutCam    = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -950,38 +956,109 @@ aboutScene.add(portalGroup);
 // of every active line naturally illuminates the chrome surface around
 // it — the random-colour reflections asked for, without faking it.
 
-// --- Procedural environment map (now studio-bright) ---
-// Brighter gradient so the chrome reads as polished bright steel, not
-// dark gunmetal. Top is near-white, bottom is mid-grey (not black) so
-// every angle of reflection has something luminous to bounce.
+// --- Procedural environment map (high-quality studio reflection) ---
+// PBR metals don't have a colour of their own — they look entirely like
+// what they reflect. To make the chrome room read as REAL polished metal
+// (not flat grey paint), the env map needs structured content the metal
+// can reflect: bright softbox sources at top, vertical bright streaks at
+// mid-height (which read as vertical bright bars on the walls), a soft
+// horizon band, and subtle hero-stripe colour patches at the bottom.
+//
+// 2048×1024 — high enough resolution that the PMREM mips at low roughness
+// preserve sharp reflection detail. The whole thing is pre-filtered by
+// PMREMGenerator so every roughness level samples a correctly-blurred
+// version of the env.
 function buildAboutEnvTexture() {
   const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 512;
+  c.width = 2048;
+  c.height = 1024;
   const ctx = c.getContext('2d');
-  const g = ctx.createLinearGradient(0, 0, 0, 512);
-  g.addColorStop(0.00, '#f4f6fc');
-  g.addColorStop(0.38, '#bcc2d4');
-  g.addColorStop(0.62, '#7a8094');
-  g.addColorStop(1.00, '#2e303c');
+
+  // Base vertical gradient: bright sky → mid → mid-dark ground.
+  const g = ctx.createLinearGradient(0, 0, 0, 1024);
+  g.addColorStop(0.00, '#dde2f0');
+  g.addColorStop(0.36, '#9aa0b4');
+  g.addColorStop(0.55, '#555a6c');
+  g.addColorStop(1.00, '#181a22');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1024, 512);
+  ctx.fillRect(0, 0, 2048, 1024);
+
+  // SOFTBOX HIGHLIGHTS — elliptical bright pools near the top of the env.
+  // These appear on the chrome FLOOR as bright spots (camera looking down
+  // reflects the env's top). Four of them spaced around the 360° equirect
+  // so reflections wrap around as the camera turns.
+  const softboxes = [
+    { u: 0.14, v: 0.10, rx: 145, ry: 52 },
+    { u: 0.40, v: 0.08, rx: 120, ry: 48 },
+    { u: 0.64, v: 0.12, rx: 150, ry: 55 },
+    { u: 0.88, v: 0.07, rx: 125, ry: 50 },
+  ];
+  for (const sb of softboxes) {
+    const cx = sb.u * 2048;
+    const cy = sb.v * 1024;
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(sb.rx, sb.ry) * 1.55);
+    rg.addColorStop(0.00, 'rgba(255, 255, 255, 1.0)');
+    rg.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)');
+    rg.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, sb.rx, sb.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // VERTICAL BRIGHT STREAKS — tall narrow elliptical highlights spanning
+  // upper-to-mid env. These reflect onto vertical chrome WALLS as the
+  // vertical bright bars seen in the reference image (where overhead lights
+  // would reflect down the wall surfaces).
+  const streaks = [
+    { u: 0.06, v: 0.32, rx: 22, ry: 230 },
+    { u: 0.28, v: 0.30, rx: 26, ry: 250 },
+    { u: 0.52, v: 0.31, rx: 24, ry: 240 },
+    { u: 0.74, v: 0.30, rx: 26, ry: 245 },
+    { u: 0.94, v: 0.33, rx: 22, ry: 230 },
+  ];
+  for (const s of streaks) {
+    const cx = s.u * 2048;
+    const cy = s.v * 1024;
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(s.rx, s.ry));
+    rg.addColorStop(0.00, 'rgba(255, 255, 255, 0.92)');
+    rg.addColorStop(0.40, 'rgba(255, 255, 255, 0.45)');
+    rg.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, s.rx, s.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // HORIZON BAND — soft bright stripe at v≈0.45-0.55, gives chrome walls
+  // a continuous bright equator line so they don't look uniformly grey.
+  const horizonGrad = ctx.createLinearGradient(0, 440, 0, 580);
+  horizonGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
+  horizonGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.16)');
+  horizonGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+  ctx.fillStyle = horizonGrad;
+  ctx.fillRect(0, 440, 2048, 140);
+
+  // Subtle hero-stripe colour tints in the lower portion — gives the
+  // chrome floor + lower walls a hint of the four brand colours without
+  // being obvious.
   const tints = [
-    { x: 128, color: 'rgba(192, 38, 211, 0.30)' },
-    { x: 384, color: 'rgba(251, 191, 36, 0.24)' },
-    { x: 640, color: 'rgba(75, 125, 255, 0.28)' },
-    { x: 896, color: 'rgba(255, 60, 60, 0.26)' },
+    { x: 256,  color: 'rgba(192, 38, 211, 0.14)' },
+    { x: 768,  color: 'rgba(251, 191, 36, 0.11)' },
+    { x: 1280, color: 'rgba(75, 125, 255, 0.16)' },
+    { x: 1792, color: 'rgba(255, 60, 60, 0.13)' },
   ];
   for (const tint of tints) {
-    const rg = ctx.createRadialGradient(tint.x, 280, 0, tint.x, 280, 220);
+    const rg = ctx.createRadialGradient(tint.x, 700, 0, tint.x, 700, 380);
     rg.addColorStop(0, tint.color);
     rg.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = rg;
-    ctx.fillRect(0, 0, 1024, 512);
+    ctx.fillRect(0, 0, 2048, 1024);
   }
+
   const tex = new THREE.CanvasTexture(c);
-  tex.mapping     = THREE.EquirectangularReflectionMapping;
-  tex.colorSpace  = THREE.SRGBColorSpace;
+  tex.mapping    = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 const __aboutEnvSrc = buildAboutEnvTexture();
@@ -997,11 +1074,14 @@ __aboutPMREM.dispose();
 // camera sees discrete planar reflections rather than a curved tunnel.
 // 18 wide × 12 tall × 80 deep, centred at z=-10 so both sceneA (camera
 // z=9) and sceneB settle (camera z=-19) live inside the same room.
+// True PBR mirror chrome: metalness 1.0 (pure metal, no diffuse), low
+// roughness for sharp reflections. envMapIntensity 1.5 boosts highlight
+// energy enough to read as bright without blowing out under ACES.
 const chromeMat = new THREE.MeshStandardMaterial({
-  color: 0xdadce8,
-  metalness: 0.92,
-  roughness: 0.16,
-  envMapIntensity: 1.45,
+  color: 0xe2e4ee,
+  metalness: 1.0,
+  roughness: 0.09,
+  envMapIntensity: 1.5,
   side: THREE.BackSide,
 });
 const chromeRoom = new THREE.Mesh(
@@ -1011,61 +1091,10 @@ const chromeRoom = new THREE.Mesh(
 chromeRoom.position.set(0, 0, -10);
 aboutScene.add(chromeRoom);
 
-// --- Ceiling spotlights ---
-// Three studio spotlights mounted on the ceiling, pointing down at the
-// floor. Each is a triple: (a) THREE.SpotLight for actual illumination,
-// (b) a glowing white disc fixture visible on the ceiling, (c) a faint
-// additive cone mesh giving the volumetric "visible beam" look from the
-// reference photo. Spaced along the room length so both sceneA and sceneB
-// each have a spotlight nearby.
-const SPOT_POSITIONS = [
-  { x:  3.2, z:   4 },
-  { x: -3.2, z:  -8 },
-  { x:  3.2, z: -22 },
-];
-const CEILING_Y = 5.95;
-const FLOOR_Y   = -5.95;
-for (const sp of SPOT_POSITIONS) {
-  // (a) actual SpotLight illuminating the floor below
-  const spot = new THREE.SpotLight(
-    0xfff8ec,                   // warm white tungsten tint
-    22,                         // intensity — tuned so chrome catches it
-    32,                         // max distance
-    Math.PI * 0.20,             // cone half-angle ≈ 36° (so ~72° full)
-    0.55,                       // penumbra softness at cone edge
-    1.4                         // distance decay (1.4 = softer than physical 2.0)
-  );
-  spot.position.set(sp.x, CEILING_Y, sp.z);
-  spot.target.position.set(sp.x, FLOOR_Y, sp.z + 0.4);
-  aboutScene.add(spot);
-  aboutScene.add(spot.target);
-
-  // (b) glowing fixture disc on the ceiling — what you actually SEE
-  // when you look up at the light source.
-  const fixture = new THREE.Mesh(
-    new THREE.CircleGeometry(0.32, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-  );
-  fixture.position.set(sp.x, CEILING_Y - 0.005, sp.z);
-  fixture.rotation.x = Math.PI / 2;     // disc lies flat on ceiling
-  aboutScene.add(fixture);
-
-  // (c) volumetric cone beam — fake additive cone showing the light's
-  // path through the air. Apex at ceiling fixture, base at floor.
-  const beam = new THREE.Mesh(
-    new THREE.ConeGeometry(2.8, 11.9, 28, 1, true),
-    new THREE.MeshBasicMaterial({
-      color: 0xfff4d8,
-      transparent: true,
-      opacity: 0.085,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    })
-  );
-  beam.position.set(sp.x, 0, sp.z);     // centered between ceiling and floor
-  aboutScene.add(beam);                 // default apex-up matches fixture above
-}
+// No direct lights in the chamber. All illumination comes from the env
+// map (via PBR reflection on the chrome walls) and the random colour
+// light lines (which carry their own PointLights). This produces the
+// "image-based lighting only" look the user asked for.
 
 // --- Random neon light line pool ---
 // Six simultaneous slots. Each holds an additive-blended cylinder mesh
