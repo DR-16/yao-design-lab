@@ -950,36 +950,27 @@ aboutScene.add(portalGroup);
 // of every active line naturally illuminates the chrome surface around
 // it — the random-colour reflections asked for, without faking it.
 
-// --- Procedural environment map ---
-// A PBR metal with metalness=1.0 has NO diffuse component — it can only
-// reflect light. Without an envMap, scene.environment defaults to nothing
-// and the chrome appears nearly black except where a direct PointLight
-// happens to hit. That's why the user saw "only the light lines, no
-// silver surround". We paint a 1024×512 equirect canvas with a vertical
-// sky→horizon→ground gradient + four colour patches echoing the hero
-// stripes, run it through PMREMGenerator for mip-filtered roughness
-// response, and hand it to aboutScene as the global environment.
+// --- Procedural environment map (now studio-bright) ---
+// Brighter gradient so the chrome reads as polished bright steel, not
+// dark gunmetal. Top is near-white, bottom is mid-grey (not black) so
+// every angle of reflection has something luminous to bounce.
 function buildAboutEnvTexture() {
   const c = document.createElement('canvas');
   c.width = 1024;
   c.height = 512;
   const ctx = c.getContext('2d');
-  // Vertical gradient: bright sky → mid → dark ground
   const g = ctx.createLinearGradient(0, 0, 0, 512);
-  g.addColorStop(0.00, '#d8def0');
-  g.addColorStop(0.42, '#8088a5');
-  g.addColorStop(0.58, '#3a3c52');
-  g.addColorStop(1.00, '#0a080e');
+  g.addColorStop(0.00, '#f4f6fc');
+  g.addColorStop(0.38, '#bcc2d4');
+  g.addColorStop(0.62, '#7a8094');
+  g.addColorStop(1.00, '#2e303c');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1024, 512);
-  // Four colour patches at the horizon, evenly spaced around the equirect
-  // (which wraps as a 360° panorama on the tube). These give the chrome
-  // its chromatic variation as the camera looks around the cylinder.
   const tints = [
-    { x: 128, color: 'rgba(192, 38, 211, 0.38)' },
-    { x: 384, color: 'rgba(251, 191, 36, 0.30)' },
-    { x: 640, color: 'rgba(75, 125, 255, 0.36)' },
-    { x: 896, color: 'rgba(255, 60, 60, 0.32)' },
+    { x: 128, color: 'rgba(192, 38, 211, 0.30)' },
+    { x: 384, color: 'rgba(251, 191, 36, 0.24)' },
+    { x: 640, color: 'rgba(75, 125, 255, 0.28)' },
+    { x: 896, color: 'rgba(255, 60, 60, 0.26)' },
   ];
   for (const tint of tints) {
     const rg = ctx.createRadialGradient(tint.x, 280, 0, tint.x, 280, 220);
@@ -1000,33 +991,81 @@ aboutScene.environment = __aboutEnvRT.texture;
 __aboutEnvSrc.dispose();
 __aboutPMREM.dispose();
 
-// --- Chrome enclosure ---
-// color is BRIGHTENED to 0xcfd2e0 (silver) so the tube reads as polished
-// chrome instead of dark steel. envMapIntensity 1.25 lifts the reflection
-// energy slightly so the surround feels "lit".
+// --- Reflective metallic ROOM (replaces the previous cylinder tube) ---
+// Per the user's reference image: a polished steel showroom — bright
+// flat walls, floor, ceiling. Box-shaped instead of cylindrical so the
+// camera sees discrete planar reflections rather than a curved tunnel.
+// 18 wide × 12 tall × 80 deep, centred at z=-10 so both sceneA (camera
+// z=9) and sceneB settle (camera z=-19) live inside the same room.
 const chromeMat = new THREE.MeshStandardMaterial({
-  color: 0xcfd2e0,
-  metalness: 1.0,
-  roughness: 0.22,
-  envMapIntensity: 1.25,
+  color: 0xdadce8,
+  metalness: 0.92,
+  roughness: 0.16,
+  envMapIntensity: 1.45,
   side: THREE.BackSide,
 });
-const chromeTube = new THREE.Mesh(
-  new THREE.CylinderGeometry(9, 9, 80, 48, 1, true),
+const chromeRoom = new THREE.Mesh(
+  new THREE.BoxGeometry(18, 12, 80),
   chromeMat
 );
-chromeTube.rotation.x = Math.PI / 2; // lay along z so its axis matches the camera's forward
-chromeTube.position.set(0, 0, -10);
-aboutScene.add(chromeTube);
+chromeRoom.position.set(0, 0, -10);
+aboutScene.add(chromeRoom);
 
-// --- Base illumination — gives the chrome shape even when no colour
-//     line is currently active. Two opposed warm/cool sources. ---
-const tubeBaseLightWarm = new THREE.PointLight(0xc8c0d8, 0.85, 60, 1.4);
-tubeBaseLightWarm.position.set(0, 5, 6);
-aboutScene.add(tubeBaseLightWarm);
-const tubeBaseLightCool = new THREE.PointLight(0x6580b0, 0.55, 70, 1.4);
-tubeBaseLightCool.position.set(-4, -3, -12);
-aboutScene.add(tubeBaseLightCool);
+// --- Ceiling spotlights ---
+// Three studio spotlights mounted on the ceiling, pointing down at the
+// floor. Each is a triple: (a) THREE.SpotLight for actual illumination,
+// (b) a glowing white disc fixture visible on the ceiling, (c) a faint
+// additive cone mesh giving the volumetric "visible beam" look from the
+// reference photo. Spaced along the room length so both sceneA and sceneB
+// each have a spotlight nearby.
+const SPOT_POSITIONS = [
+  { x:  3.2, z:   4 },
+  { x: -3.2, z:  -8 },
+  { x:  3.2, z: -22 },
+];
+const CEILING_Y = 5.95;
+const FLOOR_Y   = -5.95;
+for (const sp of SPOT_POSITIONS) {
+  // (a) actual SpotLight illuminating the floor below
+  const spot = new THREE.SpotLight(
+    0xfff8ec,                   // warm white tungsten tint
+    22,                         // intensity — tuned so chrome catches it
+    32,                         // max distance
+    Math.PI * 0.20,             // cone half-angle ≈ 36° (so ~72° full)
+    0.55,                       // penumbra softness at cone edge
+    1.4                         // distance decay (1.4 = softer than physical 2.0)
+  );
+  spot.position.set(sp.x, CEILING_Y, sp.z);
+  spot.target.position.set(sp.x, FLOOR_Y, sp.z + 0.4);
+  aboutScene.add(spot);
+  aboutScene.add(spot.target);
+
+  // (b) glowing fixture disc on the ceiling — what you actually SEE
+  // when you look up at the light source.
+  const fixture = new THREE.Mesh(
+    new THREE.CircleGeometry(0.32, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+  );
+  fixture.position.set(sp.x, CEILING_Y - 0.005, sp.z);
+  fixture.rotation.x = Math.PI / 2;     // disc lies flat on ceiling
+  aboutScene.add(fixture);
+
+  // (c) volumetric cone beam — fake additive cone showing the light's
+  // path through the air. Apex at ceiling fixture, base at floor.
+  const beam = new THREE.Mesh(
+    new THREE.ConeGeometry(2.8, 11.9, 28, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff4d8,
+      transparent: true,
+      opacity: 0.085,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+  );
+  beam.position.set(sp.x, 0, sp.z);     // centered between ceiling and floor
+  aboutScene.add(beam);                 // default apex-up matches fixture above
+}
 
 // --- Random neon light line pool ---
 // Six simultaneous slots. Each holds an additive-blended cylinder mesh
@@ -1067,13 +1106,13 @@ function tickLightLines(t, dt) {
         const hex = LIGHT_LINE_COLORS[Math.floor(Math.random() * 4)];
         ln.mesh.material.color.setHex(hex);
         ln.light.color.setHex(hex);
-        // Random angle around the tube axis, offset from centre, random z.
-        const angle  = Math.random() * Math.PI * 2;
-        const radius = 2.8 + Math.random() * 4.6;
+        // Box-aligned random spawn inside the chrome room. Box bounds:
+        // x ∈ [-9, 9], y ∈ [-6, 6], z ∈ [-50, +30]. We keep a small inset
+        // so lines never clip into the walls.
         ln.mesh.position.set(
-          Math.cos(angle) * radius,
-          Math.sin(angle) * radius,
-          -10 + (Math.random() * 70 - 35)
+          (Math.random() - 0.5) * 16,        // x in [-8, 8]
+          (Math.random() - 0.5) * 10,        // y in [-5, 5]
+          -10 + (Math.random() * 68 - 34)    // z in [-44, 24]
         );
         ln.light.position.copy(ln.mesh.position);
         // Random orientation — some lines pillar-vertical, some diagonal,
