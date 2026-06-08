@@ -430,49 +430,75 @@ body.scene-b .scene-b-fog { opacity: 1; }
   position: absolute;
   left: var(--x, 50vw);
   top:  var(--y, 50vh);
-  /* Default horror stack — overridden per colour class below for variety. */
-  font-family: "Creepster", "Chalkduster", "Papyrus", cursive, serif;
-  font-weight: 400;
-  font-style: normal;
-  font-size: clamp(20px, 1.9vw, 32px);
-  letter-spacing: 0.06em;
+  /* Direction C — unified serif typography (matches centre lines + SceneA),
+     emotional weight comes from RGB chromatic aberration in the four hero
+     stripe colours instead of horror display fonts. */
+  font-family: "Times New Roman", "Songti SC", serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(18px, 1.55vw, 26px);
+  letter-spacing: 0.04em;
   white-space: nowrap;
-  /* Resting (hidden) transform: scaled UP and heavily blurred — so when the
-     word transitions OUT of .visible it visually disperses outward like
-     scattering particles, instead of collapsing inward. */
+  color: rgba(245, 240, 255, 0.78);
+  /* Hidden state: scattered & blurred — the word disperses outward like
+     particles when it leaves .visible (same dissolution feel as before). */
   transform:
     translate(-50%, -50%)
     rotate(var(--rot, 0deg))
-    scale(calc(var(--scale, 1) * 1.55))
-    skew(-12deg, 3deg);
-  filter: blur(18px);
+    scale(calc(var(--scale, 1) * 1.5))
+    skew(-4deg, 1deg);
+  filter: blur(16px);
   opacity: 0;
-  text-shadow:
-    0 0 8px currentColor,
-    0 0 22px rgba(0, 0, 0, 0.8),
-    2px 2px 0 rgba(0, 0, 0, 0.7),
-    -1px -1px 0 rgba(255, 0, 60, 0.18);
   transition:
     opacity 1.3s cubic-bezier(0.4, 0, 0.2, 1),
     filter  1.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 1.4s cubic-bezier(0.3, 0.7, 0.25, 1);
-  mix-blend-mode: screen;
 }
 .fog-word.visible {
-  opacity: 0.72;
-  filter: url(#fog-distort) blur(0.5px);
+  opacity: 0.88;
+  filter: url(#fog-distort) blur(0.3px);
   transform:
     translate(-50%, -50%)
     rotate(var(--rot, 0deg))
     scale(var(--scale, 1))
-    skew(-12deg, 3deg);
+    skew(-4deg, 1deg);
 }
-/* Per-colour horror font assignments — variety in typography matches the
-   chaotic chorus of negative voices. */
-.fog-word.c-violet { color: #d23bff; font-family: "Creepster",  "Chalkduster", "Papyrus", cursive; }
-.fog-word.c-yellow { color: #fbbf24; font-family: "Eater",      "Chalkduster", "Papyrus", cursive; }
-.fog-word.c-blue   { color: #4b7dff; font-family: "Butcherman", "Chalkduster", "Papyrus", cursive; }
-.fog-word.c-red    { color: #ff3030; font-family: "Nosifer",    "Chalkduster", "Papyrus", cursive; }
+/* Each c-XXX class shifts which colour LEADS the chromatic split (biggest
+   offset), so the 8 words feel related but not identical. Every word still
+   carries traces of all four hero stripes — uniform color language with the
+   homepage, varied composition per word. */
+.fog-word.c-violet {
+  text-shadow:
+    -3px  -1px   0 #c026d3,
+     1.5px -0.5px 0 #fbbf24,
+    -1px   1px   0 #4b7dff,
+     1.5px 1.5px 0 rgba(255, 60, 60, 0.75),
+     0 0 14px rgba(0, 0, 0, 0.8);
+}
+.fog-word.c-yellow {
+  text-shadow:
+     1.5px -1px   0 #c026d3,
+    -3px  -0.5px 0 #fbbf24,
+     1px   1px   0 #4b7dff,
+    -1.5px 1.5px 0 rgba(255, 60, 60, 0.75),
+     0 0 14px rgba(0, 0, 0, 0.8);
+}
+.fog-word.c-blue {
+  text-shadow:
+    -1.5px -1px   0 #c026d3,
+     1.5px -0.5px 0 #fbbf24,
+    -3px   1.5px 0 #4b7dff,
+     1.5px 1.5px 0 rgba(255, 60, 60, 0.75),
+     0 0 14px rgba(0, 0, 0, 0.8);
+}
+.fog-word.c-red {
+  text-shadow:
+    -1.5px -1px   0 #c026d3,
+     1.5px -0.5px 0 #fbbf24,
+    -1px   1px   0 #4b7dff,
+     3px   1.5px 0 rgba(255, 60, 60, 0.9),
+     0 0 14px rgba(0, 0, 0, 0.8);
+}
 
 /* ---- CORRIDOR TRACK (Scene B) ----
    4 panels alternating left/right along the depth axis. The outer stage
