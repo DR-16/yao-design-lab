@@ -825,47 +825,115 @@ const ringMat = new THREE.ShaderMaterial({
 const ringParticles = new THREE.Points(ringGeo, ringMat);
 aboutScene.add(ringParticles);
 
-// ---------- Portal ring (made of particles, NOT a separate mesh) ----------
-// This is the same coloured light-halo that's been hovering above the flame
-// in scene A; we re-organise its particles into a ring on the horizontal
-// plane and let it serve as the portal we pass through. Camera physically
-// moves toward it and punches through its centre.
-const PORTAL_RING_COUNT = 120;
-const portalRingPos   = new Float32Array(PORTAL_RING_COUNT * 3);
-const portalRingColor = new Float32Array(PORTAL_RING_COUNT * 3);
-const portalRingGeo   = new THREE.BufferGeometry();
-portalRingGeo.setAttribute('position', new THREE.BufferAttribute(portalRingPos, 3));
-portalRingGeo.setAttribute('color',    new THREE.BufferAttribute(portalRingColor, 3));
-// arrange particles on a unit ring lying flat in XZ plane (so the ring's
-// "hole" points up along +Y, which is where the camera will rise through)
-for (let i = 0; i < PORTAL_RING_COUNT; i++) {
-  const a = (i / PORTAL_RING_COUNT) * Math.PI * 2;
-  portalRingPos[i*3+0] = Math.cos(a);
-  portalRingPos[i*3+1] = 0;
-  portalRingPos[i*3+2] = Math.sin(a);
-  const c = RING_PALETTE[i % RING_PALETTE.length];
-  const jitter = 0.85 + ((i * 0.137) % 1) * 0.3;
-  portalRingColor[i*3+0] = c[0] * jitter;
-  portalRingColor[i*3+1] = c[1] * jitter;
-  portalRingColor[i*3+2] = c[2] * jitter;
+// ---------- Wormhole TUNNEL (made of particle rings stacked along Z) ----------
+// Multiple coloured rings stacked along the negative Z axis form a tunnel.
+// Each ring is on its own XY plane (face-on to the camera). As the camera
+// pushes forward through Z, every ring grows in our view and slides past us,
+// just like flying through a wormhole in a film.
+const TUNNEL_LAYERS = 9;
+const TUNNEL_RING_COUNT = 70;
+const TUNNEL_COUNT = TUNNEL_LAYERS * TUNNEL_RING_COUNT;
+const tunnelPos    = new Float32Array(TUNNEL_COUNT * 3);
+const tunnelColor  = new Float32Array(TUNNEL_COUNT * 3);
+const tunnelDepth  = new Float32Array(TUNNEL_COUNT); // 0 = nearest, LAYERS-1 = farthest
+for (let layer = 0; layer < TUNNEL_LAYERS; layer++) {
+  for (let i = 0; i < TUNNEL_RING_COUNT; i++) {
+    const a = (i / TUNNEL_RING_COUNT) * Math.PI * 2 + layer * 0.4; // each layer phase-shifted
+    const k = layer * TUNNEL_RING_COUNT + i;
+    // unit-radius ring on XY plane, z = -1 -3 -5 -7 ... going into the distance
+    tunnelPos[k*3+0] = Math.cos(a);
+    tunnelPos[k*3+1] = Math.sin(a);
+    tunnelPos[k*3+2] = -1.0 - layer * 2.2;
+    tunnelDepth[k] = layer;
+    const c = RING_PALETTE[(layer + Math.floor(i/12)) % RING_PALETTE.length];
+    const jitter = 0.8 + ((i * 0.137 + layer * 0.31) % 1) * 0.4;
+    tunnelColor[k*3+0] = c[0] * jitter;
+    tunnelColor[k*3+1] = c[1] * jitter;
+    tunnelColor[k*3+2] = c[2] * jitter;
+  }
 }
-const portalRingMat = new THREE.ShaderMaterial({
+const tunnelGeo = new THREE.BufferGeometry();
+tunnelGeo.setAttribute('position', new THREE.BufferAttribute(tunnelPos, 3));
+tunnelGeo.setAttribute('color',    new THREE.BufferAttribute(tunnelColor, 3));
+tunnelGeo.setAttribute('depth',    new THREE.BufferAttribute(tunnelDepth, 1));
+const tunnelMat = new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
   blending: THREE.AdditiveBlending,
   uniforms: { uOpacity: { value: 0 }, uTime: { value: 0 } },
   vertexShader: /* glsl */`
     attribute vec3 color;
+    attribute float depth;
     uniform float uTime;
     varying vec3 vColor;
+    varying float vNear;
     void main(){
       vColor = color;
       vec3 p = position;
-      // subtle in-place flicker so the ring feels alive
-      float a = atan(p.z, p.x);
-      p.y += sin(a * 8.0 + uTime * 1.3) * 0.04;
+      // very subtle radial pulse so the tunnel feels alive
+      float pulse = 1.0 + sin(uTime * 0.5 + depth * 0.8) * 0.04;
+      p.xy *= pulse;
       vec4 mv = modelViewMatrix * vec4(p, 1.0);
-      gl_PointSize = 12.0 * (300.0 / -mv.z);
+      float dist = -mv.z;
+      // nearer rings → bigger particles; perspective handles most of it but
+      // we boost the near ones for that "rushing past" feel
+      vNear = clamp(8.0 / max(dist, 0.3), 0.0, 2.5);
+      gl_PointSize = 11.0 * (260.0 / max(dist, 0.3));
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform float uOpacity;
+    varying vec3 vColor;
+    varying float vNear;
+    void main(){
+      vec2 q = gl_PointCoord - 0.5;
+      float d = length(q);
+      float a = smoothstep(0.5, 0.0, d) * uOpacity * (0.6 + vNear * 0.4);
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor, a);
+    }
+  `,
+});
+const tunnel = new THREE.Points(tunnelGeo, tunnelMat);
+const portalGroup = new THREE.Group();
+portalGroup.add(tunnel);
+portalGroup.visible = false;
+aboutScene.add(portalGroup);
+
+// Streak particles — a few hundred points scattered in the tunnel volume so
+// when the camera rushes forward they whip past as motion streaks.
+const STREAK_COUNT = 350;
+const streakPos   = new Float32Array(STREAK_COUNT * 3);
+const streakColor = new Float32Array(STREAK_COUNT * 3);
+for (let i = 0; i < STREAK_COUNT; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 0.3 + Math.random() * 1.2;
+  const z = -1 - Math.random() * 18; // spread along the tunnel depth
+  streakPos[i*3+0] = Math.cos(a) * r;
+  streakPos[i*3+1] = Math.sin(a) * r;
+  streakPos[i*3+2] = z;
+  const c = RING_PALETTE[Math.floor(Math.random() * RING_PALETTE.length)];
+  streakColor[i*3+0] = c[0];
+  streakColor[i*3+1] = c[1];
+  streakColor[i*3+2] = c[2];
+}
+const streakGeo = new THREE.BufferGeometry();
+streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+streakGeo.setAttribute('color',    new THREE.BufferAttribute(streakColor, 3));
+const streakMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: { uOpacity: { value: 0 } },
+  vertexShader: /* glsl */`
+    attribute vec3 color;
+    varying vec3 vColor;
+    void main(){
+      vColor = color;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float dist = -mv.z;
+      gl_PointSize = 6.0 * (200.0 / max(dist, 0.3));
       gl_Position = projectionMatrix * mv;
     }
   `,
@@ -881,12 +949,8 @@ const portalRingMat = new THREE.ShaderMaterial({
     }
   `,
 });
-const portalRing = new THREE.Points(portalRingGeo, portalRingMat);
-// Wrapped in a group so we move/scale the ring as one unit during the portal.
-const portalGroup = new THREE.Group();
-portalGroup.add(portalRing);
-portalGroup.visible = false;
-aboutScene.add(portalGroup);
+const streaks = new THREE.Points(streakGeo, streakMat);
+portalGroup.add(streaks);
 
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
@@ -998,62 +1062,50 @@ function updateAboutScroll() {
     staircaseRotor.style.transform = `translateY(${ty}px) rotateY(${degA}deg)`;
   }
 
-  // ---- Portal phase ----
-  // The "portal" is the same coloured ring that's been hovering above the
-  // flame all along. As scene A reaches its end (progressA approaches 1),
-  // the ring starts to emerge; then in the portal phase it rises, expands
-  // and the camera physically moves up + forward to pass through it.
-  // Tail of scene A also previews the ring so the appearance is continuous,
-  // not a sudden pop.
-  const ringPreview = Math.max(0, Math.min(1, (progressA - 0.92) / 0.08));
-  const portalActive = portalProgress > 0 || ringPreview > 0;
-  if (portalActive) {
+  // ---- Wormhole tunnel ----
+  // Tunnel rings sit along negative Z, face-on. The camera physically flies
+  // toward and through them. A tail of scene A previews the first ring so
+  // the appearance is continuous.
+  const ringPreview = Math.max(0, Math.min(1, (progressA - 0.9) / 0.1));
+  const tunnelActive = portalProgress > 0 || ringPreview > 0;
+  if (tunnelActive) {
     portalGroup.visible = true;
-    // ring base position above the flame
-    const ringY = 1.2 + portalProgress * 2.2;
-    const ringR = 1.4 + portalProgress * 1.8;
-    portalGroup.position.set(0, ringY, 0);
-    portalGroup.scale.set(ringR, ringR, ringR);
-    // opacity: fades in from preview, fades out as camera moves past the ring
-    const inOpacity = portalProgress > 0
-      ? Math.min(1, portalProgress / 0.15)
-      : ringPreview * 0.6;
-    const outOpacity = portalProgress > 0.85 ? (1 - (portalProgress - 0.85) / 0.15) : 1;
-    portalRingMat.uniforms.uOpacity.value = inOpacity * outOpacity * 0.95;
+    portalGroup.rotation.z += 0.002; // slow self-rotation gives the tunnel life
+    const inOpacity  = portalProgress > 0 ? Math.min(1, portalProgress / 0.12) : ringPreview * 0.5;
+    const outOpacity = portalProgress > 0.96 ? Math.max(0, 1 - (portalProgress - 0.96) / 0.04) : 1;
+    const op = inOpacity * outOpacity;
+    tunnelMat.uniforms.uOpacity.value = op * 0.95;
+    streakMat.uniforms.uOpacity.value = op * 0.8;
   } else {
     portalGroup.visible = false;
-    portalRingMat.uniforms.uOpacity.value = 0;
+    tunnelMat.uniforms.uOpacity.value = 0;
+    streakMat.uniforms.uOpacity.value = 0;
   }
 
-  // ---- Camera physical motion (the heart of the transition) ----
-  // We hand-roll the camera target position+aim for each phase and let
-  // aboutTick smoothly approach it (snap-springy easing in the tick loop).
+  // ---- Camera physical motion ----
+  // Pure Z translation along the tunnel axis. As portalProgress climbs from 0
+  // to 1, the camera moves from z=9 (well outside the tunnel, looking in) all
+  // the way to z=-18 (out the far end, into scene B's space). Rings live in
+  // z = -1 to -18 so the camera literally passes each one.
   if (portalProgress <= 0) {
-    aboutCam.userData.target = null; // sceneA: aboutTick uses the gentle orbit
+    aboutCam.userData.target = null;
   } else {
-    // Phase 1 (0→0.55): camera climbs from y=0 to y=1, recedes a bit on Z, so
-    //   the world looks like it's pulling back from a flat plate into space.
-    // Phase 2 (0.55→0.85): camera pushes forward (Z decreases), keeps climbing
-    //   to align with ring centre — feeling of accelerating toward a target.
-    // Phase 3 (0.85→1): camera punches through the ring centre; Z reaches 0
-    //   then negative — we are now beyond the ring, looking into the new space.
-    let camY, camZ;
-    if (portalProgress < 0.55) {
-      const k = portalProgress / 0.55;
-      camY = k * 1.0;
-      camZ = 9.0 + k * 0.8;        // ease back slightly to feel the depth
-    } else if (portalProgress < 0.85) {
-      const k = (portalProgress - 0.55) / 0.30;
-      camY = 1.0 + k * 1.6;
-      camZ = 9.8 - k * 6.2;        // push toward / into the ring
+    let camZ;
+    if (portalProgress < 0.12) {
+      // pull back a touch to give a sense of depth ramp-up
+      const k = portalProgress / 0.12;
+      camZ = 9.0 + k * 1.5;          // 9 → 10.5
     } else {
-      const k = (portalProgress - 0.85) / 0.15;
-      camY = 2.6 + k * 0.8;
-      camZ = 3.6 - k * 4.5;        // punch through, end at -0.9 (behind ring)
+      // accelerate forward through the entire tunnel
+      const k = (portalProgress - 0.12) / 0.88;
+      // ease-in (slow start, fast finish) so it feels like accelerating
+      const eased = k * k;
+      camZ = 10.5 - eased * 28.5;    // 10.5 → -18
     }
     aboutCam.userData.target = {
-      x: 0, y: camY, z: camZ,
-      look: { x: 0, y: 1.2 + portalProgress * 1.2, z: -0.5 },
+      x: 0, y: 0, z: camZ,
+      // look straight down the tunnel axis (always at z 5 in front of the camera)
+      look: { x: 0, y: 0, z: camZ - 5 },
     };
   }
   aboutCam.userData.sceneBSettle = progressB > 0;
@@ -1304,7 +1356,7 @@ function aboutTick() {
     __aboutLastT = t;
     glassUniforms.uTime.value = t;
     portraitMat.uniforms.uTime.value = t;
-    portalRingMat.uniforms.uTime.value = t;
+    tunnelMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
 
     // Camera behaviour by phase:
@@ -1319,10 +1371,13 @@ function aboutTick() {
       aboutCam.position.z += (tg.z - aboutCam.position.z) * 0.12;
       aboutCam.lookAt(tg.look.x, tg.look.y, tg.look.z);
     } else if (aboutCam.userData.sceneBSettle) {
+      // Settled on the far side of the tunnel. We DON'T snap back to z=9;
+      // we keep the camera where the punch-through left it, so the new space
+      // feels physically distinct from the old one.
       aboutCam.position.x += (0 - aboutCam.position.x) * 0.08;
-      aboutCam.position.y += (1.8 - aboutCam.position.y) * 0.08;
-      aboutCam.position.z += (-0.5 - aboutCam.position.z) * 0.08; // stay on the far side
-      aboutCam.lookAt(0, 1.8, -2);
+      aboutCam.position.y += (0 - aboutCam.position.y) * 0.08;
+      aboutCam.position.z += (-19 - aboutCam.position.z) * 0.08;
+      aboutCam.lookAt(0, 0, -24);
     } else {
       aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
       aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
