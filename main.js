@@ -1361,12 +1361,25 @@ const PANEL_DATA_B = [
 const ALL_PANEL_DATA = PANEL_DATA.concat(PANEL_DATA_B);
 const PANEL_ARC = 1.05;             // radians of circumference each panel spans
 const PANEL_H   = 5.4;
+// Character-level wrap that also handles CJK (which has no spaces): Latin runs
+// break at the last space, CJK breaks per glyph, so Chinese never overflows.
 function wrapText(x, text, maxW) {
-  const words = text.split(/(\s+)/);
-  const lines = []; let cur = '';
-  for (const w of words) {
-    if (x.measureText(cur + w).width > maxW && cur) { lines.push(cur.trimEnd()); cur = w.trimStart(); }
-    else cur += w;
+  const lines = [];
+  let cur = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (x.measureText(cur + ch).width > maxW && cur) {
+      const lastSpace = cur.lastIndexOf(' ');
+      if (lastSpace > 0 && /[A-Za-z0-9(),.'"’“”—-]/.test(ch)) {
+        lines.push(cur.slice(0, lastSpace).trimEnd());
+        cur = cur.slice(lastSpace + 1) + ch;
+      } else {
+        lines.push(cur.trimEnd());
+        cur = (ch === ' ') ? '' : ch;
+      }
+    } else {
+      cur += ch;
+    }
   }
   if (cur.trim()) lines.push(cur.trimEnd());
   return lines;
@@ -1404,16 +1417,22 @@ function drawPanelTexture(canvas, data, idx, lang) {
     yy = 196;
   }
   x.fillStyle = '#f1f3fa';
+  // "Syne" — avant-garde but highly readable display sans for headings; a
+  // clean modern CJK sans (PingFang) for Chinese. Smaller than before so the
+  // lines stay compact inside the frame.
   const headFont = (lang === 'cn')
-    ? '500 96px "Songti SC", "Times New Roman", serif'
-    : 'italic 104px "Instrument Serif", Georgia, serif';
+    ? '600 74px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
+    : '700 80px "Syne", "Helvetica Neue", Arial, sans-serif';
   x.font = headFont;
-  for (const line of wrapText(x, d.h, W - L - 130)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 106 : 100); }
+  const maxW = W - L - 130;
+  for (const line of wrapText(x, d.h, maxW)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 92 : 88); }
   // body
-  yy += 30;
+  yy += 28;
   x.fillStyle = 'rgba(206,214,232,0.82)';
-  x.font = '400 40px "Helvetica Neue", Arial, sans-serif';
-  for (const line of wrapText(x, d.p, W - L - 130)) { x.fillText(line, L, yy); yy += 58; }
+  x.font = (lang === 'cn')
+    ? '400 38px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
+    : '400 40px "Helvetica Neue", Arial, sans-serif';
+  for (const line of wrapText(x, d.p, maxW)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 56 : 58); }
   // accent glow footer line
   x.fillStyle = accent; x.globalAlpha = 0.7;
   x.fillRect(L, H - 150, 220, 5); x.globalAlpha = 1;
@@ -1459,12 +1478,12 @@ function redrawAboutPanels(lang) {
   if (typeof redrawCeiling === 'function') redrawCeiling(__aboutLang);
 }
 window.__redrawAboutPanels = redrawAboutPanels;
-// Redraw the panels (and centre lines) once the artistic web fonts finish
-// loading, so the headings pick up Instrument Serif rather than the fallback.
+// Redraw once the web fonts load so headings pick up Syne (panels) and the
+// ceiling sentences pick up Instrument Serif, rather than the fallbacks.
 if (document.fonts && document.fonts.load) {
   Promise.all([
-    document.fonts.load("italic 104px 'Instrument Serif'"),
-    document.fonts.load("400 60px 'Instrument Serif'"),
+    document.fonts.load("700 80px 'Syne'"),
+    document.fonts.load("italic 56px 'Instrument Serif'"),
   ]).then(() => redrawAboutPanels(__aboutLang)).catch(() => {});
 }
 
