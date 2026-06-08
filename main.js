@@ -950,11 +950,65 @@ aboutScene.add(portalGroup);
 // of every active line naturally illuminates the chrome surface around
 // it — the random-colour reflections asked for, without faking it.
 
+// --- Procedural environment map ---
+// A PBR metal with metalness=1.0 has NO diffuse component — it can only
+// reflect light. Without an envMap, scene.environment defaults to nothing
+// and the chrome appears nearly black except where a direct PointLight
+// happens to hit. That's why the user saw "only the light lines, no
+// silver surround". We paint a 1024×512 equirect canvas with a vertical
+// sky→horizon→ground gradient + four colour patches echoing the hero
+// stripes, run it through PMREMGenerator for mip-filtered roughness
+// response, and hand it to aboutScene as the global environment.
+function buildAboutEnvTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 512;
+  const ctx = c.getContext('2d');
+  // Vertical gradient: bright sky → mid → dark ground
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0.00, '#d8def0');
+  g.addColorStop(0.42, '#8088a5');
+  g.addColorStop(0.58, '#3a3c52');
+  g.addColorStop(1.00, '#0a080e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1024, 512);
+  // Four colour patches at the horizon, evenly spaced around the equirect
+  // (which wraps as a 360° panorama on the tube). These give the chrome
+  // its chromatic variation as the camera looks around the cylinder.
+  const tints = [
+    { x: 128, color: 'rgba(192, 38, 211, 0.38)' },
+    { x: 384, color: 'rgba(251, 191, 36, 0.30)' },
+    { x: 640, color: 'rgba(75, 125, 255, 0.36)' },
+    { x: 896, color: 'rgba(255, 60, 60, 0.32)' },
+  ];
+  for (const tint of tints) {
+    const rg = ctx.createRadialGradient(tint.x, 280, 0, tint.x, 280, 220);
+    rg.addColorStop(0, tint.color);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, 1024, 512);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping     = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace  = THREE.SRGBColorSpace;
+  return tex;
+}
+const __aboutEnvSrc = buildAboutEnvTexture();
+const __aboutPMREM  = new THREE.PMREMGenerator(aboutRenderer);
+const __aboutEnvRT  = __aboutPMREM.fromEquirectangular(__aboutEnvSrc);
+aboutScene.environment = __aboutEnvRT.texture;
+__aboutEnvSrc.dispose();
+__aboutPMREM.dispose();
+
 // --- Chrome enclosure ---
+// color is BRIGHTENED to 0xcfd2e0 (silver) so the tube reads as polished
+// chrome instead of dark steel. envMapIntensity 1.25 lifts the reflection
+// energy slightly so the surround feels "lit".
 const chromeMat = new THREE.MeshStandardMaterial({
-  color: 0x2a2a36,
+  color: 0xcfd2e0,
   metalness: 1.0,
-  roughness: 0.18,
+  roughness: 0.22,
+  envMapIntensity: 1.25,
   side: THREE.BackSide,
 });
 const chromeTube = new THREE.Mesh(
