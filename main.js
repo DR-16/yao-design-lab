@@ -830,8 +830,8 @@ aboutScene.add(ringParticles);
 // Each ring is on its own XY plane (face-on to the camera). As the camera
 // pushes forward through Z, every ring grows in our view and slides past us,
 // just like flying through a wormhole in a film.
-const TUNNEL_LAYERS = 9;
-const TUNNEL_RING_COUNT = 70;
+const TUNNEL_LAYERS = 6;
+const TUNNEL_RING_COUNT = 48;
 const TUNNEL_COUNT = TUNNEL_LAYERS * TUNNEL_RING_COUNT;
 const tunnelPos    = new Float32Array(TUNNEL_COUNT * 3);
 const tunnelColor  = new Float32Array(TUNNEL_COUNT * 3);
@@ -878,7 +878,7 @@ const tunnelMat = new THREE.ShaderMaterial({
       // nearer rings → bigger particles; perspective handles most of it but
       // we boost the near ones for that "rushing past" feel
       vNear = clamp(8.0 / max(dist, 0.3), 0.0, 2.5);
-      gl_PointSize = 11.0 * (260.0 / max(dist, 0.3));
+      gl_PointSize = 6.5 * (260.0 / max(dist, 0.3));
       gl_Position = projectionMatrix * mv;
     }
   `,
@@ -903,7 +903,7 @@ aboutScene.add(portalGroup);
 
 // Streak particles — a few hundred points scattered in the tunnel volume so
 // when the camera rushes forward they whip past as motion streaks.
-const STREAK_COUNT = 350;
+const STREAK_COUNT = 140;
 const streakPos   = new Float32Array(STREAK_COUNT * 3);
 const streakColor = new Float32Array(STREAK_COUNT * 3);
 for (let i = 0; i < STREAK_COUNT; i++) {
@@ -933,7 +933,7 @@ const streakMat = new THREE.ShaderMaterial({
       vColor = color;
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
       float dist = -mv.z;
-      gl_PointSize = 6.0 * (200.0 / max(dist, 0.3));
+      gl_PointSize = 4.0 * (200.0 / max(dist, 0.3));
       gl_Position = projectionMatrix * mv;
     }
   `,
@@ -1110,26 +1110,26 @@ function updateAboutScroll() {
   }
   aboutCam.userData.sceneBSettle = progressB > 0;
 
-  // ---- Scene B: narrative track ----
-  const narrativeTrack = document.getElementById('narrativeTrack');
-  if (narrativeTrack) {
-    // each panel is 480px apart, panels at --y 0, 480, 960, 1440.
-    // slide the whole track upward so panel k arrives at viewport centre
-    // when progressB = k/3.
-    const yOffset = -progressB * 1440;
-    narrativeTrack.style.transform = `translateY(${yOffset}px)`;
+  // ---- Scene B: corridor track ----
+  // 4 panels at z = -300, -800, -1300, -1800. Pull the whole track forward
+  // (positive translateZ) so each panel arrives at z = 0 = the camera plane.
+  const corridorTrack = document.getElementById('corridorTrack');
+  if (corridorTrack) {
+    const zOffset = progressB * 1800;
+    corridorTrack.style.transform = `translateZ(${zOffset}px)`;
   }
 
   // ---- Compute focus ----
-  // global focusIdx: 0..5 = scene A panels, 6..9 = scene B narrative panels.
+  // global focusIdx: 0..5 = scene A panels, 6..9 = scene B corridor panels.
   let focusIdx, approachAmount;
   if (progressB <= 0.001) {
     const focusF = (-degA) / 60;
     focusIdx = Math.max(0, Math.min(5, Math.round(focusF)));
     approachAmount = Math.min(1, Math.abs(focusF - focusIdx) * 2);
   } else {
-    // 4 narrative panels; panel k at progressB k/3
-    const localF = progressB * 3;
+    // 4 corridor panels at z=-300,-800,-1300,-1800 — spacing 500.
+    // panel k centred when offset = -panel_z[k] = 300+500k → progressB = (300+500k)/1800
+    const localF = (progressB * 1800 - 300) / 500;
     const localIdx = Math.max(0, Math.min(3, Math.round(localF)));
     focusIdx = 6 + localIdx;
     approachAmount = Math.min(1, Math.abs(localF - localIdx) * 2);
@@ -1161,7 +1161,7 @@ function updateAboutScroll() {
     if (isApproaching) s.style.setProperty('--approach', approachAmount.toFixed(3));
     else s.style.removeProperty('--approach');
   });
-  document.querySelectorAll('.narrative-step').forEach((s, i) => {
+  document.querySelectorAll('.corridor-step').forEach((s, i) => {
     const g = 6 + i;
     const isCurrent = (g === focusIdx);
     const isApproaching = (g === approachIdx && approachIdx >= 6 && approachIdx !== focusIdx);
@@ -1209,10 +1209,11 @@ function panelTargetProgress(curProgress) {
     const midPortal = (SCENE_A_END + PORTAL_END) / 2;
     return curProgress < midPortal ? SCENE_A_END : PORTAL_END;
   }
-  // 4 narrative panels at progressB = k/3
+  // 4 corridor panels at progressB = (300+500k)/1800
   const localB = (curProgress - PORTAL_END) / (1 - PORTAL_END);
-  const k = Math.max(0, Math.min(3, Math.round(localB * 3)));
-  return PORTAL_END + (k / 3) * (1 - PORTAL_END);
+  const k = Math.max(0, Math.min(3, Math.round((localB * 1800 - 300) / 500)));
+  const localTarget = (300 + 500 * k) / 1800;
+  return PORTAL_END + localTarget * (1 - PORTAL_END);
 }
 
 function smoothScrollAbout(targetTop, duration = 360) {
