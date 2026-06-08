@@ -174,31 +174,25 @@ body.mode-about .work {
   pointer-events: none;
   transition: opacity 0.55s ease;
 }
-/* Hero dolly-in: the camera rushes toward the cylinder. Continuous accelerating
-   curve (no flash, no slam) — just a smooth, fast push from scale 1 all the way
-   to scale 4.5, with motion blur ramping up as if you were physically moving
-   through the air toward it. Origin set to the WHO I AM ring (top third). */
+/* Hero #stage fade: the Three.js camera in JS does the real dolly-in (it
+   physically flies into the clicked ring). CSS only fades the canvas out as
+   the about view takes over, so we don't fight the camera with a CSS zoom. */
 body.mode-about #stage {
   opacity: 0;
-  transform: scale(4.5);
-  filter: blur(40px);
-  transform-origin: 50% 48%;
   pointer-events: none;
-  transition:
-    opacity 0.7s cubic-bezier(0.5, 0, 0.55, 1),
-    transform 0.7s cubic-bezier(0.5, 0, 0.55, 1),
-    filter 0.7s cubic-bezier(0.5, 0, 0.55, 1);
+  transition: opacity 0.45s ease 0.15s;
 }
-/* Same dolly-in motion applied to the hero text so it rushes past with the camera */
+/* Hero text is pushed past the camera by the same dolly-in feel — scale + blur
+   makes it streak past the lens. */
 body.mode-about .hero-text {
   opacity: 0;
-  transform: translateX(-50%) scale(2.6);
-  filter: blur(24px);
+  transform: translateX(-50%) scale(2.2);
+  filter: blur(18px);
   transform-origin: 50% 45%;
   transition:
-    opacity 0.6s cubic-bezier(0.5, 0, 0.55, 1),
-    transform 0.6s cubic-bezier(0.5, 0, 0.55, 1),
-    filter 0.6s cubic-bezier(0.5, 0, 0.55, 1);
+    opacity 0.45s cubic-bezier(0.5, 0, 0.55, 1),
+    transform 0.55s cubic-bezier(0.5, 0, 0.55, 1),
+    filter 0.55s cubic-bezier(0.5, 0, 0.55, 1);
 }
 
 .about-stage {

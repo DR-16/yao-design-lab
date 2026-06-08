@@ -475,9 +475,40 @@ function applyState(dt) {
   if (ease > 0.75 && exitEase < 0.5) categoriesEl.classList.add('visible');
   else categoriesEl.classList.remove('visible');
 
-  camera.position.x += (pointer.x * 0.4 - camera.position.x) * 0.04;
-  camera.position.y += (pointer.y * 0.25 - camera.position.y) * 0.04;
-  camera.lookAt(0, 0, 0);
+  // Suspend the gentle pointer-parallax while a camera push animation owns
+  // the hero camera (entering About). The tween below sets camera.position
+  // and we don't want this loop fighting it.
+  if (!__heroTransiting) {
+    camera.position.x += (pointer.x * 0.4 - camera.position.x) * 0.04;
+    camera.position.y += (pointer.y * 0.25 - camera.position.y) * 0.04;
+    camera.lookAt(0, 0, 0);
+  }
+}
+
+let __heroTransiting = false;
+
+// Real dolly-in: tween the hero camera from where it is now to a position
+// pressed right up against the clicked ring, looking AT that ring. Eased
+// ease-in so it feels like accelerating into the ring.
+function playCameraPushToRing(ringIdx, duration, done) {
+  const ringMesh = (rings[ringIdx] || rings[0]).mesh;
+  const target = new THREE.Vector3();
+  ringMesh.getWorldPosition(target);
+  // landing pose: 1.0 unit in front of the ring centre, at the same height
+  const targetPos = target.clone().add(new THREE.Vector3(0, 0, 1.0));
+  const startPos  = camera.position.clone();
+  __heroTransiting = true;
+  const t0 = performance.now();
+  function tick() {
+    const t = Math.min(1, (performance.now() - t0) / duration);
+    // accelerating ease-in (t^2): slow start, smashes into the ring
+    const k = t * t;
+    camera.position.lerpVectors(startPos, targetPos, k);
+    camera.lookAt(target);
+    if (t < 1) requestAnimationFrame(tick);
+    else if (done) done();
+  }
+  requestAnimationFrame(tick);
 }
 
 function renderOnce() {
@@ -1301,29 +1332,39 @@ function emitShockwave() {
 function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
   if (mode === 'about') return;
   mode = 'about';
-  document.body.classList.add('mode-about');
-  aboutView.classList.add('active');
-  aboutView.setAttribute('aria-hidden', 'false');
 
-  if (startSceneIdx === 1) {
-    // Direct-to-scene-B: land at the end of scene A, then auto-fly through
-    // the wormhole into scene B so the user always experiences the passage
-    // rather than a hard cut. Total entry ≈ 2s (view fade 0.72s + portal flight 1.4s).
-    aboutScroll.scrollTop = 0;
-    requestAnimationFrame(() => {
-      const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
-      // start just before the portal opens (panel 6 fully in focus)
-      aboutScroll.scrollTop = max * (SCENE_A_END - 0.02);
+  const ringIdx = startSceneIdx === 1 ? 1 : 0;
+
+  // Step 1: hero camera physically rams into the clicked ring.
+  // Step 2 (mid-push): hero shell starts fading + about-view enters.
+  // Step 3 (push end): about-view fully active, scroll state initialised.
+  playCameraPushToRing(ringIdx, 650, () => {
+    // unfreeze hero camera so it can resume parallax if the user ever exits about
+    setTimeout(() => { __heroTransiting = false; }, 600);
+  });
+
+  // half-way through the push, start crossfading the world to the about view
+  setTimeout(() => {
+    document.body.classList.add('mode-about');
+  }, 200);
+  setTimeout(() => {
+    aboutView.classList.add('active');
+    aboutView.setAttribute('aria-hidden', 'false');
+    if (startSceneIdx === 1) {
+      aboutScroll.scrollTop = 0;
+      requestAnimationFrame(() => {
+        const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+        aboutScroll.scrollTop = max * (SCENE_A_END - 0.02);
+        updateAboutScroll();
+        setTimeout(() => {
+          smoothScrollAbout(max * (PORTAL_END + 0.05), 1500);
+        }, 650);
+      });
+    } else {
+      aboutScroll.scrollTop = 0;
       updateAboutScroll();
-      // after the about-view fade-in settles, auto-scroll through the portal
-      setTimeout(() => {
-        smoothScrollAbout(max * (PORTAL_END + 0.05), 1500);
-      }, 650);
-    });
-  } else {
-    aboutScroll.scrollTop = 0;
-    updateAboutScroll();
-  }
+    }
+  }, 480);
 }
 function exitAbout() {
   if (mode === 'hero') return;
