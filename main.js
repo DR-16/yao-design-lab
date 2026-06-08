@@ -974,87 +974,80 @@ function buildAboutEnvTexture() {
   c.height = 1024;
   const ctx = c.getContext('2d');
 
-  // Base vertical gradient: bright sky → mid → mid-dark ground.
+  // IRIDESCENT OIL-SLICK ENVIRONMENT.
+  // Per the reference: a dark/black field with flowing high-saturation
+  // colour blobs (violet → magenta → blue → cyan → amber → orange). The
+  // chrome cylinder reflects this, so the metal reads as holographic
+  // liquid-metal rather than a flat grey showroom. Colour mixing is done
+  // with the 'lighter' (additive) composite op so overlapping blobs blend
+  // into smooth iridescent hue transitions.
+
+  // Near-black base with a faint violet-to-blue vertical drift.
   const g = ctx.createLinearGradient(0, 0, 0, 1024);
-  g.addColorStop(0.00, '#dde2f0');
-  g.addColorStop(0.36, '#9aa0b4');
-  g.addColorStop(0.55, '#555a6c');
-  g.addColorStop(1.00, '#181a22');
+  g.addColorStop(0.00, '#08060e');
+  g.addColorStop(0.50, '#050308');
+  g.addColorStop(1.00, '#070510');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 2048, 1024);
 
-  // SOFTBOX HIGHLIGHTS — elliptical bright pools near the top of the env.
-  // These appear on the chrome FLOOR as bright spots (camera looking down
-  // reflects the env's top). Four of them spaced around the 360° equirect
-  // so reflections wrap around as the camera turns.
-  const softboxes = [
-    { u: 0.14, v: 0.10, rx: 145, ry: 52 },
-    { u: 0.40, v: 0.08, rx: 120, ry: 48 },
-    { u: 0.64, v: 0.12, rx: 150, ry: 55 },
-    { u: 0.88, v: 0.07, rx: 125, ry: 50 },
+  // Large soft colour blobs across the 360° strip. Each is a radial
+  // gradient fading to transparent; additive blending lets adjacent hues
+  // melt together. Placed at varied v so reflections sweep top-to-bottom
+  // as the camera turns and moves down the tube.
+  ctx.globalCompositeOperation = 'lighter';
+  const blobs = [
+    // u (0-1), v (0-1), radius px, [r,g,b], peak alpha
+    { u: 0.05, v: 0.34, r: 520, col: [192,  38, 211], a: 0.62 }, // violet
+    { u: 0.13, v: 0.62, r: 460, col: [255,  79, 216], a: 0.50 }, // magenta
+    { u: 0.21, v: 0.28, r: 500, col: [ 75, 125, 255], a: 0.58 }, // blue
+    { u: 0.30, v: 0.70, r: 430, col: [ 54, 224, 255], a: 0.44 }, // cyan
+    { u: 0.38, v: 0.40, r: 540, col: [192,  38, 211], a: 0.56 }, // violet
+    { u: 0.47, v: 0.66, r: 470, col: [ 75, 125, 255], a: 0.52 }, // blue
+    { u: 0.55, v: 0.30, r: 500, col: [255,  79, 216], a: 0.48 }, // magenta
+    { u: 0.63, v: 0.58, r: 510, col: [251, 191,  36], a: 0.50 }, // amber
+    { u: 0.71, v: 0.36, r: 440, col: [255, 122,  26], a: 0.46 }, // orange
+    { u: 0.79, v: 0.64, r: 520, col: [192,  38, 211], a: 0.58 }, // violet
+    { u: 0.87, v: 0.32, r: 470, col: [ 75, 125, 255], a: 0.54 }, // blue
+    { u: 0.95, v: 0.60, r: 460, col: [255,  79, 216], a: 0.50 }, // magenta
+    // a couple of warm accents low-down so the floor glows amber
+    { u: 0.42, v: 0.88, r: 420, col: [255, 122,  26], a: 0.40 },
+    { u: 0.68, v: 0.90, r: 400, col: [255,  48,  48], a: 0.36 },
   ];
-  for (const sb of softboxes) {
-    const cx = sb.u * 2048;
-    const cy = sb.v * 1024;
-    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(sb.rx, sb.ry) * 1.55);
-    rg.addColorStop(0.00, 'rgba(255, 255, 255, 1.0)');
-    rg.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)');
-    rg.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, sb.rx, sb.ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // VERTICAL BRIGHT STREAKS — tall narrow elliptical highlights spanning
-  // upper-to-mid env. These reflect onto vertical chrome WALLS as the
-  // vertical bright bars seen in the reference image (where overhead lights
-  // would reflect down the wall surfaces).
-  const streaks = [
-    { u: 0.06, v: 0.32, rx: 22, ry: 230 },
-    { u: 0.28, v: 0.30, rx: 26, ry: 250 },
-    { u: 0.52, v: 0.31, rx: 24, ry: 240 },
-    { u: 0.74, v: 0.30, rx: 26, ry: 245 },
-    { u: 0.94, v: 0.33, rx: 22, ry: 230 },
-  ];
-  for (const s of streaks) {
-    const cx = s.u * 2048;
-    const cy = s.v * 1024;
-    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(s.rx, s.ry));
-    rg.addColorStop(0.00, 'rgba(255, 255, 255, 0.92)');
-    rg.addColorStop(0.40, 'rgba(255, 255, 255, 0.45)');
-    rg.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, s.rx, s.ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // HORIZON BAND — soft bright stripe at v≈0.45-0.55, gives chrome walls
-  // a continuous bright equator line so they don't look uniformly grey.
-  const horizonGrad = ctx.createLinearGradient(0, 440, 0, 580);
-  horizonGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
-  horizonGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.16)');
-  horizonGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
-  ctx.fillStyle = horizonGrad;
-  ctx.fillRect(0, 440, 2048, 140);
-
-  // Subtle hero-stripe colour tints in the lower portion — gives the
-  // chrome floor + lower walls a hint of the four brand colours without
-  // being obvious.
-  const tints = [
-    { x: 256,  color: 'rgba(192, 38, 211, 0.14)' },
-    { x: 768,  color: 'rgba(251, 191, 36, 0.11)' },
-    { x: 1280, color: 'rgba(75, 125, 255, 0.16)' },
-    { x: 1792, color: 'rgba(255, 60, 60, 0.13)' },
-  ];
-  for (const tint of tints) {
-    const rg = ctx.createRadialGradient(tint.x, 700, 0, tint.x, 700, 380);
-    rg.addColorStop(0, tint.color);
-    rg.addColorStop(1, 'rgba(0,0,0,0)');
+  for (const b of blobs) {
+    const cx = b.u * 2048;
+    const cy = b.v * 1024;
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, b.r);
+    const [r, gg, bb] = b.col;
+    rg.addColorStop(0.00, `rgba(${r},${gg},${bb},${b.a})`);
+    rg.addColorStop(0.45, `rgba(${r},${gg},${bb},${b.a * 0.35})`);
+    rg.addColorStop(1.00, `rgba(${r},${gg},${bb},0)`);
     ctx.fillStyle = rg;
     ctx.fillRect(0, 0, 2048, 1024);
   }
+
+  // Bright specular glints — small near-white hotspots inside the colour
+  // field. On the glossy chrome these become sharp liquid-metal sparkles
+  // and give the highlights that "wet" oil-slick sheen.
+  const glints = [
+    { u: 0.18, v: 0.30, r: 70 },
+    { u: 0.36, v: 0.44, r: 60 },
+    { u: 0.54, v: 0.34, r: 75 },
+    { u: 0.66, v: 0.56, r: 64 },
+    { u: 0.82, v: 0.36, r: 70 },
+    { u: 0.92, v: 0.58, r: 58 },
+  ];
+  for (const gl of glints) {
+    const cx = gl.u * 2048;
+    const cy = gl.v * 1024;
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, gl.r);
+    rg.addColorStop(0.00, 'rgba(255,255,255,0.95)');
+    rg.addColorStop(0.30, 'rgba(255,250,240,0.45)');
+    rg.addColorStop(1.00, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, 2048, 1024);
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
 
   const tex = new THREE.CanvasTexture(c);
   tex.mapping    = THREE.EquirectangularReflectionMapping;
@@ -1068,26 +1061,29 @@ aboutScene.environment = __aboutEnvRT.texture;
 __aboutEnvSrc.dispose();
 __aboutPMREM.dispose();
 
-// --- Reflective metallic ROOM (replaces the previous cylinder tube) ---
-// Per the user's reference image: a polished steel showroom — bright
-// flat walls, floor, ceiling. Box-shaped instead of cylindrical so the
-// camera sees discrete planar reflections rather than a curved tunnel.
-// 18 wide × 12 tall × 80 deep, centred at z=-10 so both sceneA (camera
-// z=9) and sceneB settle (camera z=-19) live inside the same room.
-// True PBR mirror chrome: metalness 1.0 (pure metal, no diffuse), low
-// roughness for sharp reflections. envMapIntensity 1.5 boosts highlight
-// energy enough to read as bright without blowing out under ACES.
+// --- Reflective iridescent CYLINDER (enclosing chrome tube) ---
+// Per the user's reference: holographic liquid-metal — a dark base whose
+// glossy surface reflects flowing violet/blue/amber/magenta light. The
+// camera lives inside a polished cylinder (BackSide) so reflections curve
+// continuously around the tube rather than breaking on flat box seams.
+// radius 11, length 100, axis rotated onto Z. Centred at z=-10 so both
+// sceneA (camera z=9) and sceneB settle (camera z=-19) sit inside it.
+// metalness 1.0 = pure mirror metal (no diffuse — all colour comes from
+// the env reflection). roughness 0.12 keeps reflections sharp but lets
+// the colour bands smear slightly into that liquid oil-slick flow.
+// envMapIntensity 2.2 makes the hero colours read vivid and saturated.
 const chromeMat = new THREE.MeshStandardMaterial({
-  color: 0xe2e4ee,
+  color: 0xf2f3fa,
   metalness: 1.0,
-  roughness: 0.09,
-  envMapIntensity: 1.5,
+  roughness: 0.12,
+  envMapIntensity: 2.2,
   side: THREE.BackSide,
 });
 const chromeRoom = new THREE.Mesh(
-  new THREE.BoxGeometry(18, 12, 80),
+  new THREE.CylinderGeometry(11, 11, 100, 120, 1, true),
   chromeMat
 );
+chromeRoom.rotation.x = Math.PI / 2;   // lay the tube along the Z axis
 chromeRoom.position.set(0, 0, -10);
 aboutScene.add(chromeRoom);
 
@@ -1135,13 +1131,15 @@ function tickLightLines(t, dt) {
         const hex = LIGHT_LINE_COLORS[Math.floor(Math.random() * 4)];
         ln.mesh.material.color.setHex(hex);
         ln.light.color.setHex(hex);
-        // Box-aligned random spawn inside the chrome room. Box bounds:
-        // x ∈ [-9, 9], y ∈ [-6, 6], z ∈ [-50, +30]. We keep a small inset
-        // so lines never clip into the walls.
+        // Cylinder-aligned random spawn inside the chrome tube. Tube:
+        // radius 11, length 100 centred at z=-10 (z ∈ [-60, 40]). We keep
+        // the spawn radius ≤ 8 and z inset so lines never clip the wall.
+        const ang = Math.random() * Math.PI * 2;
+        const rad = Math.random() * 8;
         ln.mesh.position.set(
-          (Math.random() - 0.5) * 16,        // x in [-8, 8]
-          (Math.random() - 0.5) * 10,        // y in [-5, 5]
-          -10 + (Math.random() * 68 - 34)    // z in [-44, 24]
+          Math.cos(ang) * rad,
+          Math.sin(ang) * rad,
+          -10 + (Math.random() * 88 - 44)    // z in [-54, 34]
         );
         ln.light.position.copy(ln.mesh.position);
         // Random orientation — some lines pillar-vertical, some diagonal,
