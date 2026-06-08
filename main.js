@@ -1331,7 +1331,9 @@ for (let i = 0; i < PANEL_DATA.length; i++) {
   // mirror horizontally: a BackSide cylinder segment flips U, so pre-flip here
   tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = -1; tex.offset.x = 1;
   const angle = i * (Math.PI * 2 / PANEL_DATA.length);   // spiral around
-  const py = FLOOR_Y + 7 + i * ((ROOM_H - 16) / (PANEL_DATA.length - 1));
+  // Panels occupy the lower ~62% of the shaft; the top quarter is reserved
+  // for the SceneB doubt-voice swarm and the central resolution lines.
+  const py = FLOOR_Y + 6 + i * ((ROOM_H * 0.60) / (PANEL_DATA.length - 1));
   const geo = new THREE.CylinderGeometry(
     ROOM_R - 0.06, ROOM_R - 0.06, PANEL_H, 48, 1, true,
     angle - PANEL_ARC / 2, PANEL_ARC
@@ -1353,6 +1355,10 @@ function redrawAboutPanels(lang) {
     drawPanelTexture(aboutPanels[i].canvas, PANEL_DATA[i], i, __aboutLang);
     aboutPanels[i].tex.needsUpdate = true;
   }
+  // also redraw the SceneB central resolution lines (defined further below)
+  if (typeof resoLines !== 'undefined') {
+    for (let i = 0; i < resoLines.length; i++) drawResoTexture(i, __aboutLang);
+  }
 }
 window.__redrawAboutPanels = redrawAboutPanels;
 
@@ -1362,6 +1368,158 @@ const __staircaseEl = document.getElementById('staircase');
 if (__staircaseEl) __staircaseEl.style.display = 'none';
 glassFlame.visible = false;
 portrait.visible = false;
+
+// =============================================================================
+// SCENE B  —  embedded into the same chamber (no HTML overlay)
+// The upper quarter of the shaft is the "doubt zone": eight negative voices
+// drift in the air around the camera as it rises, materialising in hero
+// colours. Above them, four resolution lines light up one by one along the
+// central axis, leading the eye up into the skylight. The old HTML overlays
+// (fog words, centre lines, corridor placeholders) are hidden.
+['sceneBFog', 'sceneBLines', 'corridorStage'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+});
+
+// Generic glowing-text texture on a transparent canvas.
+function makeTextTexture(text, opts) {
+  const o = Object.assign({ w: 512, h: 256, font: '700 italic 96px Georgia, serif',
+    color: '#ffffff', glow: 'rgba(255,255,255,0.5)', chroma: null }, opts);
+  const c = document.createElement('canvas');
+  c.width = o.w; c.height = o.h;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, o.w, o.h);
+  x.font = o.font; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const cx = o.w / 2, cy = o.h / 2;
+  // chromatic-aberration ghost (negative-voice horror feel)
+  if (o.chroma) {
+    x.globalAlpha = 0.55;
+    x.fillStyle = o.chroma[0]; x.fillText(text, cx - 5, cy - 3);
+    x.fillStyle = o.chroma[1]; x.fillText(text, cx + 5, cy + 3);
+    x.globalAlpha = 1;
+  }
+  x.shadowColor = o.glow; x.shadowBlur = 28;
+  x.fillStyle = o.color; x.fillText(text, cx, cy);
+  x.shadowBlur = 0;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+
+// ---- Doubt voices ----------------------------------------------------------
+const DOUBT_ZONE_Y0 = FLOOR_Y + 6 + ROOM_H * 0.60 + 3;   // just above top panel
+const DOUBT_ZONE_Y1 = CEIL_Y - 4;
+const DOUBT_WORDS = [
+  { t: 'Too young',            ci: 0 },
+  { t: 'Impossible',           ci: 2 },
+  { t: 'Not practical',        ci: 3 },
+  { t: 'Maybe one day',        ci: 1 },
+  { t: 'Nobody cares',         ci: 2 },
+  { t: 'Unfinished',           ci: 0 },
+  { t: 'What if it fails',     ci: 1 },
+  { t: 'Someone already did it', ci: 3 },
+];
+const doubtVoices = [];
+for (let i = 0; i < DOUBT_WORDS.length; i++) {
+  const d = DOUBT_WORDS[i];
+  const tex = makeTextTexture(d.t, {
+    w: 1024, h: 256,
+    font: '700 italic 92px Georgia, "Times New Roman", serif',
+    color: HERO_CSS[d.ci], glow: HERO_CSS[d.ci],
+    chroma: ['rgba(80,200,255,0.7)', 'rgba(255,70,180,0.7)'],
+  });
+  const aspect = 1024 / 256;
+  const hgt = 0.85 + Math.random() * 0.5;
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(hgt * aspect, hgt),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false })
+  );
+  const ang = (i / DOUBT_WORDS.length) * Math.PI * 2 + Math.random() * 0.6;
+  const rad = 2.2 + Math.random() * 3.0;
+  const wy  = DOUBT_ZONE_Y0 + Math.random() * (DOUBT_ZONE_Y1 - DOUBT_ZONE_Y0);
+  mesh.position.set(Math.sin(ang) * rad, wy, Math.cos(ang) * rad);
+  mesh.renderOrder = 5;
+  aboutScene.add(mesh);
+  doubtVoices.push({
+    mesh, baseY: wy,
+    appearAt: 0.70 + (i / DOUBT_WORDS.length) * 0.14,  // staggered 0.70→0.84
+    drift: 0.3 + Math.random() * 0.4,
+    phase: Math.random() * Math.PI * 2,
+  });
+}
+
+// ---- Central resolution lines ----------------------------------------------
+const RESO_DATA = [
+  { en: 'Too Many Ideas…',                cn: '我经常思考很多' },
+  { en: 'Not Everything Becomes Reality', cn: '但并非所有都会成真' },
+  { en: 'However The Process Changed Me', cn: '即使如此 过程改变了我' },
+  { en: 'So I Built This Lab',            cn: '于是我建造了这个实验室' },
+];
+const resoLines = [];
+for (let i = 0; i < RESO_DATA.length; i++) {
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(6.0, 1.0),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  // Stacked near the top of the shaft, in the camera's gaze during the final
+  // ascent into the skylight.
+  const ry = 18 + i * 2.4;
+  mesh.position.set(0, ry, 0);
+  mesh.renderOrder = 7;
+  aboutScene.add(mesh);
+  resoLines.push({ mesh, y: ry, appearAt: 0.85 + i * 0.034 });
+}
+function drawResoTexture(idx, lang) {
+  const d = RESO_DATA[idx];
+  const text = lang === 'cn' ? d.cn : d.en;
+  const c = document.createElement('canvas');
+  c.width = 1536; c.height = 256;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 1536, 256);
+  // dark translucent pill backing so the line stays legible over the bright
+  // skylight as the camera rises into it
+  const r = 60, w = 1536, h = 256, pad = 30;
+  x.fillStyle = 'rgba(8,10,16,0.62)';
+  x.beginPath();
+  x.moveTo(pad + r, pad);
+  x.arcTo(w - pad, pad, w - pad, h - pad, r);
+  x.arcTo(w - pad, h - pad, pad, h - pad, r);
+  x.arcTo(pad, h - pad, pad, pad, r);
+  x.arcTo(pad, pad, w - pad, pad, r);
+  x.closePath(); x.fill();
+  // glowing text
+  x.font = lang === 'cn' ? '500 78px "Songti SC", serif' : '500 italic 80px Georgia, serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.shadowColor = 'rgba(180,205,255,0.8)'; x.shadowBlur = 26;
+  x.fillStyle = '#f4f7ff';
+  x.fillText(text, w / 2, h / 2 + 4);
+  x.shadowBlur = 0;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  const old = resoLines[idx].mesh.material.map;
+  resoLines[idx].mesh.material.map = tex;
+  resoLines[idx].mesh.material.needsUpdate = true;
+  if (old) old.dispose();
+}
+for (let i = 0; i < RESO_DATA.length; i++) drawResoTexture(i, __aboutLang);
+
+// Materialise + billboard SceneB text each frame, driven by scroll progress.
+function tickSceneB(sp, t) {
+  for (const v of doubtVoices) {
+    const k = Math.max(0, Math.min(1, (sp - v.appearAt) / 0.10));
+    v.mesh.material.opacity = k * 0.95;
+    v.mesh.position.y = v.baseY + Math.sin(t * v.drift + v.phase) * 0.25;
+    v.mesh.scale.setScalar(0.6 + k * 0.4);
+    if (k > 0) v.mesh.quaternion.copy(aboutCam.quaternion);  // billboard
+  }
+  for (const r of resoLines) {
+    const k = Math.max(0, Math.min(1, (sp - r.appearAt) / 0.06));
+    r.mesh.material.opacity = k;
+    if (k > 0) r.mesh.quaternion.copy(aboutCam.quaternion);
+  }
+}
 
 // Illumination = ceiling key light + emissive neon columns + iridescent env
 // reflection + the random colour light lines. Real volumetric light + true
@@ -2242,43 +2400,66 @@ function aboutTick() {
       pc.material.uniforms.uOpacity.value = PANEL_CLOUD_OP[i];
     }
 
-    // TRAVEL CAMERA — the operator rides UP the cylindrical shaft. Scroll
-    // (aboutScrollProgress 0→1) dollies the eye from floor level toward the
-    // ceiling opening, while the yaw tracks the wall panel at the current
-    // height so each of the six panels is framed head-on in turn. The camera
-    // sits a little off-centre on the OPPOSITE side of the target panel, so
-    // the panel reads across the room and the curved wall wraps around it.
+    // TRAVEL CAMERA — the operator rides UP the cylindrical shaft.
+    // Phase 1 (scroll 0→0.55): frame the six wall panels one by one. The eye
+    // sits off-centre opposite each panel so the curved wall wraps around it.
+    // Phase 2 (0.55→1): leave the wall, drift to the central axis and rise
+    // through the doubt-voice swarm, then up toward the skylight as the four
+    // resolution lines light along the axis ahead.
     const sp = aboutScrollProgress;
     const N = aboutPanels.length;
-    // Panels occupy the first 84% of the scroll; the last stretch ascends
-    // into the bright ceiling opening with a look-up.
-    const travel = Math.min(1, sp / 0.84);
+    const bob = Math.sin(t * 0.5) * 0.12;
+
+    // ---- panel-framing pose ----
+    const travel = Math.min(1, sp / 0.55);
     const fIdx = travel * (N - 1);
     const i0 = Math.floor(fIdx);
     const i1 = Math.min(N - 1, i0 + 1);
     const f  = fIdx - i0;
-    const ease = f * f * (3 - 2 * f);                  // smoothstep between panels
-    const ang  = aboutPanels[i0].angle + (aboutPanels[i1].angle - aboutPanels[i0].angle) * ease;
-    const tgtY = aboutPanels[i0].y + (aboutPanels[i1].y - aboutPanels[i0].y) * ease;
+    const ease = f * f * (3 - 2 * f);
+    const pAng  = aboutPanels[i0].angle + (aboutPanels[i1].angle - aboutPanels[i0].angle) * ease;
+    const pY    = aboutPanels[i0].y + (aboutPanels[i1].y - aboutPanels[i0].y) * ease;
+    const camRad = 2.7, camAng = pAng + Math.PI;
+    const pPosX = Math.sin(camAng) * camRad, pPosZ = Math.cos(camAng) * camRad, pPosY = pY + bob;
+    const pLookX = Math.sin(pAng) * ROOM_R, pLookY = pY, pLookZ = Math.cos(pAng) * ROOM_R;
 
-    const bob  = Math.sin(t * 0.5) * 0.12;
-    const camRad = 2.7;
-    const camAng = ang + Math.PI;                      // stand opposite the panel
-    const eyeY = tgtY + bob;
+    // ---- central rising pose (doubt zone → skylight) ----
+    const a = Math.max(0, Math.min(1, (sp - 0.55) / 0.45));
+    const aE = a * a * (3 - 2 * a);
+    const spiral = t * 0.06 + a * Math.PI * 1.1;
+    const aRad = 1.9;
+    const topY = aboutPanels[N - 1].y;
+    const riseY = topY + aE * (CEIL_Y - 6 - topY) + bob;
+    const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
+    // While crossing the doubt swarm keep the gaze roughly LEVEL (look across
+    // the chamber, slightly ahead) so the voices drift through frame; only in
+    // the finale pitch up the axis into the skylight as the resolution lines
+    // light overhead.
+    const finale = Math.max(0, (a - 0.6) / 0.4);       // 0 until a=0.6, →1 at end
+    const fE = finale * finale;
+    const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
+    const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
+    const aLookY = riseY + 1.0 + fE * (CEIL_Y + 2 - riseY);
+
+    // ---- blend the two poses ----
+    // Pose blend resolves fast (camera is on the central axis by ~sp 0.73) so
+    // the viewer is inside the doubt swarm well before it materialises; the
+    // vertical rise (riseY, via aE) keeps climbing gradually after that.
+    const kk = Math.max(0, Math.min(1, (sp - 0.55) / 0.18));
+    const k = kk * kk * (3 - 2 * kk);
     aboutCam.position.set(
-      Math.sin(camAng) * camRad,
-      eyeY,
-      Math.cos(camAng) * camRad
+      pPosX + (aPosX - pPosX) * k,
+      pPosY + (aPosY - pPosY) * k,
+      pPosZ + (aPosZ - pPosZ) * k
+    );
+    aboutCam.lookAt(
+      pLookX + (aLookX - pLookX) * k,
+      pLookY + (aLookY - pLookY) * k,
+      pLookZ + (aLookZ - pLookZ) * k
     );
 
-    // End-of-scroll: pitch the look upward toward the ceiling opening so the
-    // viewer feels the full height of the shaft above them.
-    const upLook = Math.max(0, (sp - 0.84) / 0.16);    // 0 until 84%, →1 at end
-    aboutCam.lookAt(
-      Math.sin(ang) * ROOM_R * (1 - upLook),
-      tgtY + upLook * (CEIL_Y - tgtY) * 0.9,
-      Math.cos(ang) * ROOM_R * (1 - upLook)
-    );
+    // SceneB voices + resolution lines materialise and billboard to the camera.
+    tickSceneB(sp, t);
 
     // Hard-hide the retired tunnel point cloud so it never floats in the room.
     portalGroup.visible = false;
