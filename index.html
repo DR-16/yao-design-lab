@@ -168,6 +168,21 @@
       </div>
     </div>
 
+    <!-- SceneB "doubt voices": 8 scattered phrases that materialize progressively
+         as the user advances through corridor panels 1→4 (2 per panel, all 8 by
+         panel 4). They sit on a lower z than corridor frames + centre lines, so
+         any overlap is naturally muted by the backdrop-blur of the frames. -->
+    <div class="scene-b-fog" id="sceneBFog" aria-hidden="true">
+      <span class="fog-word c-violet" style="--x: 8vw;  --y: 16vh; --rot: -8deg;  --scale: 1.4;">Too young</span>
+      <span class="fog-word c-yellow" style="--x: 88vw; --y: 12vh; --rot:  6deg;  --scale: 1.2;">Impossible</span>
+      <span class="fog-word c-red"    style="--x: 14vw; --y: 36vh; --rot:-14deg;  --scale: 1.5;">Not practical</span>
+      <span class="fog-word c-blue"   style="--x: 84vw; --y: 32vh; --rot: 10deg;  --scale: 1.3;">Maybe one day</span>
+      <span class="fog-word c-yellow" style="--x: 11vw; --y: 64vh; --rot:  4deg;  --scale: 1.1;">Nobody cares</span>
+      <span class="fog-word c-violet" style="--x: 90vw; --y: 68vh; --rot: -6deg;  --scale: 1.6;">Unfinished</span>
+      <span class="fog-word c-blue"   style="--x: 20vw; --y: 88vh; --rot: 12deg;  --scale: 1.2;">What if it fails</span>
+      <span class="fog-word c-red"    style="--x: 74vw; --y: 86vh; --rot: -8deg;  --scale: 1.0;">Someone already did it</span>
+    </div>
+
     <!-- SceneB centre lines: 4 lines that accumulate as the user advances
          through corridor panels 1→4. Panel 1 → line 1; panel 4 → all 4 lines.
          Scrolling back removes lines. -->

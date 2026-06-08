@@ -1379,6 +1379,29 @@ function updateAboutScroll() {
   if (focusIdx >= 6) visibleLines = Math.min(4, focusIdx - 6 + 1);
   sceneBLines.forEach((p, i) => p.classList.toggle('show', i < visibleLines));
 
+  // SceneB "doubt voices": 8 scattered phrases that materialize as the user
+  // advances through corridor panels (panel 1→2 adds 2, …, all 8 by panel 4).
+  // The reveal order is a stable random shuffle generated once per session, so
+  // scrolling back hides the same words in reverse without reshuffling.
+  if (!updateAboutScroll.fogOrder) {
+    const idx = [0, 1, 2, 3, 4, 5, 6, 7];
+    for (let i = idx.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    updateAboutScroll.fogOrder = idx;
+    updateAboutScroll.fogWords = Array.from(document.querySelectorAll('.fog-word'));
+  }
+  let visibleFog = 0;
+  if (focusIdx === 6)      visibleFog = 2;
+  else if (focusIdx === 7) visibleFog = 4;
+  else if (focusIdx === 8) visibleFog = 6;
+  else if (focusIdx >= 9)  visibleFog = 8;
+  updateAboutScroll.fogOrder.forEach((wordIdx, k) => {
+    const w = updateAboutScroll.fogWords[wordIdx];
+    if (w) w.classList.toggle('visible', k < visibleFog);
+  });
+
   // dissolve the portrait gradually
   portraitMat.uniforms.uDissolve.value = Math.min(1, aboutScrollProgress * 1.05);
   if (aboutScrollProgress > 0.03 && aboutHint) aboutHint.classList.add('faded');

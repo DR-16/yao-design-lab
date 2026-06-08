@@ -409,6 +409,67 @@ body.scene-b .scene-b-lines { opacity: 1; }
   transform: translateY(0);
 }
 
+/* ---- SCENE B "DOUBT VOICES" ----
+   8 scattered horror-style phrases that materialize as particles when the
+   user advances through corridor panels 1→4. Each word lives at viewport
+   coordinates via --x/--y, with --rot and --scale for irregular framing.
+   They sit at z-index 4 (below corridor frames at 6 and centre lines at 7),
+   so overlap is naturally muted by the corridor frame's backdrop blur and
+   centre-line text-shadow. */
+.scene-b-fog {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+body.scene-b .scene-b-fog { opacity: 1; }
+
+.fog-word {
+  position: absolute;
+  left: var(--x, 50vw);
+  top:  var(--y, 50vh);
+  font-family: "Chalkduster", "Brush Script MT", "Papyrus", "STKaiti", cursive, serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: clamp(15px, 1.35vw, 22px);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  /* Resting transform: scaled-down, blurred-in; .visible expands it back. */
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0deg))
+    scale(0.35)
+    skew(-7deg, 1.5deg);
+  filter: blur(14px);
+  opacity: 0;
+  text-shadow:
+    0 0 10px currentColor,
+    0 0 26px rgba(0, 0, 0, 0.7),
+    1px 1px 0 rgba(0, 0, 0, 0.5);
+  transition:
+    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    filter  1.1s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 1.2s cubic-bezier(0.3, 0.7, 0.25, 1);
+  mix-blend-mode: screen;
+}
+.fog-word.visible {
+  opacity: 0.62;
+  filter: blur(0.4px);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rot, 0deg))
+    scale(var(--scale, 1))
+    skew(-7deg, 1.5deg);
+}
+/* Colours echo the four hero stripes (violet / yellow / blue / red). The dark
+   blue + red read a little brightly on black thanks to currentColor glow. */
+.fog-word.c-violet { color: #c026d3; }
+.fog-word.c-yellow { color: #fbbf24; }
+.fog-word.c-blue   { color: #3b6bd6; }
+.fog-word.c-red    { color: #c43030; }
+
 /* ---- CORRIDOR TRACK (Scene B) ----
    4 panels alternating left/right along the depth axis. The outer stage
    handles fade-in; the inner track is translated on Z by JS to pull each
