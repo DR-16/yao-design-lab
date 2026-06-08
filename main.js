@@ -861,6 +861,7 @@ const ringMat = new THREE.ShaderMaterial({
   `,
 });
 const ringParticles = new THREE.Points(ringGeo, ringMat);
+ringParticles.visible = false;   // retired: stray colour particles don't fit the metal room
 aboutScene.add(ringParticles);
 
 // ---------- Wormhole TUNNEL (made of particle rings stacked along Z) ----------
@@ -2045,7 +2046,9 @@ function updateAboutScroll() {
   // next scene.
   if (typeof updateAboutScroll.lastFocus === 'undefined') updateAboutScroll.lastFocus = focusIdx;
   if (focusIdx !== updateAboutScroll.lastFocus) {
-    emitRing(__scrollDir);
+    // (Removed) coloured ring burst — it read as stray floating particles in
+    // the metal chamber. void to keep emitRing referenced without firing.
+    void emitRing;
     updateAboutScroll.lastFocus = focusIdx;
   }
   // Update scene-A panels (.step, indices 0..5) and scene-B panels (.corridor-step,
