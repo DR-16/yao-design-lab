@@ -989,12 +989,12 @@ portalGroup.add(streaks);
 // They sit behind the text panel and in front of the flame, half-transparent
 // so the flame still shows through.
 const PANEL_IMAGES = [
-  'img/p1.jpg',
-  null,             // panel 2 — waiting on user image
-  'img/p2.jpg',
-  null,             // panel 4 — waiting on user image
-  'img/p3.jpg',
-  null,             // panel 6 — waiting on user image
+  'img/p1.jpg', // panel 1
+  'img/p2.jpg', // panel 2
+  'img/p3.jpg', // panel 3
+  'img/p4.jpg', // panel 4
+  'img/p5.jpg', // panel 5
+  'img/p6.jpg', // panel 6
 ];
 const panelClouds = new Array(6).fill(null);
 const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0); // tween target per cloud
@@ -1004,7 +1004,9 @@ function loadImageParticles(url, idx) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    const MAX_W = 220;
+    // bigger sample canvas + every-2-pixel sampling → dense point cloud
+    // (activetheory's spine-cloud style: tens of thousands of tiny points)
+    const MAX_W = 300;
     const w = MAX_W;
     const h = Math.round(MAX_W * img.height / img.width);
     const cv = document.createElement('canvas');
@@ -1014,9 +1016,8 @@ function loadImageParticles(url, idx) {
     const data = ctx.getImageData(0, 0, w, h).data;
 
     const positions = [], colors = [];
-    const STEP = 4; // sample every 4 pixels → particle density that reads as POINTS, not a sheet
-    // world-unit dimensions: image fits in a ~3 × (3 * aspect) area
-    const worldW = 3.6;
+    const STEP = 2; // every 2 pixels → ~22k particles per image
+    const worldW = 3.4;
     const worldH = worldW * h / w;
     for (let py = 0; py < h; py += STEP) {
       for (let px = 0; px < w; px += STEP) {
@@ -1047,7 +1048,9 @@ function loadImageParticles(url, idx) {
         void main(){
           vColor = color;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = 0.9 * (120.0 / max(-mv.z, 0.3));
+          // tiny particles + flat distance scaling — activetheory-style dense
+          // point cloud where the image emerges from the sheer density of points
+          gl_PointSize = 0.45 * (60.0 / max(-mv.z, 0.3));
           gl_Position = projectionMatrix * mv;
         }
       `,
@@ -1059,8 +1062,7 @@ function loadImageParticles(url, idx) {
           float d = length(q);
           float a = smoothstep(0.5, 0.0, d) * uOpacity;
           if (a < 0.01) discard;
-          // boost brightness so the cloud reads against the black backdrop
-          gl_FragColor = vec4(vColor * 1.4, a * 0.75);
+          gl_FragColor = vec4(vColor * 1.15, a * 0.62);
         }
       `,
     });
