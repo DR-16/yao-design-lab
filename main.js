@@ -1232,44 +1232,73 @@ function buildCeilingTex() {
   t.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
   return t;
 }
-function buildCeilingEmissive() {
+// The four SceneB theme sentences live ENGRAVED into the metal ceiling — they
+// read as glowing reflections on the polished disc, not pasted labels.
+const CEIL_LINES = [
+  { en: 'Too Many Ideas…',                cn: '我经常思考很多' },
+  { en: 'Not Everything Becomes Reality', cn: '但并非所有都会成真' },
+  { en: 'However The Process Changed Me', cn: '即使如此 过程改变了我' },
+  { en: 'So I Built This Lab',            cn: '于是我建造了这个实验室' },
+];
+function buildCeilingEmissive(lang) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 1024;
   const x = c.getContext('2d');
   x.fillStyle = '#000'; x.fillRect(0, 0, 1024, 1024);
-  const g = x.createRadialGradient(512, 512, 0, 512, 512, 230);
-  g.addColorStop(0.0, 'rgba(238,244,255,1)');
-  g.addColorStop(0.6, 'rgba(210,224,255,0.5)');
+  // faint central sheen (no hard white disc)
+  const g = x.createRadialGradient(512, 512, 0, 512, 512, 360);
+  g.addColorStop(0.0, 'rgba(208,222,250,0.30)');
   g.addColorStop(1.0, 'rgba(0,0,0,0)');
   x.fillStyle = g; x.fillRect(0, 0, 1024, 1024);
+  // The disc is seen from below, which flips its texture 180°, so pre-rotate
+  // the text so it reads upright on the ceiling.
+  x.translate(512, 512); x.rotate(Math.PI); x.translate(-512, -512);
+  // four theme sentences as glowing reflected text, stacked
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = (lang === 'cn')
+    ? '500 50px "Songti SC", "Times New Roman", serif'
+    : 'italic 56px "Instrument Serif", Georgia, serif';
+  const ys = [350, 444, 580, 674];
+  for (let i = 0; i < CEIL_LINES.length; i++) {
+    const txt = (lang === 'cn') ? CEIL_LINES[i].cn : CEIL_LINES[i].en;
+    x.shadowColor = 'rgba(200,222,255,0.85)'; x.shadowBlur = 22;
+    x.fillStyle = 'rgba(232,240,253,0.95)';
+    x.fillText(txt, 512, ys[i], 770);
+    x.shadowBlur = 0;
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-const ceilDisc = new THREE.Mesh(
-  new THREE.CircleGeometry(ROOM_R, 128),
-  new THREE.MeshStandardMaterial({
-    map: buildCeilingTex(),
-    emissive: 0xffffff, emissiveMap: buildCeilingEmissive(), emissiveIntensity: 1.3,
-    metalness: 0.45, roughness: 0.42, envMapIntensity: 1.0,
-    side: THREE.DoubleSide,
-  })
-);
+const ceilMatStd = new THREE.MeshStandardMaterial({
+  map: buildCeilingTex(),
+  emissive: 0xffffff, emissiveMap: buildCeilingEmissive(__ceilLang()), emissiveIntensity: 1.25,
+  metalness: 0.72, roughness: 0.3, envMapIntensity: 1.25,   // polished + reflective
+  side: THREE.DoubleSide,
+});
+function __ceilLang() { return document.body.classList.contains('lang-cn') ? 'cn' : 'en'; }
+function redrawCeiling(lang) {
+  const old = ceilMatStd.emissiveMap;
+  ceilMatStd.emissiveMap = buildCeilingEmissive(lang === 'cn' ? 'cn' : 'en');
+  ceilMatStd.needsUpdate = true;
+  if (old) old.dispose();
+}
+const ceilDisc = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R, 128), ceilMatStd);
 ceilDisc.rotation.x = Math.PI / 2;     // normal pointing down into the room
 ceilDisc.position.y = CEIL_Y;
 aboutScene.add(ceilDisc);
-// soft additive bloom over the skylight core
+// very soft central sheen (the polished metal does the rest)
 const ceilGlow = new THREE.Mesh(
-  new THREE.CircleGeometry(ROOM_R * 0.34, 96),
+  new THREE.CircleGeometry(ROOM_R * 0.22, 96),
   new THREE.MeshBasicMaterial({
-    color: 0xdfe9ff, transparent: true, opacity: 0.55,
+    color: 0xcad8f5, transparent: true, opacity: 0.22,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
   })
 );
 ceilGlow.rotation.x = Math.PI / 2;
 ceilGlow.position.y = CEIL_Y - 0.15;
 aboutScene.add(ceilGlow);
-const ceilKey = new THREE.PointLight(0xeaf2ff, 3.0, ROOM_H * 2.6, 1.3);
+const ceilKey = new THREE.PointLight(0xeaf2ff, 2.2, ROOM_H * 2.6, 1.3);
 ceilKey.position.set(0, CEIL_Y - 1.5, 0);
 aboutScene.add(ceilKey);
 const fillKey = new THREE.PointLight(0xbfd0ff, 0.8, ROOM_H * 1.2, 1.6);
@@ -1399,10 +1428,8 @@ function redrawAboutPanels(lang) {
     drawPanelTexture(aboutPanels[i].canvas, PANEL_DATA[i], i, __aboutLang);
     aboutPanels[i].tex.needsUpdate = true;
   }
-  // also redraw the SceneB central resolution lines (defined further below)
-  if (typeof resoLines !== 'undefined') {
-    for (let i = 0; i < resoLines.length; i++) drawResoTexture(i, __aboutLang);
-  }
+  // also redraw the SceneB theme sentences engraved into the metal ceiling
+  if (typeof redrawCeiling === 'function') redrawCeiling(__aboutLang);
 }
 window.__redrawAboutPanels = redrawAboutPanels;
 // Redraw the panels (and centre lines) once the artistic web fonts finish
@@ -1501,81 +1528,19 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
   });
 }
 
-// ---- Central resolution lines ----------------------------------------------
-const RESO_DATA = [
-  { en: 'Too Many Ideas…',                cn: '我经常思考很多' },
-  { en: 'Not Everything Becomes Reality', cn: '但并非所有都会成真' },
-  { en: 'However The Process Changed Me', cn: '即使如此 过程改变了我' },
-  { en: 'So I Built This Lab',            cn: '于是我建造了这个实验室' },
-];
-const resoLines = [];
-for (let i = 0; i < RESO_DATA.length; i++) {
-  const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(4.2, 0.72),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
-  );
-  // Each line sits on the axis at the eye height the rising camera reaches
-  // when it lights up, so all four are framed in turn as the viewer ascends
-  // (the camera stays near-level until the very end, then tilts up).
-  const ry = [18.6, 20.3, 22.0, 23.4][i];
-  mesh.position.set(0, ry, 0);
-  mesh.renderOrder = 7;
-  aboutScene.add(mesh);
-  resoLines.push({ mesh, y: ry, appearAt: 0.78 + i * 0.05 });
-}
-function drawResoTexture(idx, lang) {
-  const d = RESO_DATA[idx];
-  const text = lang === 'cn' ? d.cn : d.en;
-  const c = document.createElement('canvas');
-  c.width = 1536; c.height = 256;
-  const x = c.getContext('2d');
-  x.clearRect(0, 0, 1536, 256);
-  // dark translucent pill backing so the line stays legible over the bright
-  // skylight as the camera rises into it
-  const r = 60, w = 1536, h = 256, pad = 30;
-  x.fillStyle = 'rgba(8,10,16,0.72)';
-  x.beginPath();
-  x.moveTo(pad + r, pad);
-  x.arcTo(w - pad, pad, w - pad, h - pad, r);
-  x.arcTo(w - pad, h - pad, pad, h - pad, r);
-  x.arcTo(pad, h - pad, pad, pad, r);
-  x.arcTo(pad, pad, w - pad, pad, r);
-  x.closePath(); x.fill();
-  // glowing text — maxWidth keeps even the longest line inside the pill
-  x.font = lang === 'cn' ? '500 70px "Songti SC", serif' : 'italic 82px "Instrument Serif", Georgia, serif';
-  x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.shadowColor = 'rgba(180,205,255,0.85)'; x.shadowBlur = 24;
-  x.fillStyle = '#f4f7ff';
-  x.fillText(text, w / 2, h / 2 + 4, w - 220);
-  x.shadowBlur = 0;
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
-  const old = resoLines[idx].mesh.material.map;
-  resoLines[idx].mesh.material.map = tex;
-  resoLines[idx].mesh.material.needsUpdate = true;
-  if (old) old.dispose();
-}
-for (let i = 0; i < RESO_DATA.length; i++) drawResoTexture(i, __aboutLang);
+// (The four theme sentences are no longer 3D planes in the air — they are
+// engraved into the metal ceiling as glowing reflections; see buildCeilingEmissive.)
 
-// Materialise + billboard SceneB text each frame, driven by scroll progress.
+// Materialise + billboard the doubt voices each frame. They fade out near the
+// final page so the ending settles to the reflective ceiling + its text.
 function tickSceneB(sp, t) {
-  // The four theme sentences fade in together at the final page (appear); the
-  // doubt voices fade OUT as that happens, so the ending settles to just the
-  // resolved sentences inside the skylight.
-  const appear = Math.max(0, Math.min(1, (sp - 0.84) / 0.06));
+  const settle = Math.max(0, Math.min(1, (sp - 0.84) / 0.06));
   for (const v of doubtVoices) {
     const k = Math.max(0, Math.min(1, (sp - v.appearAt) / 0.10));
-    v.mesh.material.opacity = k * 0.95 * (1 - appear);
+    v.mesh.material.opacity = k * 0.95 * (1 - settle);
     v.mesh.position.y = v.baseY + Math.sin(t * v.drift + v.phase) * 0.25;
     v.mesh.scale.setScalar(0.6 + k * 0.4);
     if (k > 0) v.mesh.quaternion.copy(aboutCam.quaternion);  // billboard
-  }
-  // All four theme sentences fade in TOGETHER (not one-by-one) and stay lit
-  // inside the skylight disc on the final page.
-  for (const r of resoLines) {
-    r.mesh.material.opacity = appear;
-    if (appear > 0) r.mesh.quaternion.copy(aboutCam.quaternion);
   }
 }
 
@@ -2536,34 +2501,16 @@ function aboutTick() {
     for (let i = 0; i < panelClouds.length; i++) {
       const pc = panelClouds[i];
       if (!pc) continue;
-      const pa = aboutPanels[i].angle - 0.50;          // sit beside the text (right side)
-      const pr = ROOM_R - 0.7;                          // close to the wall
+      const pa = aboutPanels[i].angle - 0.82;          // OUTSIDE the frame's edge
+      const pr = ROOM_R - 1.1;                          // float just off the wall
       pc.position.set(Math.sin(pa) * pr, aboutPanels[i].y + 0.1, Math.cos(pa) * pr);
       pc.lookAt(aboutCam.position);                     // face the viewer
-      pc.scale.setScalar(1.25);
+      pc.scale.setScalar(1.15);
       const near = 1 - Math.min(1, Math.abs(fIdx - i)); // 1 when framed
       PANEL_CLOUD_TARGET_OP[i] = near * (1 - k) * 0.95; // hide once in doubt zone
     }
 
-    // Park the four theme sentences as a stack a few metres in front of the
-    // camera, in its VIEW plane, so they sit inside the bright skylight disc
-    // the camera is looking up into. The basis comes straight from the camera's
-    // world matrix (always orthonormal — no degenerate cross product even when
-    // the gaze is near-vertical), so the stack never scatters.
-    if (sp > 0.80) {
-      aboutCam.updateMatrixWorld();
-      const e = aboutCam.matrixWorld.elements;
-      const up = new THREE.Vector3(e[4], e[5], e[6]);          // camera Y (screen up)
-      const fwd = new THREE.Vector3(-e[8], -e[9], -e[10]);     // camera -Z (forward)
-      const D = 6.6;
-      const center = aboutCam.position.clone().addScaledVector(fwd, D);
-      for (let i = 0; i < resoLines.length; i++) {
-        const off = (1.5 - i) * 1.02;                  // line0 top → line3 bottom
-        resoLines[i].mesh.position.copy(center).addScaledVector(up, off);
-      }
-    }
-
-    // SceneB voices + resolution lines materialise and billboard to the camera.
+    // SceneB doubt voices materialise and billboard to the camera.
     tickSceneB(sp, t);
 
     // Hard-hide the retired tunnel point cloud so it never floats in the room.
