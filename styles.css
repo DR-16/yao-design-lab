@@ -274,7 +274,9 @@ body.scene-b .about-eyebrow { color: rgba(220, 180, 255, 0.6); }
    while the text steps rotate around it as the user scrolls */
 .staircase {
   position: fixed;
-  left: 50%;
+  /* shifted left so the right half of the viewport is free for the photo
+     particle helix that mirrors this one */
+  left: 28%;
   top: 50%;
   width: 0;
   height: 0;

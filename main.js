@@ -1342,6 +1342,26 @@ function updateAboutScroll() {
     }
     PANEL_CLOUD_TARGET_OP[i] = op;
   }
+
+  // Position each image cloud on a DNA helix in the RIGHT half of the viewport,
+  // mirroring the text staircase on the left. Same rotor angle / vertical
+  // sweep as the text helix, but offset along +X so the photo sits to the
+  // right of the text panel that corresponds to the focused step.
+  const IMG_HELIX_RADIUS = 0.9;
+  const IMG_PANEL_Y_GAP  = 0.4;
+  const IMG_GROUP_X      = 2.4; // world-units offset → right half of screen
+  const rotorTyUnits     = (IMG_PANEL_Y_GAP * 2.5) - effA * (IMG_PANEL_Y_GAP * 5);
+  for (let i = 0; i < panelClouds.length; i++) {
+    const pts = panelClouds[i];
+    if (!pts) continue;
+    const stepRyRad = (i * 60) * Math.PI / 180;
+    const baseX = IMG_HELIX_RADIUS * Math.sin(stepRyRad);
+    const baseZ = IMG_HELIX_RADIUS * Math.cos(stepRyRad);
+    const stepY = (i - 2.5) * IMG_PANEL_Y_GAP; // panel 1 lowest, panel 6 highest
+    const x = baseX * cosR + baseZ * sinR;
+    const z = -baseX * sinR + baseZ * cosR;
+    pts.position.set(x + IMG_GROUP_X, stepY + rotorTyUnits, z);
+  }
   document.querySelectorAll('.corridor-step').forEach((s, i) => {
     const g = 6 + i;
     const isCurrent = (g === focusIdx);
