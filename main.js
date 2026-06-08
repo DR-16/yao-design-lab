@@ -573,8 +573,8 @@ aboutRenderer.toneMapping = THREE.ACESFilmicToneMapping;
 aboutRenderer.toneMappingExposure = 1.0;
 
 const aboutScene  = new THREE.Scene();
-const aboutCam    = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
-aboutCam.position.set(0, 0, 9);
+const aboutCam    = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+aboutCam.position.set(0, 0, 3);
 
 aboutScene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const aboutKey = new THREE.PointLight(0xc0d8ff, 1.1, 30);
@@ -1061,36 +1061,102 @@ aboutScene.environment = __aboutEnvRT.texture;
 __aboutEnvSrc.dispose();
 __aboutPMREM.dispose();
 
-// --- Reflective iridescent CYLINDER (enclosing chrome tube) ---
-// Per the user's reference: holographic liquid-metal — a dark base whose
-// glossy surface reflects flowing violet/blue/amber/magenta light. The
-// camera lives inside a polished cylinder (BackSide) so reflections curve
-// continuously around the tube rather than breaking on flat box seams.
-// radius 11, length 100, axis rotated onto Z. Centred at z=-10 so both
-// sceneA (camera z=9) and sceneB settle (camera z=-19) sit inside it.
-// metalness 1.0 = pure mirror metal (no diffuse — all colour comes from
-// the env reflection). roughness 0.12 keeps reflections sharp but lets
-// the colour bands smear slightly into that liquid oil-slick flow.
-// envMapIntensity 2.2 makes the hero colours read vivid and saturated.
-const chromeMat = new THREE.MeshStandardMaterial({
+// =============================================================================
+// VERTICAL MIRROR CYLINDER ROOM
+// A real architectural space, not a flat backdrop. The camera stands INSIDE a
+// giant polished-metal cylinder: walls curve continuously through 360°, a
+// mirror floor reflects the whole chamber, a dark ceiling cap holds a bright
+// emissive light ring that pours a soft volumetric shaft down the centre.
+// References: Apple Vision Pro stage, teamLab chamber, sci-fi museum hall.
+// radius 7.5 (≈15 m diameter), height 26 (≈20 m). Axis is vertical (Y), so
+// looking up the cylinder climbs away and looking down the floor mirrors back.
+const ROOM_R = 7.5;
+const ROOM_H = 26;
+
+// Curved wall — pure mirror chrome reflecting the iridescent env field.
+// metalness 1.0 = no diffuse, all colour comes from the reflection; low
+// roughness keeps it sharp but lets the colour bands smear into liquid flow.
+const wallMat = new THREE.MeshStandardMaterial({
   color: 0xf2f3fa,
   metalness: 1.0,
   roughness: 0.12,
   envMapIntensity: 2.2,
   side: THREE.BackSide,
 });
-const chromeRoom = new THREE.Mesh(
-  new THREE.CylinderGeometry(11, 11, 100, 120, 1, true),
-  chromeMat
+const roomWall = new THREE.Mesh(
+  new THREE.CylinderGeometry(ROOM_R, ROOM_R, ROOM_H, 160, 1, true),
+  wallMat
 );
-chromeRoom.rotation.x = Math.PI / 2;   // lay the tube along the Z axis
-chromeRoom.position.set(0, 0, -10);
-aboutScene.add(chromeRoom);
+aboutScene.add(roomWall);
 
-// No direct lights in the chamber. All illumination comes from the env
-// map (via PBR reflection on the chrome walls) and the random colour
-// light lines (which carry their own PointLights). This produces the
-// "image-based lighting only" look the user asked for.
+// Mirror floor — sharper (lower roughness) so it reads as a wet reflective
+// surface throwing the whole room back at the viewer when they look down.
+const floorMat = new THREE.MeshStandardMaterial({
+  color: 0xeef0f8,
+  metalness: 1.0,
+  roughness: 0.06,
+  envMapIntensity: 2.4,
+});
+const roomFloor = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R, 160), floorMat);
+roomFloor.rotation.x = -Math.PI / 2;        // lay flat, normal pointing up
+roomFloor.position.y = -ROOM_H / 2;
+aboutScene.add(roomFloor);
+
+// Dark metal ceiling cap so the top reads as a real lid, not open sky.
+const ceilMat = new THREE.MeshStandardMaterial({
+  color: 0x10121a,
+  metalness: 1.0,
+  roughness: 0.35,
+  envMapIntensity: 0.8,
+  side: THREE.BackSide,
+});
+const roomCeil = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R, 160), ceilMat);
+roomCeil.rotation.x = Math.PI / 2;          // normal pointing down
+roomCeil.position.y = ROOM_H / 2;
+aboutScene.add(roomCeil);
+
+// Bright emissive light ring set into the ceiling — the room's key light.
+const ringLightMat = new THREE.MeshBasicMaterial({
+  color: 0xeaf2ff,
+  transparent: true,
+  opacity: 0.95,
+  blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const ceilRing = new THREE.Mesh(
+  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R * 0.60, 96),
+  ringLightMat
+);
+ceilRing.rotation.x = Math.PI / 2;
+ceilRing.position.y = ROOM_H / 2 - 0.06;
+aboutScene.add(ceilRing);
+
+// Real point light at the ceiling ring — this is the actual illumination the
+// chrome and floor pick up (the env map is ambient fill; this is the key).
+const ceilKey = new THREE.PointLight(0xdfeaff, 2.6, ROOM_H * 2.4, 1.4);
+ceilKey.position.set(0, ROOM_H / 2 - 1.0, 0);
+aboutScene.add(ceilKey);
+
+// Soft VOLUMETRIC SHAFT — a faint additive cone widening downward from the
+// ceiling ring, reading as light falling through the chamber's dusty air.
+const shaftMat = new THREE.MeshBasicMaterial({
+  color: 0xbcd0ff,
+  transparent: true,
+  opacity: 0.05,
+  blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const lightShaft = new THREE.Mesh(
+  new THREE.CylinderGeometry(ROOM_R * 0.50, ROOM_R * 0.94, ROOM_H, 64, 1, true),
+  shaftMat
+);
+aboutScene.add(lightShaft);
+
+// Illumination = ceiling key light + iridescent env reflection + the random
+// colour light lines (each carries its own PointLight). Together they give the
+// chamber real volumetric light and true environment reflections.
 
 // --- Random neon light line pool ---
 // Six simultaneous slots. Each holds an additive-blended cylinder mesh
@@ -1131,15 +1197,15 @@ function tickLightLines(t, dt) {
         const hex = LIGHT_LINE_COLORS[Math.floor(Math.random() * 4)];
         ln.mesh.material.color.setHex(hex);
         ln.light.color.setHex(hex);
-        // Cylinder-aligned random spawn inside the chrome tube. Tube:
-        // radius 11, length 100 centred at z=-10 (z ∈ [-60, 40]). We keep
-        // the spawn radius ≤ 8 and z inset so lines never clip the wall.
+        // Random spawn inside the vertical room volume. Cylindrical coords:
+        // radius ≤ 6 (inset from the 7.5 wall), full height ±(ROOM_H*0.42)
+        // so neon bars hang at all levels of the chamber.
         const ang = Math.random() * Math.PI * 2;
-        const rad = Math.random() * 8;
+        const rad = Math.random() * 6;
         ln.mesh.position.set(
           Math.cos(ang) * rad,
-          Math.sin(ang) * rad,
-          -10 + (Math.random() * 88 - 44)    // z in [-54, 34]
+          (Math.random() - 0.5) * ROOM_H * 0.84,
+          Math.sin(ang) * rad
         );
         ln.light.position.copy(ln.mesh.position);
         // Random orientation — some lines pillar-vertical, some diagonal,
@@ -1967,31 +2033,35 @@ function aboutTick() {
       pc.material.uniforms.uOpacity.value = PANEL_CLOUD_OP[i];
     }
 
-    // Camera behaviour by phase:
-    //   Scene A:      gentle floating orbit (no userData.target)
-    //   Portal phase: smoothly chase the precomputed target position/look —
-    //                 real physical movement: rises along Y, pushes through on Z
-    //   Scene B:      settle into the narrative pose
-    const tg = aboutCam.userData.target;
-    if (tg) {
-      aboutCam.position.x += (tg.x - aboutCam.position.x) * 0.12;
-      aboutCam.position.y += (tg.y - aboutCam.position.y) * 0.12;
-      aboutCam.position.z += (tg.z - aboutCam.position.z) * 0.12;
-      aboutCam.lookAt(tg.look.x, tg.look.y, tg.look.z);
-    } else if (aboutCam.userData.sceneBSettle) {
-      // Settled on the far side of the tunnel. We DON'T snap back to z=9;
-      // we keep the camera where the punch-through left it, so the new space
-      // feels physically distinct from the old one.
-      aboutCam.position.x += (0 - aboutCam.position.x) * 0.08;
-      aboutCam.position.y += (0 - aboutCam.position.y) * 0.08;
-      aboutCam.position.z += (-19 - aboutCam.position.z) * 0.08;
-      aboutCam.lookAt(0, 0, -24);
-    } else {
-      aboutCam.position.x = Math.sin(t * 0.18) * 0.4;
-      aboutCam.position.y = Math.cos(t * 0.14) * 0.25;
-      aboutCam.position.z = 9;
-      aboutCam.lookAt(0, 0, 0);
-    }
+    // First-person operator standing INSIDE the vertical mirror room.
+    // The forward-flight tunnel narrative is retired — instead the camera
+    // walks a slow circular path near the centre, sweeping the curved walls.
+    // Scroll (aboutScrollProgress 0→1) drives a vertical RISE and a yaw
+    // sweep; idle time adds a gentle breathing bob so the space feels alive.
+    // Looking direction pitches UP as you rise (the cylinder climbs away);
+    // near the bottom it tips down so the mirror floor fills the lower frame.
+    const sp = aboutScrollProgress;
+    const orbitR = 3.0;
+    const yaw    = t * 0.045 + sp * Math.PI * 1.3;     // auto-rotate + scroll sweep
+    const px = Math.sin(yaw) * orbitR;
+    const pz = Math.cos(yaw) * orbitR;
+    const eyeY = -ROOM_H * 0.30 + sp * ROOM_H * 0.52   // rise low → upper-mid
+               + Math.sin(t * 0.4) * 0.18;             // breathing bob
+    aboutCam.position.set(px, eyeY, pz);
+
+    // Look ahead along the orbit tangent, pitched by scroll: down at the
+    // mirror floor when low, level mid-way, up at the ceiling ring when high.
+    const lookAng = yaw + 0.55;
+    const lookR   = orbitR * 1.5;
+    const pitch   = -0.35 + sp * 1.25;                 // -0.35 (down) → +0.9 (up)
+    aboutCam.lookAt(
+      Math.sin(lookAng) * lookR,
+      eyeY + pitch * 6.0,
+      Math.cos(lookAng) * lookR
+    );
+
+    // Hard-hide the retired tunnel point cloud so it never floats in the room.
+    portalGroup.visible = false;
 
     aboutRenderer.render(aboutScene, aboutCam);
   }
