@@ -4,9 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yao Design Lab</title>
+  <!-- Horror display fonts for the SceneB "doubt voices". Free, no API key. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nosifer&family=Creepster&family=Eater&family=Butcherman&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="lang-en">
+  <!-- SVG turbulence + displacement filter used to distort the SceneB doubt
+       voices. Defined once, referenced from CSS via filter: url(#fog-distort). -->
+  <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+    <defs>
+      <filter id="fog-distort" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="7" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5.5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
   <div id="bg">
     <div class="bg-stripe bg-stripe-1"></div>
     <div class="bg-stripe bg-stripe-2"></div>

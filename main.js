@@ -1392,11 +1392,15 @@ function updateAboutScroll() {
     updateAboutScroll.fogOrder = idx;
     updateAboutScroll.fogWords = Array.from(document.querySelectorAll('.fog-word'));
   }
+  // Inverted progression: panel 1 shows the full chorus of 8 doubts; each
+  // panel deeper dissolves 2 random ones into particles. Two stubborn doubts
+  // persist at the final panel. The shuffled order determines which 2 fade
+  // at each step, so reverse-scrolling re-materializes them in stable order.
   let visibleFog = 0;
-  if (focusIdx === 6)      visibleFog = 2;
-  else if (focusIdx === 7) visibleFog = 4;
-  else if (focusIdx === 8) visibleFog = 6;
-  else if (focusIdx >= 9)  visibleFog = 8;
+  if (focusIdx === 6)      visibleFog = 8;
+  else if (focusIdx === 7) visibleFog = 6;
+  else if (focusIdx === 8) visibleFog = 4;
+  else if (focusIdx >= 9)  visibleFog = 2;
   updateAboutScroll.fogOrder.forEach((wordIdx, k) => {
     const w = updateAboutScroll.fogWords[wordIdx];
     if (w) w.classList.toggle('visible', k < visibleFog);
