@@ -933,113 +933,118 @@ portalGroup.visible = false;
 aboutScene.add(portalGroup);
 
 // ============================================================
-// DIRECTION Z — Mirror floor + floating ghost rings
+// DIRECTION Z (v2) — Chrome enclosure + random neon light lines
 // ============================================================
-// Brings the hero's avant-garde chrome+neon vocabulary into SceneA/B as
-// a continuous "stage". A large chrome floor stretches from in front of
-// the sceneA camera (z=+8) all the way through to past the sceneB camera
-// (z=-52) so BOTH scenes feel grounded on the same mirror surface.
-// Three concentric ghost rings hover at origin, slowly rotating — they
-// are the spiritual reflection of the hero's 3-layer cylinder, projected
-// into the about-view's depth. Four neon arcs (violet/yellow/blue/red)
-// sit fixed on the outer ring radius — the hero stripes incarnated as
-// edge lights welded to the structure.
+// The about-view is now wrapped in a long bright-chrome tube. The camera
+// lives INSIDE this tube — conceptually we've "punched through" the
+// hero's 3-layer ring on the homepage and we are now physically inside
+// the same metal structure. The tube runs along the z-axis and is long
+// enough that BOTH sceneA (camera z=9) and sceneB settle (camera z=-19)
+// happen inside the same surround.
+//
+// Colour enters as occasional neon "light lines" — thin glowing bars
+// that fade in at random positions and orientations inside the chamber,
+// each carrying one of the four hero colours (violet/yellow/blue/red).
+// Each line is paired with a PointLight, and the chrome wall uses
+// MeshStandardMaterial with metalness=1 + low roughness, so the colour
+// of every active line naturally illuminates the chrome surface around
+// it — the random-colour reflections asked for, without faking it.
 
-// --- Mirror floor (chrome plane with brushed bands + wandering highlight) ---
-const floorMat = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 } },
-  vertexShader: /* glsl */`
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: /* glsl */`
-    uniform float uTime;
-    varying vec2 vUv;
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    float noise(vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-                 mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-    }
-    void main() {
-      vec2 p = vUv - 0.5;
-      float r = length(p) * 1.5;
-      // Slow-drifting brushed-metal bands along X
-      float band = sin(vUv.x * 70.0 + uTime * 0.35) * 0.05 + 0.5;
-      // A roaming bright highlight, like a slow camera light passing over chrome
-      vec2 hlPos = vec2(sin(uTime * 0.11) * 0.28, cos(uTime * 0.09) * 0.18);
-      float hl = (1.0 - smoothstep(0.0, 0.32, length(p - hlPos))) * 0.32;
-      // Fine grain for tactile surface texture
-      float n = noise(vUv * 280.0) * 0.045 - 0.022;
-      // Base chrome tone — cool dark with faint violet undertone matching hero
-      vec3 col = vec3(0.075, 0.072, 0.10) + band * vec3(0.022, 0.028, 0.045);
-      col += vec3(hl);
-      col += vec3(n);
-      // Atmospheric fade to near-black at the edges (horizon vignette)
-      float vignette = smoothstep(0.22, 0.72, r);
-      col = mix(col, vec3(0.014, 0.010, 0.022), vignette);
-      gl_FragColor = vec4(col, 1.0);
-    }
-  `,
-  side: THREE.DoubleSide,
+// --- Chrome enclosure ---
+const chromeMat = new THREE.MeshStandardMaterial({
+  color: 0x2a2a36,
+  metalness: 1.0,
+  roughness: 0.18,
+  side: THREE.BackSide,
 });
-const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80, 1, 1), floorMat);
-floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.set(0, -2.3, -12);
-aboutScene.add(floorMesh);
+const chromeTube = new THREE.Mesh(
+  new THREE.CylinderGeometry(9, 9, 80, 48, 1, true),
+  chromeMat
+);
+chromeTube.rotation.x = Math.PI / 2; // lay along z so its axis matches the camera's forward
+chromeTube.position.set(0, 0, -10);
+aboutScene.add(chromeTube);
 
-// --- Three ghost rings — concentric chrome torus, slow Y-axis rotation ---
-const ringGroup = new THREE.Group();
-ringGroup.position.set(0, -1.65, 0);
-const GHOST_RING_SPECS = [
-  { r: 1.65, tube: 0.024, speed:  0.045, opacity: 0.42 },
-  { r: 1.15, tube: 0.020, speed: -0.075, opacity: 0.36 },
-  { r: 0.72, tube: 0.016, speed:  0.115, opacity: 0.30 },
-];
-const ghostRings = [];
-for (const spec of GHOST_RING_SPECS) {
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0xd2d2d8,
-    transparent: true,
-    opacity: spec.opacity,
-    depthWrite: false,
-  });
-  const mesh = new THREE.Mesh(
-    new THREE.TorusGeometry(spec.r, spec.tube, 12, 128),
-    mat
-  );
-  mesh.rotation.x = Math.PI / 2;
-  mesh.userData.speed = spec.speed;
-  ringGroup.add(mesh);
-  ghostRings.push(mesh);
-}
+// --- Base illumination — gives the chrome shape even when no colour
+//     line is currently active. Two opposed warm/cool sources. ---
+const tubeBaseLightWarm = new THREE.PointLight(0xc8c0d8, 0.85, 60, 1.4);
+tubeBaseLightWarm.position.set(0, 5, 6);
+aboutScene.add(tubeBaseLightWarm);
+const tubeBaseLightCool = new THREE.PointLight(0x6580b0, 0.55, 70, 1.4);
+tubeBaseLightCool.position.set(-4, -3, -12);
+aboutScene.add(tubeBaseLightCool);
 
-// --- 4 neon accent arcs welded to the outer ring radius ---
-// These are children of ringGroup (not of any spinning ring), so they hold
-// their angular position while the rings rotate beneath them. The four
-// arcs use the hero's exact violet/yellow/blue/red palette — hero stripes,
-// now glowing on the rim of the chrome structure.
-const ACCENT_ARC_COLORS = [0xc026d3, 0xfbbf24, 0x4b7dff, 0xff3030];
-for (let i = 0; i < 4; i++) {
-  const arc = new THREE.Mesh(
-    new THREE.TorusGeometry(1.66, 0.038, 8, 64, Math.PI / 6),
+// --- Random neon light line pool ---
+// Six simultaneous slots. Each holds an additive-blended cylinder mesh
+// (the visible glowing bar) plus a paired PointLight (the source that
+// lights the chrome around it). Slots cycle through idle → fade in →
+// hold → fade out → idle, with random spawn timing.
+const LIGHT_LINE_COUNT  = 6;
+const LIGHT_LINE_COLORS = [0xc026d3, 0xfbbf24, 0x4b7dff, 0xff3030];
+const lightLines = [];
+for (let i = 0; i < LIGHT_LINE_COUNT; i++) {
+  const lineMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.06, 4.5, 8, 1),
     new THREE.MeshBasicMaterial({
-      color: ACCENT_ARC_COLORS[i],
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
       depthWrite: false,
     })
   );
-  arc.rotation.x = Math.PI / 2;
-  arc.rotation.z = (i / 4) * Math.PI * 2 + Math.PI / 8;
-  ringGroup.add(arc);
+  aboutScene.add(lineMesh);
+  const light = new THREE.PointLight(0xffffff, 0, 22, 1.6);
+  aboutScene.add(light);
+  lightLines.push({
+    mesh: lineMesh,
+    light,
+    state: 'idle',
+    t0: 0,
+    lifetime: 0,
+  });
 }
-aboutScene.add(ringGroup);
+function tickLightLines(t, dt) {
+  for (const ln of lightLines) {
+    if (ln.state === 'idle') {
+      // ~0.012 chance per frame to spawn → roughly 0.7 spawns/sec per slot.
+      // With 6 slots and ~3s mean lifetimes you get 2–4 active at once.
+      if (Math.random() < 0.012) {
+        const hex = LIGHT_LINE_COLORS[Math.floor(Math.random() * 4)];
+        ln.mesh.material.color.setHex(hex);
+        ln.light.color.setHex(hex);
+        // Random angle around the tube axis, offset from centre, random z.
+        const angle  = Math.random() * Math.PI * 2;
+        const radius = 2.8 + Math.random() * 4.6;
+        ln.mesh.position.set(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius,
+          -10 + (Math.random() * 70 - 35)
+        );
+        ln.light.position.copy(ln.mesh.position);
+        // Random orientation — some lines pillar-vertical, some diagonal,
+        // some near-radial. Reads as "neon tubes scattered in the chamber".
+        ln.mesh.rotation.set(
+          (Math.random() - 0.5) * Math.PI,
+          (Math.random() - 0.5) * Math.PI,
+          (Math.random() - 0.5) * Math.PI
+        );
+        ln.lifetime = 2.6 + Math.random() * 3.8;
+        ln.t0       = t;
+        ln.state    = 'active';
+      }
+    } else {
+      const ratio = (t - ln.t0) / ln.lifetime;
+      let amp;
+      if (ratio < 0.15)      amp = ratio / 0.15;
+      else if (ratio < 0.82) amp = 1.0;
+      else if (ratio < 1.0)  amp = (1.0 - ratio) / 0.18;
+      else { ln.state = 'idle'; amp = 0; }
+      ln.mesh.material.opacity = amp * 0.95;
+      ln.light.intensity       = amp * 3.2;
+    }
+  }
+}
 
 // Streak particles — a few hundred points scattered in the tunnel volume so
 // when the camera rushes forward they whip past as motion streaks.
@@ -1829,14 +1834,10 @@ function aboutTick() {
     tunnelMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
 
-    // Direction Z: drive the mirror floor's drifting bands/highlight and
-    // spin each ghost ring at its own slow speed. The ringGroup itself sways
-    // gently on Y so the whole structure feels alive rather than mechanical.
-    floorMat.uniforms.uTime.value = t;
-    for (const ring of ghostRings) {
-      ring.rotation.z += ring.userData.speed * dt;
-    }
-    ringGroup.rotation.y = Math.sin(t * 0.08) * 0.06;
+    // Direction Z (v2): cycle the random neon light lines — spawn, fade
+    // in, hold, fade out, return to idle. The PBR chrome tube picks up
+    // each active line's colour as a natural metallic reflection.
+    tickLightLines(t, dt);
 
     // Ease each panel image cloud's opacity toward its target so swaps are smooth
     for (let i = 0; i < panelClouds.length; i++) {
