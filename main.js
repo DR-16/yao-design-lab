@@ -1315,8 +1315,12 @@ function buildScrollStops() {
   return arr;
 }
 
-let __wheelLocked = false;
-let __wheelLockTimer = null;
+// Lock state. __wheelLockedUntil is the timestamp until which we ignore new
+// wheels. While a trackpad's momentum scroll keeps firing wheel events, we
+// keep extending the lock by a short cooldown — so one physical flick only
+// fires one step, no matter how long the OS keeps sending residual deltas.
+let __wheelLockedUntil = 0;
+const MOMENTUM_COOLDOWN = 220; // ms of trackpad-silence required before next step
 
 function nearestStopIndex(curProg) {
   const stops = buildScrollStops();
@@ -1330,7 +1334,13 @@ function nearestStopIndex(curProg) {
 
 function onAboutWheel(e) {
   e.preventDefault();
-  if (__wheelLocked) return;
+  const now = performance.now();
+  // still locked? extend the lock by MOMENTUM_COOLDOWN so a long inertia
+  // tail keeps the door shut. Caller must wait for momentum to fully stop.
+  if (now < __wheelLockedUntil) {
+    __wheelLockedUntil = Math.max(__wheelLockedUntil, now + MOMENTUM_COOLDOWN);
+    return;
+  }
   const stops = buildScrollStops();
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
   const curProg = aboutScroll.scrollTop / max;
@@ -1341,22 +1351,22 @@ function onAboutWheel(e) {
   // crossing the wormhole (sceneA last panel ↔ sceneB first panel) takes longer
   const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
   const duration = crossing ? 1500 : 500;
-  __wheelLocked = true;
-  clearTimeout(__wheelLockTimer);
   smoothScrollAbout(stops[nextIdx] * max, duration);
-  __wheelLockTimer = setTimeout(() => { __wheelLocked = false; }, duration + 90);
+  // initial lock = animation length + cooldown; subsequent wheels keep extending
+  __wheelLockedUntil = now + duration + MOMENTUM_COOLDOWN;
 }
 aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
 
-// Touch swipe → same step-locked behaviour (vertical drag only)
+// Touch swipe → same step-lock behaviour
 let __touchStartY = null;
 aboutScroll?.addEventListener('touchstart', (e) => {
   __touchStartY = e.touches[0]?.clientY ?? null;
 }, { passive: true });
 aboutScroll?.addEventListener('touchmove', (e) => {
-  if (__wheelLocked || __touchStartY == null) { e.preventDefault(); return; }
+  const now = performance.now();
+  if (now < __wheelLockedUntil || __touchStartY == null) { e.preventDefault(); return; }
   const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
-  if (Math.abs(dy) < 30) return; // need enough flick to count as a swipe
+  if (Math.abs(dy) < 30) return;
   e.preventDefault();
   const stops = buildScrollStops();
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
@@ -1366,11 +1376,9 @@ aboutScroll?.addEventListener('touchmove', (e) => {
   if (nextIdx === curIdx) return;
   const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
   const duration = crossing ? 1500 : 500;
-  __wheelLocked = true;
   __touchStartY = null;
-  clearTimeout(__wheelLockTimer);
   smoothScrollAbout(stops[nextIdx] * max, duration);
-  __wheelLockTimer = setTimeout(() => { __wheelLocked = false; }, duration + 90);
+  __wheelLockedUntil = now + duration + MOMENTUM_COOLDOWN;
 }, { passive: false });
 
 // ---------- Enter / exit transitions ----------
