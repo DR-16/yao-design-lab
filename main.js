@@ -1191,41 +1191,84 @@ floorGrid.rotation.x = -Math.PI / 2;
 floorGrid.position.y = FLOOR_Y + 0.02;
 aboutScene.add(floorGrid);
 
-// ---- Ceiling: bright opening far overhead + key light + volumetric shaft ----
+// ---- Ceiling: BRUSHED-SILVER dome with a soft skylight at the centre -------
 const CEIL_Y = ROOM_H / 2;
-// Dark metal ceiling cap with a circular OCULUS opening in the centre. The
-// opening glows bright (the light source far overhead) but is modest in size,
-// so looking up reads as "a distant skylight" rather than a wall of white.
-const ceilCap = new THREE.Mesh(
-  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R, 96),
+// A machined silver ceiling: concentric brushed-metal rings converging to a
+// softly glowing skylight. Matches the wall's polished-aluminium quality —
+// no black cap, no stark white disc.
+function buildCeilingTex() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1024;
+  const x = c.getContext('2d');
+  const cx = 512, cy = 512;
+  // brushed-silver radial base
+  const base = x.createRadialGradient(cx, cy, 0, cx, cy, 512);
+  base.addColorStop(0.00, '#f6f8fc');   // bright skylight core
+  base.addColorStop(0.18, '#e6e9f1');
+  base.addColorStop(0.30, '#cfd3dd');
+  base.addColorStop(0.62, '#bcc1cd');
+  base.addColorStop(1.00, '#d2d6df');
+  x.fillStyle = base; x.fillRect(0, 0, 1024, 1024);
+  // concentric machined grooves
+  for (let r = 30; r < 512; r += 26) {
+    x.strokeStyle = 'rgba(40,44,54,0.45)'; x.lineWidth = 2;
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,0.5)'; x.lineWidth = 1;
+    x.beginPath(); x.arc(cx, cy, r - 2, 0, Math.PI * 2); x.stroke();
+  }
+  // fine radial brushed streaks
+  for (let i = 0; i < 720; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const r0 = 60 + Math.random() * 440, r1 = r0 + 20 + Math.random() * 60;
+    x.strokeStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
+    x.lineWidth = 1;
+    x.beginPath();
+    x.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+    x.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+    x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+function buildCeilingEmissive() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1024;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, 1024, 1024);
+  const g = x.createRadialGradient(512, 512, 0, 512, 512, 230);
+  g.addColorStop(0.0, 'rgba(238,244,255,1)');
+  g.addColorStop(0.6, 'rgba(210,224,255,0.5)');
+  g.addColorStop(1.0, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 1024, 1024);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const ceilDisc = new THREE.Mesh(
+  new THREE.CircleGeometry(ROOM_R, 128),
   new THREE.MeshStandardMaterial({
-    color: 0x161922, metalness: 0.9, roughness: 0.4,
-    envMapIntensity: 0.7, side: THREE.DoubleSide,
+    map: buildCeilingTex(),
+    emissive: 0xffffff, emissiveMap: buildCeilingEmissive(), emissiveIntensity: 1.3,
+    metalness: 0.45, roughness: 0.42, envMapIntensity: 1.0,
+    side: THREE.DoubleSide,
   })
 );
-ceilCap.rotation.x = Math.PI / 2;
-ceilCap.position.y = CEIL_Y;
-aboutScene.add(ceilCap);
+ceilDisc.rotation.x = Math.PI / 2;     // normal pointing down into the room
+ceilDisc.position.y = CEIL_Y;
+aboutScene.add(ceilDisc);
+// soft additive bloom over the skylight core
 const ceilGlow = new THREE.Mesh(
-  new THREE.CircleGeometry(ROOM_R * 0.40, 96),
+  new THREE.CircleGeometry(ROOM_R * 0.34, 96),
   new THREE.MeshBasicMaterial({
-    color: 0xeef4ff, transparent: true, opacity: 0.98,
+    color: 0xdfe9ff, transparent: true, opacity: 0.55,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
   })
 );
 ceilGlow.rotation.x = Math.PI / 2;
-ceilGlow.position.y = CEIL_Y - 0.1;
+ceilGlow.position.y = CEIL_Y - 0.15;
 aboutScene.add(ceilGlow);
-const ceilRing = new THREE.Mesh(
-  new THREE.RingGeometry(ROOM_R * 0.40, ROOM_R * 0.50, 96),
-  new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.85,
-    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
-  })
-);
-ceilRing.rotation.x = Math.PI / 2;
-ceilRing.position.y = CEIL_Y - 0.05;
-aboutScene.add(ceilRing);
 const ceilKey = new THREE.PointLight(0xeaf2ff, 3.0, ROOM_H * 2.6, 1.3);
 ceilKey.position.set(0, CEIL_Y - 1.5, 0);
 aboutScene.add(ceilKey);
@@ -1459,16 +1502,17 @@ const RESO_DATA = [
 const resoLines = [];
 for (let i = 0; i < RESO_DATA.length; i++) {
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(6.0, 1.0),
+    new THREE.PlaneGeometry(4.2, 0.72),
     new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   );
-  // Stacked near the top of the shaft, in the camera's gaze during the final
-  // ascent into the skylight.
-  const ry = 18 + i * 2.4;
+  // Each line sits on the axis at the eye height the rising camera reaches
+  // when it lights up, so all four are framed in turn as the viewer ascends
+  // (the camera stays near-level until the very end, then tilts up).
+  const ry = [18.6, 20.3, 22.0, 23.4][i];
   mesh.position.set(0, ry, 0);
   mesh.renderOrder = 7;
   aboutScene.add(mesh);
-  resoLines.push({ mesh, y: ry, appearAt: 0.85 + i * 0.034 });
+  resoLines.push({ mesh, y: ry, appearAt: 0.78 + i * 0.05 });
 }
 function drawResoTexture(idx, lang) {
   const d = RESO_DATA[idx];
@@ -1480,7 +1524,7 @@ function drawResoTexture(idx, lang) {
   // dark translucent pill backing so the line stays legible over the bright
   // skylight as the camera rises into it
   const r = 60, w = 1536, h = 256, pad = 30;
-  x.fillStyle = 'rgba(8,10,16,0.62)';
+  x.fillStyle = 'rgba(8,10,16,0.72)';
   x.beginPath();
   x.moveTo(pad + r, pad);
   x.arcTo(w - pad, pad, w - pad, h - pad, r);
@@ -1488,12 +1532,12 @@ function drawResoTexture(idx, lang) {
   x.arcTo(pad, h - pad, pad, pad, r);
   x.arcTo(pad, pad, w - pad, pad, r);
   x.closePath(); x.fill();
-  // glowing text
-  x.font = lang === 'cn' ? '500 78px "Songti SC", serif' : '500 italic 80px Georgia, serif';
+  // glowing text — maxWidth keeps even the longest line inside the pill
+  x.font = lang === 'cn' ? '500 66px "Songti SC", serif' : '500 italic 66px Georgia, serif';
   x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.shadowColor = 'rgba(180,205,255,0.8)'; x.shadowBlur = 26;
+  x.shadowColor = 'rgba(180,205,255,0.85)'; x.shadowBlur = 24;
   x.fillStyle = '#f4f7ff';
-  x.fillText(text, w / 2, h / 2 + 4);
+  x.fillText(text, w / 2, h / 2 + 4, w - 220);
   x.shadowBlur = 0;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -1514,9 +1558,12 @@ function tickSceneB(sp, t) {
     v.mesh.scale.setScalar(0.6 + k * 0.4);
     if (k > 0) v.mesh.quaternion.copy(aboutCam.quaternion);  // billboard
   }
+  // Lines light up in turn (k), then dissolve into the skylight during the
+  // final emergence (fade) — which also hides the camera-pitch reshuffle.
+  const fade = Math.max(0, Math.min(1, (sp - 0.93) / 0.055));
   for (const r of resoLines) {
     const k = Math.max(0, Math.min(1, (sp - r.appearAt) / 0.06));
-    r.mesh.material.opacity = k;
+    r.mesh.material.opacity = k * (1 - fade);
     if (k > 0) r.mesh.quaternion.copy(aboutCam.quaternion);
   }
 }
@@ -2387,10 +2434,10 @@ function aboutTick() {
     tunnelMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
 
-    // Direction Z (v2): cycle the random neon light lines — spawn, fade
-    // in, hold, fade out, return to idle. The PBR chrome tube picks up
-    // each active line's colour as a natural metallic reflection.
-    tickLightLines(t, dt);
+    // (Removed) the free-floating random neon light-line pool — it read as
+    // bars hovering in mid-air rather than reflections. The only neon now is
+    // the colour columns baked into the wall's emissive map.
+    void tickLightLines;
 
     // Ease each panel image cloud's opacity toward its target so swaps are smooth
     for (let i = 0; i < panelClouds.length; i++) {
@@ -2429,17 +2476,18 @@ function aboutTick() {
     const spiral = t * 0.06 + a * Math.PI * 1.1;
     const aRad = 1.9;
     const topY = aboutPanels[N - 1].y;
-    const riseY = topY + aE * (CEIL_Y - 6 - topY) + bob;
+    // Rise tops out at CEIL_Y-5 so the camera stays below the resolution lines
+    // and reads them at eye level while ascending.
+    const riseY = topY + aE * ((CEIL_Y - 5) - topY) + bob;
     const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
-    // While crossing the doubt swarm keep the gaze roughly LEVEL (look across
-    // the chamber, slightly ahead) so the voices drift through frame; only in
-    // the finale pitch up the axis into the skylight as the resolution lines
-    // light overhead.
-    const finale = Math.max(0, (a - 0.6) / 0.4);       // 0 until a=0.6, →1 at end
+    // Keep the gaze near-LEVEL through the whole doubt + resolution climb so
+    // the voices drift through frame and each central line is framed in turn;
+    // only in the final 8% tilt UP into the skylight for the emergence.
+    const finale = Math.max(0, (sp - 0.92) / 0.08);    // 0 until sp 0.92, →1 at end
     const fE = finale * finale;
     const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
     const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
-    const aLookY = riseY + 1.0 + fE * (CEIL_Y + 2 - riseY);
+    const aLookY = riseY + 1.4 + fE * (CEIL_Y + 1 - riseY);
 
     // ---- blend the two poses ----
     // Pose blend resolves fast (camera is on the central axis by ~sp 0.73) so
@@ -2457,6 +2505,43 @@ function aboutTick() {
       pLookY + (aLookY - pLookY) * k,
       pLookZ + (aLookZ - pLookZ) * k
     );
+
+    // ---- Mount the six photo particle-clouds onto their wall panels ----
+    // Each photo floats just off the wall, beside its text panel, facing the
+    // camera — so when a panel is framed you see the story text AND its photo.
+    // They fade out as the camera leaves the wall for the doubt zone.
+    for (let i = 0; i < panelClouds.length; i++) {
+      const pc = panelClouds[i];
+      if (!pc) continue;
+      const pa = aboutPanels[i].angle - 0.50;          // sit beside the text (right side)
+      const pr = ROOM_R - 0.7;                          // close to the wall
+      pc.position.set(Math.sin(pa) * pr, aboutPanels[i].y + 0.1, Math.cos(pa) * pr);
+      pc.lookAt(aboutCam.position);                     // face the viewer
+      pc.scale.setScalar(1.25);
+      const near = 1 - Math.min(1, Math.abs(fIdx - i)); // 1 when framed
+      PANEL_CLOUD_TARGET_OP[i] = near * (1 - k) * 0.95; // hide once in doubt zone
+    }
+
+    // Park the four resolution lines as a stack a few metres in front of the
+    // camera, in its view plane, so each is framed and legible as it lights up
+    // regardless of camera pose. Robust up-basis (avoids the degenerate cross
+    // product when the gaze nears vertical) and a ceiling clamp (so the stack
+    // never pushes through the opaque ceiling disc and gets occluded).
+    if (sp > 0.74) {
+      const fwd = new THREE.Vector3();
+      aboutCam.getWorldDirection(fwd);
+      const ref = Math.abs(fwd.y) > 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(fwd, ref).normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+      const D = 6.4;
+      const center = aboutCam.position.clone().add(fwd.multiplyScalar(D));
+      for (let i = 0; i < resoLines.length; i++) {
+        const off = (1.5 - i) * 1.0;                   // line0 top → line3 bottom
+        const p = center.clone().addScaledVector(up, off);
+        if (p.y > CEIL_Y - 1.5) p.y = CEIL_Y - 1.5;    // stay below the ceiling
+        resoLines[i].mesh.position.copy(p);
+      }
+    }
 
     // SceneB voices + resolution lines materialise and billboard to the camera.
     tickSceneB(sp, t);
