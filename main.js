@@ -983,6 +983,99 @@ const streakMat = new THREE.ShaderMaterial({
 const streaks = new THREE.Points(streakGeo, streakMat);
 portalGroup.add(streaks);
 
+// ===== PER-PANEL PARTICLE PORTRAITS =====
+// 6 images (one per sceneA panel). Each is sampled into ~6000 coloured
+// particles arranged in the image's shape and tinted with its original RGB.
+// They sit behind the text panel and in front of the flame, half-transparent
+// so the flame still shows through.
+const PANEL_IMAGES = [
+  'img/p1.jpg',
+  null,             // panel 2 — waiting on user image
+  'img/p2.jpg',
+  null,             // panel 4 — waiting on user image
+  'img/p3.jpg',
+  null,             // panel 6 — waiting on user image
+];
+const panelClouds = new Array(6).fill(null);
+const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0); // tween target per cloud
+const PANEL_CLOUD_OP = new Array(6).fill(0);        // current displayed opacity
+
+function loadImageParticles(url, idx) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const MAX_W = 220;
+    const w = MAX_W;
+    const h = Math.round(MAX_W * img.height / img.width);
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+
+    const positions = [], colors = [];
+    const STEP = 4; // sample every 4 pixels → particle density that reads as POINTS, not a sheet
+    // world-unit dimensions: image fits in a ~3 × (3 * aspect) area
+    const worldW = 3.6;
+    const worldH = worldW * h / w;
+    for (let py = 0; py < h; py += STEP) {
+      for (let px = 0; px < w; px += STEP) {
+        const i = (py * w + px) * 4;
+        const r = data[i]   / 255;
+        const g = data[i+1] / 255;
+        const b = data[i+2] / 255;
+        const a = data[i+3] / 255;
+        if (a < 0.05) continue;
+        const x = (px / w - 0.5) * worldW;
+        const y = -(py / h - 0.5) * worldH;
+        positions.push(x, y, 0);
+        // soften pure black so the cloud doesn't disappear against the background
+        colors.push(Math.max(0.08, r), Math.max(0.08, g), Math.max(0.08, b));
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
+    const mat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      uniforms: { uOpacity: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute vec3 color;
+        varying vec3 vColor;
+        void main(){
+          vColor = color;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = 0.9 * (120.0 / max(-mv.z, 0.3));
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform float uOpacity;
+        varying vec3 vColor;
+        void main(){
+          vec2 q = gl_PointCoord - 0.5;
+          float d = length(q);
+          float a = smoothstep(0.5, 0.0, d) * uOpacity;
+          if (a < 0.01) discard;
+          // boost brightness so the cloud reads against the black backdrop
+          gl_FragColor = vec4(vColor * 1.4, a * 0.75);
+        }
+      `,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.position.set(0, 0, 1.8); // behind text panel (in front of flame)
+    aboutScene.add(pts);
+    panelClouds[idx] = pts;
+    console.log('[panelCloud]', idx, url, 'particles:', positions.length / 3);
+  };
+  img.onerror = () => { console.warn('[panelCloud] failed to load', url); };
+  img.src = url;
+}
+
+PANEL_IMAGES.forEach((url, idx) => { if (url) loadImageParticles(url, idx); });
+
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
 // dead, take the ones nearest to death (the ones the user would barely
@@ -1222,6 +1315,17 @@ function updateAboutScroll() {
     if (isApproaching) s.style.setProperty('--approach', approachAmount.toFixed(3));
     else s.style.removeProperty('--approach');
   });
+
+  // Per-panel image cloud opacity targets — also fade away during the portal phase
+  const inSceneA = (progressB <= 0.001) && (portalProgress < 0.05);
+  for (let i = 0; i < 6; i++) {
+    let op = 0;
+    if (inSceneA) {
+      if (i === focusIdx)      op = 1;
+      else if (i === approachIdx && approachIdx < 6) op = approachAmount * 0.85;
+    }
+    PANEL_CLOUD_TARGET_OP[i] = op;
+  }
   document.querySelectorAll('.corridor-step').forEach((s, i) => {
     const g = 6 + i;
     const isCurrent = (g === focusIdx);
@@ -1545,6 +1649,14 @@ function aboutTick() {
     portraitMat.uniforms.uTime.value = t;
     tunnelMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
+
+    // Ease each panel image cloud's opacity toward its target so swaps are smooth
+    for (let i = 0; i < panelClouds.length; i++) {
+      const pc = panelClouds[i];
+      if (!pc) continue;
+      PANEL_CLOUD_OP[i] += (PANEL_CLOUD_TARGET_OP[i] - PANEL_CLOUD_OP[i]) * 0.12;
+      pc.material.uniforms.uOpacity.value = PANEL_CLOUD_OP[i];
+    }
 
     // Camera behaviour by phase:
     //   Scene A:      gentle floating orbit (no userData.target)
