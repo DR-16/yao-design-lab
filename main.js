@@ -1004,9 +1004,11 @@ function loadImageParticles(url, idx) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    // bigger sample canvas + every-2-pixel sampling → dense point cloud
-    // (activetheory's spine-cloud style: tens of thousands of tiny points)
-    const MAX_W = 300;
+    // larger sample canvas + every-pixel sampling → super dense point cloud.
+    // Tens of thousands of tiny coloured points where the photo reads from
+    // sheer density, with a soft noisy edge mask so the cloud doesn't end
+    // in a hard rectangle.
+    const MAX_W = 360;
     const w = MAX_W;
     const h = Math.round(MAX_W * img.height / img.width);
     const cv = document.createElement('canvas');
@@ -1016,8 +1018,9 @@ function loadImageParticles(url, idx) {
     const data = ctx.getImageData(0, 0, w, h).data;
 
     const positions = [], colors = [];
-    const STEP = 2; // every 2 pixels → ~22k particles per image
-    const worldW = 3.4;
+    const STEP = 1; // every pixel → ~130k particles per image at 360 × ~480
+    // smaller image footprint so it doesn't dominate the screen
+    const worldW = 2.4;
     const worldH = worldW * h / w;
     for (let py = 0; py < h; py += STEP) {
       for (let px = 0; px < w; px += STEP) {
@@ -1027,8 +1030,20 @@ function loadImageParticles(url, idx) {
         const b = data[i+2] / 255;
         const a = data[i+3] / 255;
         if (a < 0.05) continue;
-        const x = (px / w - 0.5) * worldW;
-        const y = -(py / h - 0.5) * worldH;
+
+        // === SOFT IRREGULAR EDGE MASK ===
+        // distance from centre (0 at centre, ~0.71 at corners)
+        const cx = px / w - 0.5;
+        const cy = py / h - 0.5;
+        const dist = Math.sqrt(cx * cx + cy * cy);
+        // start fading from 0.32 outward, fully gone past 0.46. Multiply with
+        // per-pixel noise so the edge breaks up into a jagged, organic shape.
+        const fade = 1 - Math.max(0, (dist - 0.32) / 0.14);
+        const noise = 0.65 + Math.random() * 0.7;
+        if (fade * noise < 0.5) continue;
+
+        const x = cx * worldW;
+        const y = -cy * worldH;
         positions.push(x, y, 0);
         // soften pure black so the cloud doesn't disappear against the background
         colors.push(Math.max(0.08, r), Math.max(0.08, g), Math.max(0.08, b));
@@ -1048,9 +1063,7 @@ function loadImageParticles(url, idx) {
         void main(){
           vColor = color;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          // tiny particles + flat distance scaling — activetheory-style dense
-          // point cloud where the image emerges from the sheer density of points
-          gl_PointSize = 0.45 * (60.0 / max(-mv.z, 0.3));
+          gl_PointSize = 0.55 * (60.0 / max(-mv.z, 0.3));
           gl_Position = projectionMatrix * mv;
         }
       `,
@@ -1062,7 +1075,8 @@ function loadImageParticles(url, idx) {
           float d = length(q);
           float a = smoothstep(0.5, 0.0, d) * uOpacity;
           if (a < 0.01) discard;
-          gl_FragColor = vec4(vColor * 1.15, a * 0.62);
+          // brighter colour + higher alpha so the photo is clearly identifiable
+          gl_FragColor = vec4(vColor * 1.55, a * 0.88);
         }
       `,
     });
