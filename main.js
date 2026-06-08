@@ -1293,16 +1293,26 @@ function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
   document.body.classList.add('mode-about');
   aboutView.classList.add('active');
   aboutView.setAttribute('aria-hidden', 'false');
-  // jump straight to the appropriate panel start. Half-scroll point = panel 7 (scene B).
-  aboutScroll.scrollTop = 0;
+
   if (startSceneIdx === 1) {
+    // Direct-to-scene-B: land at the end of scene A, then auto-fly through
+    // the wormhole into scene B so the user always experiences the passage
+    // rather than a hard cut. Total entry ≈ 2s (view fade 0.72s + portal flight 1.4s).
+    aboutScroll.scrollTop = 0;
     requestAnimationFrame(() => {
       const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
-      aboutScroll.scrollTop = max * 0.63; // just past the SCENE_A boundary (0.6) — lands on scene B panel 1
+      // start just before the portal opens (panel 6 fully in focus)
+      aboutScroll.scrollTop = max * (SCENE_A_END - 0.02);
       updateAboutScroll();
+      // after the about-view fade-in settles, auto-scroll through the portal
+      setTimeout(() => {
+        smoothScrollAbout(max * (PORTAL_END + 0.05), 1500);
+      }, 650);
     });
+  } else {
+    aboutScroll.scrollTop = 0;
+    updateAboutScroll();
   }
-  updateAboutScroll();
 }
 function exitAbout() {
   if (mode === 'hero') return;
