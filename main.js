@@ -1315,12 +1315,14 @@ function buildScrollStops() {
   return arr;
 }
 
-// Lock state. __wheelLockedUntil is the timestamp until which we ignore new
-// wheels. While a trackpad's momentum scroll keeps firing wheel events, we
-// keep extending the lock by a short cooldown — so one physical flick only
-// fires one step, no matter how long the OS keeps sending residual deltas.
-let __wheelLockedUntil = 0;
-const MOMENTUM_COOLDOWN = 220; // ms of trackpad-silence required before next step
+// Lock model: only TWO conditions can block a step.
+//   1) An animation is currently playing  (now < __scrollLockUntil)
+//   2) The wheel stream hasn't paused long enough  (gap < QUIET_MS)
+// Crucially the lock NEVER auto-extends. The moment the user stops scrolling,
+// they can immediately start the next step — no "infinite chain locks".
+let __scrollLockUntil = 0;
+let __lastWheelAt = 0;
+const QUIET_MS = 180; // user must pause this long between flicks
 
 function nearestStopIndex(curProg) {
   const stops = buildScrollStops();
@@ -1332,53 +1334,44 @@ function nearestStopIndex(curProg) {
   return idx;
 }
 
-function onAboutWheel(e) {
-  e.preventDefault();
-  const now = performance.now();
-  // still locked? extend the lock by MOMENTUM_COOLDOWN so a long inertia
-  // tail keeps the door shut. Caller must wait for momentum to fully stop.
-  if (now < __wheelLockedUntil) {
-    __wheelLockedUntil = Math.max(__wheelLockedUntil, now + MOMENTUM_COOLDOWN);
-    return;
-  }
-  const stops = buildScrollStops();
-  const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
-  const curProg = aboutScroll.scrollTop / max;
-  const curIdx = nearestStopIndex(curProg);
-  const dir = e.deltaY > 0 ? 1 : -1;
-  const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
-  if (nextIdx === curIdx) return;
-  // crossing the wormhole (sceneA last panel ↔ sceneB first panel) takes longer
-  const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
-  const duration = crossing ? 1500 : 500;
-  smoothScrollAbout(stops[nextIdx] * max, duration);
-  // initial lock = animation length + cooldown; subsequent wheels keep extending
-  __wheelLockedUntil = now + duration + MOMENTUM_COOLDOWN;
-}
-aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
-
-// Touch swipe → same step-lock behaviour
-let __touchStartY = null;
-aboutScroll?.addEventListener('touchstart', (e) => {
-  __touchStartY = e.touches[0]?.clientY ?? null;
-}, { passive: true });
-aboutScroll?.addEventListener('touchmove', (e) => {
-  const now = performance.now();
-  if (now < __wheelLockedUntil || __touchStartY == null) { e.preventDefault(); return; }
-  const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
-  if (Math.abs(dy) < 30) return;
-  e.preventDefault();
+function doStep(dir) {
   const stops = buildScrollStops();
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
   const curIdx = nearestStopIndex(aboutScroll.scrollTop / max);
-  const dir = dy > 0 ? 1 : -1;
   const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
   if (nextIdx === curIdx) return;
   const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
   const duration = crossing ? 1500 : 500;
-  __touchStartY = null;
   smoothScrollAbout(stops[nextIdx] * max, duration);
-  __wheelLockedUntil = now + duration + MOMENTUM_COOLDOWN;
+  __scrollLockUntil = performance.now() + duration;
+}
+
+function onAboutWheel(e) {
+  e.preventDefault();
+  const now = performance.now();
+  const gap = now - __lastWheelAt;
+  __lastWheelAt = now;
+  if (now < __scrollLockUntil) return;  // animation in progress
+  if (gap < QUIET_MS) return;           // still in last flick's momentum tail
+  doStep(e.deltaY > 0 ? 1 : -1);
+}
+aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
+
+// Touch swipe → same lock model. Each touchstart resets the timestamp gate,
+// so each new finger-down can immediately count as a fresh user intent.
+let __touchStartY = null;
+aboutScroll?.addEventListener('touchstart', (e) => {
+  __touchStartY = e.touches[0]?.clientY ?? null;
+  __lastWheelAt = 0; // a new touch counts as a fresh gesture, bypass quiet check
+}, { passive: true });
+aboutScroll?.addEventListener('touchmove', (e) => {
+  const now = performance.now();
+  if (now < __scrollLockUntil || __touchStartY == null) { e.preventDefault(); return; }
+  const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
+  if (Math.abs(dy) < 30) return;
+  e.preventDefault();
+  __touchStartY = null;
+  doStep(dy > 0 ? 1 : -1);
 }, { passive: false });
 
 // ---------- Enter / exit transitions ----------
