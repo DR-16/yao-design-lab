@@ -932,6 +932,115 @@ portalGroup.add(tunnel);
 portalGroup.visible = false;
 aboutScene.add(portalGroup);
 
+// ============================================================
+// DIRECTION Z — Mirror floor + floating ghost rings
+// ============================================================
+// Brings the hero's avant-garde chrome+neon vocabulary into SceneA/B as
+// a continuous "stage". A large chrome floor stretches from in front of
+// the sceneA camera (z=+8) all the way through to past the sceneB camera
+// (z=-52) so BOTH scenes feel grounded on the same mirror surface.
+// Three concentric ghost rings hover at origin, slowly rotating — they
+// are the spiritual reflection of the hero's 3-layer cylinder, projected
+// into the about-view's depth. Four neon arcs (violet/yellow/blue/red)
+// sit fixed on the outer ring radius — the hero stripes incarnated as
+// edge lights welded to the structure.
+
+// --- Mirror floor (chrome plane with brushed bands + wandering highlight) ---
+const floorMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform float uTime;
+    varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+                 mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+    }
+    void main() {
+      vec2 p = vUv - 0.5;
+      float r = length(p) * 1.5;
+      // Slow-drifting brushed-metal bands along X
+      float band = sin(vUv.x * 70.0 + uTime * 0.35) * 0.05 + 0.5;
+      // A roaming bright highlight, like a slow camera light passing over chrome
+      vec2 hlPos = vec2(sin(uTime * 0.11) * 0.28, cos(uTime * 0.09) * 0.18);
+      float hl = (1.0 - smoothstep(0.0, 0.32, length(p - hlPos))) * 0.32;
+      // Fine grain for tactile surface texture
+      float n = noise(vUv * 280.0) * 0.045 - 0.022;
+      // Base chrome tone — cool dark with faint violet undertone matching hero
+      vec3 col = vec3(0.075, 0.072, 0.10) + band * vec3(0.022, 0.028, 0.045);
+      col += vec3(hl);
+      col += vec3(n);
+      // Atmospheric fade to near-black at the edges (horizon vignette)
+      float vignette = smoothstep(0.22, 0.72, r);
+      col = mix(col, vec3(0.014, 0.010, 0.022), vignette);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  side: THREE.DoubleSide,
+});
+const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80, 1, 1), floorMat);
+floorMesh.rotation.x = -Math.PI / 2;
+floorMesh.position.set(0, -2.3, -12);
+aboutScene.add(floorMesh);
+
+// --- Three ghost rings — concentric chrome torus, slow Y-axis rotation ---
+const ringGroup = new THREE.Group();
+ringGroup.position.set(0, -1.65, 0);
+const GHOST_RING_SPECS = [
+  { r: 1.65, tube: 0.024, speed:  0.045, opacity: 0.42 },
+  { r: 1.15, tube: 0.020, speed: -0.075, opacity: 0.36 },
+  { r: 0.72, tube: 0.016, speed:  0.115, opacity: 0.30 },
+];
+const ghostRings = [];
+for (const spec of GHOST_RING_SPECS) {
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xd2d2d8,
+    transparent: true,
+    opacity: spec.opacity,
+    depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(
+    new THREE.TorusGeometry(spec.r, spec.tube, 12, 128),
+    mat
+  );
+  mesh.rotation.x = Math.PI / 2;
+  mesh.userData.speed = spec.speed;
+  ringGroup.add(mesh);
+  ghostRings.push(mesh);
+}
+
+// --- 4 neon accent arcs welded to the outer ring radius ---
+// These are children of ringGroup (not of any spinning ring), so they hold
+// their angular position while the rings rotate beneath them. The four
+// arcs use the hero's exact violet/yellow/blue/red palette — hero stripes,
+// now glowing on the rim of the chrome structure.
+const ACCENT_ARC_COLORS = [0xc026d3, 0xfbbf24, 0x4b7dff, 0xff3030];
+for (let i = 0; i < 4; i++) {
+  const arc = new THREE.Mesh(
+    new THREE.TorusGeometry(1.66, 0.038, 8, 64, Math.PI / 6),
+    new THREE.MeshBasicMaterial({
+      color: ACCENT_ARC_COLORS[i],
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+    })
+  );
+  arc.rotation.x = Math.PI / 2;
+  arc.rotation.z = (i / 4) * Math.PI * 2 + Math.PI / 8;
+  ringGroup.add(arc);
+}
+aboutScene.add(ringGroup);
+
 // Streak particles — a few hundred points scattered in the tunnel volume so
 // when the camera rushes forward they whip past as motion streaks.
 const STREAK_COUNT = 140;
@@ -1719,6 +1828,15 @@ function aboutTick() {
     portraitMat.uniforms.uTime.value = t;
     tunnelMat.uniforms.uTime.value = t;
     tickRingParticles(dt);
+
+    // Direction Z: drive the mirror floor's drifting bands/highlight and
+    // spin each ghost ring at its own slow speed. The ringGroup itself sways
+    // gently on Y so the whole structure feels alive rather than mechanical.
+    floorMat.uniforms.uTime.value = t;
+    for (const ring of ghostRings) {
+      ring.rotation.z += ring.userData.speed * dt;
+    }
+    ringGroup.rotation.y = Math.sin(t * 0.08) * 0.06;
 
     // Ease each panel image cloud's opacity toward its target so swaps are smooth
     for (let i = 0; i < panelClouds.length; i++) {
