@@ -1584,7 +1584,7 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
   aboutScene.add(mesh);
   doubtVoices.push({
     mesh, baseY: wy,
-    appearAt: 0.66 + frac * 0.12,                          // staggered 0.66→0.78
+    appearAt: 0.62 + frac * 0.12,                          // staggered 0.62→0.74
     drift: 0.3 + Math.random() * 0.4,
     phase: Math.random() * Math.PI * 2,
   });
@@ -1596,7 +1596,7 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
 // Materialise + billboard the doubt voices each frame. They fade out near the
 // final page so the ending settles to the reflective ceiling + its text.
 function tickSceneB(sp, t) {
-  const settle = Math.max(0, Math.min(1, (sp - 0.86) / 0.06));
+  const settle = Math.max(0, Math.min(1, (sp - 0.92) / 0.06));
   for (const v of doubtVoices) {
     const k = Math.max(0, Math.min(1, (sp - v.appearAt) / 0.10));
     v.mesh.material.opacity = k * 0.95 * (1 - settle);
@@ -2260,7 +2260,11 @@ function buildScrollStops() {
   const arr = [];
   const N = 10, P1 = 0.66;
   for (let i = 0; i < N; i++) arr.push((i / (N - 1)) * P1);
-  arr.push(0.82);
+  // doubt-swarm stops: step up through the voices (lower → mid → upper) …
+  arr.push(0.74);
+  arr.push(0.81);
+  arr.push(0.88);
+  // … then the final reflective-ceiling page.
   arr.push(0.985);
   return arr;
 }
@@ -2514,22 +2518,19 @@ function aboutTick() {
     const pLookX = Math.sin(pAng) * ROOM_R, pLookY = pY, pLookZ = Math.cos(pAng) * ROOM_R;
 
     // ---- central rising pose (doubt zone → skylight) ----
-    // Motion is FROZEN after sp 0.92 (spc clamp): the last 8% of scroll is the
-    // settled "final page" where the camera holds a fixed pose looking up into
-    // the skylight with the four theme sentences framed inside the white disc.
-    const spc = Math.min(sp, 0.92);
-    const a = Math.max(0, Math.min(1, (spc - PHASE1_END) / (0.92 - PHASE1_END)));
+    // The camera rises SLOWLY through the doubt swarm with a forward gaze across
+    // 0.66 → 0.90 (a long window so the viewer can step through the voices,
+    // lower → upper), then pitches up into the reflective ceiling only in the
+    // final 0.90 → 1.0.
+    const a = Math.max(0, Math.min(1, (sp - PHASE1_END) / (0.92 - PHASE1_END)));
     const aE = a * a * (3 - 2 * a);
-    const spiral = a * Math.PI * 0.42;                 // gentle turn (was 1.1) so
-    //                                                    the forward doubt-wedge stays in view
+    const spiral = a * Math.PI * 0.42;                 // gentle turn so the forward
+    //                                                    doubt-wedge stays in view
     const aRad = 1.9;
     const topY = aboutPanels[N - 1].y;
     const riseY = topY + aE * ((CEIL_Y - 9) - topY) + bob * 0.4;
     const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
-    // Pitch UP into the skylight, completing by sp 0.92, so the gaze is settled
-    // and stable while the viewer reads the final sentences.
-    const finale = Math.max(0, Math.min(1, (spc - 0.82) / 0.10));  // hold the forward
-    //                                          doubt-gaze until 0.82, then pitch up
+    const finale = Math.max(0, Math.min(1, (sp - 0.92) / 0.08));   // pitch up 0.92→1.0
     const fE = finale * finale;
     const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
     const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
@@ -2539,7 +2540,7 @@ function aboutTick() {
     // Pose blend resolves fast (camera is on the central axis by ~sp 0.73) so
     // the viewer is inside the doubt swarm well before it materialises; the
     // vertical rise (riseY, via aE) keeps climbing gradually after that.
-    const kk = Math.max(0, Math.min(1, (sp - PHASE1_END) / 0.14));
+    const kk = Math.max(0, Math.min(1, (sp - PHASE1_END) / 0.05));
     const k = kk * kk * (3 - 2 * kk);
     aboutCam.position.set(
       pPosX + (aPosX - pPosX) * k,
