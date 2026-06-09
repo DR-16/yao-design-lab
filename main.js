@@ -1360,10 +1360,10 @@ const PANEL_DATA_B = [
 ];
 const ALL_PANEL_DATA = PANEL_DATA.concat(PANEL_DATA_B);
 const PANEL_ARC = 1.05;             // radians of circumference each panel spans
-// 16:9 frame: width = (ROOM_R-0.06)*PANEL_ARC ≈ 6.76, so height = 6.76*9/16 ≈
-// 3.80. Matching the 1280×720 (16:9) texture means the content is no longer
-// vertically stretched.
-const PANEL_H   = 3.8;
+// 3:2 frame (a compromise between the old 5:4 and the wide 16:9): width =
+// (ROOM_R-0.06)*PANEL_ARC ≈ 6.76, so height = 6.76 / 1.5 ≈ 4.5. The panel
+// texture is the matching 3:2 aspect (1280×853) so nothing is stretched.
+const PANEL_H   = 4.5;
 // Character-level wrap that also handles CJK (which has no spaces): Latin runs
 // break at the last space, CJK breaks per glyph, so Chinese never overflows.
 function wrapText(x, text, maxW) {
@@ -1406,36 +1406,41 @@ function drawPanelTexture(canvas, data, idx, lang) {
   x.strokeStyle = 'rgba(150,165,200,0.25)'; x.lineWidth = 2;
   x.strokeRect(70, 70, W - 140, H - 140);
   const L = 130;
-  // heading — no step number; an editorial "Instrument Serif" display face
-  // for a more artistic, high-fashion feel (falls back to Georgia until the
-  // web font loads, then the panels are redrawn).
   const d = data[lang] || data.en;
   x.textBaseline = 'top';
-  let yy = 150;
-  // optional eyebrow tag (SceneB chapter marker)
-  if (data.tag) {
-    x.fillStyle = accent;
-    x.font = '700 34px "Helvetica Neue", Arial, sans-serif';
-    x.fillText(data.tag, L, 116);
-    yy = 196;
-  }
-  x.fillStyle = '#f1f3fa';
+  const maxW = W - L - 130;
   // "Syne" — avant-garde but highly readable display sans for headings; a
-  // clean modern CJK sans (PingFang) for Chinese. Smaller than before so the
-  // lines stay compact inside the frame.
+  // clean modern CJK sans (PingFang) for Chinese.
   const headFont = (lang === 'cn')
     ? '600 74px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
     : '700 80px "Syne", "Helvetica Neue", Arial, sans-serif';
-  x.font = headFont;
-  const maxW = W - L - 130;
-  for (const line of wrapText(x, d.h, maxW)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 92 : 88); }
-  // body
-  yy += 28;
-  x.fillStyle = 'rgba(206,214,232,0.82)';
-  x.font = (lang === 'cn')
+  const bodyFont = (lang === 'cn')
     ? '400 38px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
     : '400 40px "Helvetica Neue", Arial, sans-serif';
-  for (const line of wrapText(x, d.p, maxW)) { x.fillText(line, L, yy); yy += (lang === 'cn' ? 56 : 58); }
+  const headLH = (lang === 'cn') ? 92 : 88;
+  const bodyLH = (lang === 'cn') ? 56 : 58;
+
+  // Measure first so the heading + body block can be vertically CENTERED in the
+  // frame (the 3:2 panel is taller, so top-aligned text would look top-heavy).
+  x.font = headFont; const hLines = wrapText(x, d.h, maxW);
+  x.font = bodyFont; const bLines = wrapText(x, d.p, maxW);
+  const blockH = hLines.length * headLH + 28 + bLines.length * bodyLH;
+  const tagH = data.tag ? 70 : 0;
+  let yy = Math.max(140, tagH + (H - 140 - tagH - blockH) / 2 + 40);
+
+  // optional eyebrow tag (SceneB chapter marker), sits just above the block
+  if (data.tag) {
+    x.fillStyle = accent;
+    x.font = '700 34px "Helvetica Neue", Arial, sans-serif';
+    x.fillText(data.tag, L, yy - 60);
+  }
+  x.fillStyle = '#f1f3fa';
+  x.font = headFont;
+  for (const line of hLines) { x.fillText(line, L, yy); yy += headLH; }
+  yy += 28;
+  x.fillStyle = 'rgba(206,214,232,0.82)';
+  x.font = bodyFont;
+  for (const line of bLines) { x.fillText(line, L, yy); yy += bodyLH; }
   // accent glow footer line
   x.fillStyle = accent; x.globalAlpha = 0.7;
   x.fillRect(L, H - 150, 220, 5); x.globalAlpha = 1;
@@ -1445,7 +1450,7 @@ let __aboutLang = (document.body.classList.contains('lang-cn')) ? 'cn' : 'en';
 const PANEL_COUNT = ALL_PANEL_DATA.length;             // 6 SceneA + 4 SceneB
 for (let i = 0; i < PANEL_COUNT; i++) {
   const cv = document.createElement('canvas');
-  cv.width = 1280; cv.height = 720;
+  cv.width = 1280; cv.height = 853;   // 3:2, matches the panel geometry
   drawPanelTexture(cv, ALL_PANEL_DATA[i], i, __aboutLang);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
