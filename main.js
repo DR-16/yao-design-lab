@@ -1563,20 +1563,28 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
     chroma: ['rgba(80,200,255,0.7)', 'rgba(255,70,180,0.7)'],
   });
   const aspect = 1024 / 256;
-  const hgt = 0.85 + Math.random() * 0.5;
+  const hgt = 1.05 + Math.random() * 0.5;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(hgt * aspect, hgt),
     new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false })
   );
-  const ang = (i / DOUBT_WORDS.length) * Math.PI * 2 + Math.random() * 0.6;
-  const rad = 2.2 + Math.random() * 3.0;
-  const wy  = DOUBT_ZONE_Y0 + Math.random() * (DOUBT_ZONE_Y1 - DOUBT_ZONE_Y0);
+  // Cluster the voices in the camera's FORWARD wedge (it looks toward azimuth
+  // ≈ PI while it rises), spread across the whole rise-height band, so as the
+  // camera climbs they ALL drift through frame instead of scattering 360°
+  // (most of which the 60° view never sees).
+  const baseAz = Math.PI + 0.4;
+  const ang = baseAz + (Math.random() - 0.5) * 2.3;        // forward ±1.15 rad
+  const rad = 2.6 + Math.random() * 2.3;
+  const frac = i / (DOUBT_WORDS.length - 1);
+  const wy  = DOUBT_ZONE_Y0 + 1
+            + frac * 9                                     // tighter band ~17→26
+            + (Math.random() - 0.5) * 1.6;                 // matches the eye-level rise
   mesh.position.set(Math.sin(ang) * rad, wy, Math.cos(ang) * rad);
   mesh.renderOrder = 5;
   aboutScene.add(mesh);
   doubtVoices.push({
     mesh, baseY: wy,
-    appearAt: 0.70 + (i / DOUBT_WORDS.length) * 0.14,  // staggered 0.70→0.84
+    appearAt: 0.66 + frac * 0.12,                          // staggered 0.66→0.78
     drift: 0.3 + Math.random() * 0.4,
     phase: Math.random() * Math.PI * 2,
   });
@@ -1588,7 +1596,7 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
 // Materialise + billboard the doubt voices each frame. They fade out near the
 // final page so the ending settles to the reflective ceiling + its text.
 function tickSceneB(sp, t) {
-  const settle = Math.max(0, Math.min(1, (sp - 0.84) / 0.06));
+  const settle = Math.max(0, Math.min(1, (sp - 0.86) / 0.06));
   for (const v of doubtVoices) {
     const k = Math.max(0, Math.min(1, (sp - v.appearAt) / 0.10));
     v.mesh.material.opacity = k * 0.95 * (1 - settle);
@@ -2512,14 +2520,16 @@ function aboutTick() {
     const spc = Math.min(sp, 0.92);
     const a = Math.max(0, Math.min(1, (spc - PHASE1_END) / (0.92 - PHASE1_END)));
     const aE = a * a * (3 - 2 * a);
-    const spiral = a * Math.PI * 1.1;                  // scroll-driven, freezes
+    const spiral = a * Math.PI * 0.42;                 // gentle turn (was 1.1) so
+    //                                                    the forward doubt-wedge stays in view
     const aRad = 1.9;
     const topY = aboutPanels[N - 1].y;
     const riseY = topY + aE * ((CEIL_Y - 9) - topY) + bob * 0.4;
     const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
     // Pitch UP into the skylight, completing by sp 0.92, so the gaze is settled
     // and stable while the viewer reads the final sentences.
-    const finale = Math.max(0, Math.min(1, (spc - 0.74) / 0.18));  // 0.74 → 0.92
+    const finale = Math.max(0, Math.min(1, (spc - 0.82) / 0.10));  // hold the forward
+    //                                          doubt-gaze until 0.82, then pitch up
     const fE = finale * finale;
     const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
     const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
