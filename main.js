@@ -1572,9 +1572,14 @@ for (let i = 0; i < DOUBT_WORDS.length; i++) {
   // ≈ PI while it rises), spread across the whole rise-height band, so as the
   // camera climbs they ALL drift through frame instead of scattering 360°
   // (most of which the 60° view never sees).
-  const baseAz = Math.PI + 0.4;
-  const ang = baseAz + (Math.random() - 0.5) * 2.3;        // forward ±1.15 rad
-  const rad = 2.6 + Math.random() * 2.3;
+  // Centre the voices on the camera's mid look-azimuth and keep a TIGHT spread
+  // so they stay near the middle of the frame and don't swing wildly across it
+  // as the camera turns (the rotation itself is unchanged).
+  const baseAz = Math.PI + 0.85;
+  // alternate left/right by index (plus a little jitter) so the tight central
+  // cluster doesn't stack two voices on top of each other
+  const ang = baseAz + ((i % 2) - 0.5) * 0.8 + (Math.random() - 0.5) * 0.3;
+  const rad = 3.0 + Math.random() * 1.6;                   // 3.0–4.6
   const frac = i / (DOUBT_WORDS.length - 1);
   const wy  = DOUBT_ZONE_Y0 + 1
             + frac * 9                                     // tighter band ~17→26
@@ -2260,9 +2265,8 @@ function buildScrollStops() {
   const arr = [];
   const N = 10, P1 = 0.66;
   for (let i = 0; i < N; i++) arr.push((i / (N - 1)) * P1);
-  // doubt-swarm stops: step up through the voices (lower → mid → upper) …
-  arr.push(0.74);
-  arr.push(0.81);
+  // doubt-swarm stops: two — a lower and an upper view of the voices …
+  arr.push(0.77);
   arr.push(0.88);
   // … then the final reflective-ceiling page.
   arr.push(0.985);
