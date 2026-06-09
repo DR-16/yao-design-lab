@@ -1556,13 +1556,17 @@ const DOUBT_WORDS = [
 const doubtVoices = [];
 for (let i = 0; i < DOUBT_WORDS.length; i++) {
   const d = DOUBT_WORDS[i];
+  // Wide canvas (1600) so even the longest phrase ("Someone already did it")
+  // fits with margin and isn't clipped at the edges; it only adds transparent
+  // margin, so the text size/scale is unchanged.
+  const DV_W = 1600;
   const tex = makeTextTexture(d.t, {
-    w: 1024, h: 256,
+    w: DV_W, h: 256,
     font: '700 italic 92px Georgia, "Times New Roman", serif',
     color: HERO_CSS[d.ci], glow: HERO_CSS[d.ci],
     chroma: ['rgba(80,200,255,0.7)', 'rgba(255,70,180,0.7)'],
   });
-  const aspect = 1024 / 256;
+  const aspect = DV_W / 256;
   const hgt = 1.05 + Math.random() * 0.5;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(hgt * aspect, hgt),
