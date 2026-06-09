@@ -1744,125 +1744,158 @@ const streakMat = new THREE.ShaderMaterial({
 const streaks = new THREE.Points(streakGeo, streakMat);
 portalGroup.add(streaks);
 
-// ===== PER-PANEL PARTICLE PORTRAITS =====
-// 6 images (one per sceneA panel). Each is sampled into ~6000 coloured
-// particles arranged in the image's shape and tinted with its original RGB.
-// They sit behind the text panel and in front of the flame, half-transparent
-// so the flame still shows through.
+// ===== PER-PANEL WALL HOLOGRAMS =====
+// Each SceneA panel gets a holographic photo: a semi-transparent rectangular
+// holo-screen (scanlines + noise + blue-white glow + slight edge glitch, NO
+// feathered edge), beamed from a small metal projector mounted on the wall via
+// a faint light cone, with a soft glow spot on the wall behind so it reads as
+// actually lighting the metal. The whole rig is fixed in space beside its
+// panel and faces inward — a real lab hologram, not a sticker floating around.
 const PANEL_IMAGES = [
-  'img/p1.jpg', // panel 1
-  'img/p2.jpg', // panel 2
-  'img/p3.jpg', // panel 3
-  'img/p4.jpg', // panel 4
-  'img/p5.jpg', // panel 5
-  'img/p6.jpg', // panel 6
+  'img/p1.jpg', 'img/p2.jpg', 'img/p3.jpg',
+  'img/p4.jpg', 'img/p5.jpg', 'img/p6.jpg',
 ];
-const panelClouds = new Array(6).fill(null);
-const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0); // tween target per cloud
+const holograms = new Array(6).fill(null);
+const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0); // tween target per holo
 const PANEL_CLOUD_OP = new Array(6).fill(0);        // current displayed opacity
+const __holoTime = { value: 0 };                    // shared animated time
 
-function loadImageParticles(url, idx) {
+// soft radial glow sprite reused for the wall light-spot
+function __buildHoloGlowTex() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0.0, 'rgba(190,215,255,0.95)');
+  g.addColorStop(0.4, 'rgba(120,160,255,0.35)');
+  g.addColorStop(1.0, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const __holoGlowTex = __buildHoloGlowTex();
+
+const __holoVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const __holoFrag = /* glsl */`
+  uniform sampler2D uMap; uniform float uTime; uniform float uOpacity;
+  varying vec2 vUv;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  void main(){
+    vec2 uv = vUv;
+    // occasional horizontal glitch band (a clean shift, not a frayed edge)
+    float row = floor(uv.y * 46.0);
+    float ga = hash(vec2(row, floor(uTime * 9.0)));
+    uv.x += step(0.93, ga) * (hash(vec2(row, floor(uTime * 9.0) + 3.0)) - 0.5) * 0.05;
+    vec4 tx = texture2D(uMap, uv);
+    float scan = 0.80 + 0.20 * sin(vUv.y * 660.0);               // scanlines
+    float n = hash(vUv * vec2(311.0, 127.0) + uTime);            // noise
+    vec3 col = tx.rgb * (0.55 + 0.55 * scan);                     // keep the photo legible
+    col += vec3(0.10, 0.17, 0.30) * 0.42;                         // blue-white glow lift
+    col += (n - 0.5) * 0.06;                                      // noise
+    float e = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    float edge = 1.0 - smoothstep(0.0, 0.018, e);                // crisp glowing border
+    col += vec3(0.45, 0.65, 1.0) * edge * 0.6;
+    float bar = smoothstep(0.5, 0.0, abs(fract(vUv.y * 0.5 - uTime * 0.12) - 0.5));
+    col += vec3(0.3, 0.45, 0.8) * bar * 0.14;                     // slow rolling scan bar
+    float a = tx.a * uOpacity * (0.74 + 0.06 * scan) + edge * uOpacity * 0.3;
+    if (a < 0.008) discard;
+    gl_FragColor = vec4(col, a);
+  }
+`;
+
+function loadHologram(url, idx) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    // larger sample canvas + every-pixel sampling → super dense point cloud.
-    // Tens of thousands of tiny coloured points where the photo reads from
-    // sheer density, with a soft noisy edge mask so the cloud doesn't end
-    // in a hard rectangle.
-    // CENTRE-CROP to a 3:4 portrait that keeps the human subject (bias the
-    // crop slightly upward so heads aren't clipped), then sample that.
-    const w = 300, h = 400;            // portrait 3:4 working canvas
-    const targetAR = w / h;
+    // 3:4 centre-crop (biased up to keep the head) + cool metallic duotone, on
+    // a HARD rectangle (no oval feather mask).
+    const W = 384, H = 512, targetAR = W / H;
     let cw = img.width, ch = img.height;
     if (cw / ch > targetAR) cw = ch * targetAR; else ch = cw / targetAR;
-    const sx = (img.width - cw) / 2;
-    const sy = (img.height - ch) * 0.32;   // bias up → keep faces
-    const cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
+    const sx = (img.width - cw) / 2, sy = (img.height - ch) * 0.32;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
-    ctx.drawImage(img, sx, sy, cw, ch, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h).data;
-
-    const positions = [], colors = [];
-    const STEP = 1;
-    const worldW = 2.1;
-    const worldH = worldW * h / w;             // portrait 3:4
-    for (let py = 0; py < h; py += STEP) {
-      for (let px = 0; px < w; px += STEP) {
-        const i = (py * w + px) * 4;
-        const r = data[i]   / 255;
-        const g = data[i+1] / 255;
-        const b = data[i+2] / 255;
-        const a = data[i+3] / 255;
-        if (a < 0.05) continue;
-
-        // === SOFT IRREGULAR EDGE MASK (taller ellipse to keep the figure) ===
-        const cx = px / w - 0.5;
-        const cy = (py / h - 0.5) * 0.78;       // squash vertically → portrait oval
-        const dist = Math.sqrt(cx * cx + cy * cy);
-        const fade = 1 - Math.max(0, (dist - 0.34) / 0.13);
-        const noise = 0.65 + Math.random() * 0.7;
-        if (fade * noise < 0.5) continue;
-
-        const x = (px / w - 0.5) * worldW;
-        const y = -(py / h - 0.5) * worldH;
-        positions.push(x, y, 0);
-
-        // === AVANT-GARDE METALLIC RE-STYLE ===
-        // collapse to luminance, push contrast, then remap onto a cool liquid-
-        // silver ramp (shadow → polished highlight) so every portrait reads as
-        // chromed metal and unifies with the chamber.
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        let Lc = (lum - 0.5) * 1.4 + 0.5;
-        Lc = Lc < 0 ? 0 : Lc > 1 ? 1 : Lc;
-        const rr = 0.06 + 0.88 * Lc;
-        const gg = 0.075 + 0.90 * Lc;
-        const bb = 0.11 + 0.96 * Lc;            // cool blue-silver in highlights
-        colors.push(rr, gg, bb);
-      }
+    ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
+    const id = ctx.getImageData(0, 0, W, H), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      let Lc = (lum - 0.5) * 1.4 + 0.5; Lc = Lc < 0 ? 0 : Lc > 1 ? 1 : Lc;
+      d[i] = (0.06 + 0.88 * Lc) * 255;
+      d[i + 1] = (0.075 + 0.90 * Lc) * 255;
+      d[i + 2] = (0.11 + 0.96 * Lc) * 255;
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,    3));
-    const mat = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.NormalBlending,
-      uniforms: { uOpacity: { value: 0 } },
-      vertexShader: /* glsl */`
-        attribute vec3 color;
-        varying vec3 vColor;
-        void main(){
-          vColor = color;
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = 0.55 * (60.0 / max(-mv.z, 0.3));
-          gl_Position = projectionMatrix * mv;
-        }
-      `,
-      fragmentShader: /* glsl */`
-        uniform float uOpacity;
-        varying vec3 vColor;
-        void main(){
-          vec2 q = gl_PointCoord - 0.5;
-          float d = length(q);
-          float a = smoothstep(0.5, 0.0, d) * uOpacity;
-          if (a < 0.01) discard;
-          // brighter colour + higher alpha so the photo is clearly identifiable
-          gl_FragColor = vec4(vColor * 1.55, a * 0.88);
-        }
-      `,
+    ctx.putImageData(id, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+
+    const PW = 2.15, PH = PW * H / W;                 // 3:4 holo-screen
+    const photoMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { uMap: { value: tex }, uTime: __holoTime, uOpacity: { value: 0 } },
+      vertexShader: __holoVert, fragmentShader: __holoFrag,
     });
-    const pts = new THREE.Points(geo, mat);
-    pts.position.set(0, 0, 1.8); // behind text panel (in front of flame)
-    aboutScene.add(pts);
-    panelClouds[idx] = pts;
-    console.log('[panelCloud]', idx, url, 'particles:', positions.length / 3);
+    const photo = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), photoMat);
+
+    // soft glow on the wall behind the screen
+    const glowMat = new THREE.MeshBasicMaterial({
+      map: __holoGlowTex, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.8, PH * 1.45), glowMat);
+    glow.position.set(0, 0, -1.35);
+
+    // small metal projector + emissive slot, mounted on the wall below
+    const proj = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.22, 0.42),
+      new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.95, roughness: 0.3, envMapIntensity: 1.2 })
+    );
+    proj.position.set(0, -PH * 0.5 - 0.55, -1.1);
+    const slotMat = new THREE.MeshBasicMaterial({
+      color: 0xbfd4ff, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const slot = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.08), slotMat);
+    slot.position.set(0, -PH * 0.5 - 0.44, -0.9); slot.rotation.x = -0.7;
+
+    // very faint conical light beam projector → screen
+    const P = new THREE.Vector3(0, -PH * 0.5 - 0.46, -1.0);
+    const C = new THREE.Vector3(0, -0.1, -0.05);
+    const dir = C.clone().sub(P); const len = dir.length();
+    const beamMat = new THREE.MeshBasicMaterial({
+      color: 0xaecbff, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
+    });
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(PW * 0.6, 0.08, len, 28, 1, true), beamMat
+    );
+    beam.position.copy(P).addScaledVector(dir, 0.5);
+    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+
+    const group = new THREE.Group();
+    group.add(glow, beam, photo, proj, slot);
+    const panel = aboutPanels[idx];
+    const ah = panel.angle - 0.72;                    // beside the text panel
+    const RH = 5.15;                                  // floats in front of the wall
+    group.position.set(Math.sin(ah) * RH, panel.y + 0.15, Math.cos(ah) * RH);
+    group.lookAt(0, panel.y + 0.15, 0);               // face the room centre (inward)
+    aboutScene.add(group);
+
+    holograms[idx] = {
+      group,
+      setOpacity: (o) => {
+        photoMat.uniforms.uOpacity.value = o;
+        glowMat.opacity = o * 0.8;
+        slotMat.opacity = o * 0.95;
+        beamMat.opacity = o * 0.1;
+      },
+    };
   };
-  img.onerror = () => { console.warn('[panelCloud] failed to load', url); };
+  img.onerror = () => console.warn('[holo] failed to load', url);
   img.src = url;
 }
 
-PANEL_IMAGES.forEach((url, idx) => { if (url) loadImageParticles(url, idx); });
+
+PANEL_IMAGES.forEach((url, idx) => { if (url) loadHologram(url, idx); });
 
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
@@ -2117,25 +2150,8 @@ function updateAboutScroll() {
     PANEL_CLOUD_TARGET_OP[i] = op;
   }
 
-  // Position each image cloud on a DNA helix in the RIGHT half of the viewport,
-  // mirroring the text staircase on the left. Same rotor angle / vertical
-  // sweep as the text helix, but offset along +X so the photo sits to the
-  // right of the text panel that corresponds to the focused step.
-  const IMG_HELIX_RADIUS = 0.9;
-  const IMG_PANEL_Y_GAP  = 0.4;
-  const IMG_GROUP_X      = 2.4; // world-units offset → right half of screen
-  const rotorTyUnits     = (IMG_PANEL_Y_GAP * 2.5) - effA * (IMG_PANEL_Y_GAP * 5);
-  for (let i = 0; i < panelClouds.length; i++) {
-    const pts = panelClouds[i];
-    if (!pts) continue;
-    const stepRyRad = (i * 60) * Math.PI / 180;
-    const baseX = IMG_HELIX_RADIUS * Math.sin(stepRyRad);
-    const baseZ = IMG_HELIX_RADIUS * Math.cos(stepRyRad);
-    const stepY = (i - 2.5) * IMG_PANEL_Y_GAP; // panel 1 lowest, panel 6 highest
-    const x = baseX * cosR + baseZ * sinR;
-    const z = -baseX * sinR + baseZ * cosR;
-    pts.position.set(x + IMG_GROUP_X, stepY + rotorTyUnits, z);
-  }
+  // (Holograms are fixed in space beside their panels — the old DNA-helix
+  // positioning is retired; opacity is driven from aboutTick instead.)
   document.querySelectorAll('.corridor-step').forEach((s, i) => {
     const g = 6 + i;
     const isCurrent = (g === focusIdx);
@@ -2494,12 +2510,13 @@ function aboutTick() {
     // the colour columns baked into the wall's emissive map.
     void tickLightLines;
 
-    // Ease each panel image cloud's opacity toward its target so swaps are smooth
-    for (let i = 0; i < panelClouds.length; i++) {
-      const pc = panelClouds[i];
-      if (!pc) continue;
+    // Animate the holograms and ease each one's opacity toward its target.
+    __holoTime.value = t;
+    for (let i = 0; i < holograms.length; i++) {
+      const ho = holograms[i];
+      if (!ho) continue;
       PANEL_CLOUD_OP[i] += (PANEL_CLOUD_TARGET_OP[i] - PANEL_CLOUD_OP[i]) * 0.12;
-      pc.material.uniforms.uOpacity.value = PANEL_CLOUD_OP[i];
+      ho.setOpacity(PANEL_CLOUD_OP[i]);
     }
 
     // TRAVEL CAMERA — the operator rides UP the cylindrical shaft.
@@ -2561,20 +2578,14 @@ function aboutTick() {
       pLookZ + (aLookZ - pLookZ) * k
     );
 
-    // ---- Mount the six photo particle-clouds onto their wall panels ----
-    // Each photo floats just off the wall, beside its text panel, facing the
-    // camera — so when a panel is framed you see the story text AND its photo.
-    // They fade out as the camera leaves the wall for the doubt zone.
-    for (let i = 0; i < panelClouds.length; i++) {
-      const pc = panelClouds[i];
-      if (!pc) continue;
-      const pa = aboutPanels[i].angle - 0.82;          // OUTSIDE the frame's edge
-      const pr = ROOM_R - 1.1;                          // float just off the wall
-      pc.position.set(Math.sin(pa) * pr, aboutPanels[i].y + 0.1, Math.cos(pa) * pr);
-      pc.lookAt(aboutCam.position);                     // face the viewer
-      pc.scale.setScalar(1.15);
+    // ---- Hologram fade ----
+    // Each hologram is FIXED in space beside its panel (built in loadHologram);
+    // here we only drive its opacity — bright when its panel is framed, hidden
+    // once the camera leaves the wall for the doubt zone.
+    for (let i = 0; i < holograms.length; i++) {
+      if (!holograms[i]) continue;
       const near = 1 - Math.min(1, Math.abs(fIdx - i)); // 1 when framed
-      PANEL_CLOUD_TARGET_OP[i] = near * (1 - k) * 0.95; // hide once in doubt zone
+      PANEL_CLOUD_TARGET_OP[i] = near * (1 - k);         // hide once in doubt zone
     }
 
     // SceneB doubt voices materialise and billboard to the camera.
