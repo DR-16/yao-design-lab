@@ -1744,92 +1744,77 @@ const streakMat = new THREE.ShaderMaterial({
 const streaks = new THREE.Points(streakGeo, streakMat);
 portalGroup.add(streaks);
 
-// ===== PER-PANEL WALL HOLOGRAMS =====
-// Each SceneA panel gets a holographic photo: a semi-transparent rectangular
-// holo-screen (scanlines + noise + blue-white glow + slight edge glitch, NO
-// feathered edge), beamed from a small metal projector mounted on the wall via
-// a faint light cone, with a soft glow spot on the wall behind so it reads as
-// actually lighting the metal. The whole rig is fixed in space beside its
-// panel and faces inward — a real lab hologram, not a sticker floating around.
+// ===== PER-PANEL ARCHIVE EXHIBITS =====
+// Each SceneA panel has a PHYSICAL archive print: a real photo on a rounded
+// glass plate in a brushed-metal frame, mounted on the cylinder wall by a metal
+// standoff arm + a wall plate + top/bottom clamps. It reads as a record in YAO
+// FLAME LAB's archive — a second exhibit beside the story panel, not a floating
+// hologram. (No projector, beam or holographic shader.)
 const PANEL_IMAGES = [
   'img/p1.jpg', 'img/p2.jpg', 'img/p3.jpg',
   'img/p4.jpg', 'img/p5.jpg', 'img/p6.jpg',
 ];
-const holograms = new Array(6).fill(null);
-const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0); // tween target per holo
-const PANEL_CLOUD_OP = new Array(6).fill(0);        // current displayed opacity
-const __holoTime = { value: 0 };                    // shared animated time
+const exhibits = new Array(6).fill(null);
+const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0);
+const PANEL_CLOUD_OP = new Array(6).fill(0);
 
-// soft radial glow sprite reused for the wall light-spot
-function __buildHoloGlowTex() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+function __roundRectPath(x, w, h, r) {
+  x.beginPath();
+  x.moveTo(r, 0);
+  x.arcTo(w, 0, w, h, r);
+  x.arcTo(w, h, 0, h, r);
+  x.arcTo(0, h, 0, 0, r);
+  x.arcTo(0, 0, w, 0, r);
+  x.closePath();
+}
+// brushed-metal frame texture (rounded) — shows as the border around the photo
+function __buildFrameTex() {
+  const c = document.createElement('canvas'); c.width = 320; c.height = 416;
   const x = c.getContext('2d');
-  const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
-  g.addColorStop(0.0, 'rgba(190,215,255,0.95)');
-  g.addColorStop(0.4, 'rgba(120,160,255,0.35)');
-  g.addColorStop(1.0, 'rgba(0,0,0,0)');
-  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  const g = x.createLinearGradient(0, 0, 320, 416);
+  g.addColorStop(0, '#d8dce5'); g.addColorStop(0.5, '#969cab'); g.addColorStop(1, '#c4c9d4');
+  __roundRectPath(x, 320, 416, 26); x.fillStyle = g; x.fill();
+  for (let i = 0; i < 240; i++) {
+    x.strokeStyle = `rgba(255,255,255,${Math.random() * 0.06})`;
+    const px = Math.random() * 320;
+    x.beginPath(); x.moveTo(px, 0); x.lineTo(px, 416); x.stroke();
+  }
+  x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = 3;
+  __roundRectPath(x, 317, 413, 26); x.stroke();
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const __holoGlowTex = __buildHoloGlowTex();
+const __frameTex = __buildFrameTex();
+const __exhibitMetal = () => new THREE.MeshStandardMaterial({
+  color: 0xc4c9d4, metalness: 0.92, roughness: 0.3, envMapIntensity: 1.2,
+  transparent: true, opacity: 0,
+});
 
-const __holoVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-// Photo first (80%), projection cues second (20%): the image stays solid and
-// legible; only a whisper of scanlines/noise + a hairline cool edge hint that
-// it is a projection. No heavy blue filter, no wide white feather.
-const __holoFrag = /* glsl */`
-  uniform sampler2D uMap; uniform float uTime; uniform float uOpacity;
-  varying vec2 vUv;
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  void main(){
-    vec2 uv = vUv;
-    // rare + tiny horizontal glitch band (clean shift, not a frayed edge)
-    float row = floor(uv.y * 52.0);
-    float ga = hash(vec2(row, floor(uTime * 6.0)));
-    uv.x += step(0.978, ga) * (hash(vec2(row, floor(uTime * 6.0) + 3.0)) - 0.5) * 0.018;
-    vec4 tx = texture2D(uMap, uv);
-    vec3 col = tx.rgb;                                            // the REAL photo
-    col *= 0.94 + 0.06 * sin(vUv.y * 720.0);                      // faint scanlines
-    col += (hash(vUv * vec2(311.0, 127.0) + uTime) - 0.5) * 0.025; // faint noise
-    col += vec3(0.035, 0.05, 0.085);                             // tiny cool lift (subconscious)
-    // hairline cool edge — a thin frame, not a glowing halo
-    float e = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    float edge = 1.0 - smoothstep(0.0, 0.006, e);
-    col += vec3(0.30, 0.45, 0.70) * edge * 0.28;
-    float a = tx.a * uOpacity * 0.93;                            // mostly solid → legible
-    if (a < 0.01) discard;
-    gl_FragColor = vec4(col, a);
-  }
-`;
-
-function loadHologram(url, idx) {
+function loadArchivePhoto(url, idx) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    // 3:4 centre-crop (biased up to keep the head) + cool metallic duotone, on
-    // a HARD rectangle (no oval feather mask).
+    // 3:4 centre-crop (biased up), rounded corners, gentle archival grade
+    // (−18% saturation, tiny cool tint, light film grain). No hologram FX.
     const W = 384, H = 512, targetAR = W / H;
     let cw = img.width, ch = img.height;
     if (cw / ch > targetAR) cw = ch * targetAR; else ch = cw / targetAR;
     const sx = (img.width - cw) / 2, sy = (img.height - ch) * 0.32;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
+    __roundRectPath(ctx, W, H, 26); ctx.save(); ctx.clip();
     ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
-    // GENTLE "digital archive" grade — keep the REAL photo (face, glasses, tie,
-    // jacket texture all readable): only mute the saturation a little and add a
-    // faint cool tint + slight contrast. No heavy silver duotone that flattens
-    // the subject.
+    ctx.restore();
     const id = ctx.getImageData(0, 0, W, H), d = id.data;
-    const SAT = 0.7;                        // keep 70% of the original colour
+    const SAT = 0.82;
     for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;                  // keep rounded corners transparent
       const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
       let R = lum + (r - lum) * SAT;
       let G = lum + (g - lum) * SAT;
       let B = lum + (b - lum) * SAT;
-      R = (R - 0.5) * 1.06 + 0.50;           // slight contrast
-      G = (G - 0.5) * 1.06 + 0.50;
-      B = (B - 0.5) * 1.06 + 0.53;           // tiny cool lift
+      const grain = (Math.random() - 0.5) * 0.05;    // light film grain
+      R += grain; G += grain; B += grain + 0.012;     // tiny cool lift
       d[i]     = Math.max(0, Math.min(255, R * 255));
       d[i + 1] = Math.max(0, Math.min(255, G * 255));
       d[i + 2] = Math.max(0, Math.min(255, B * 255));
@@ -1839,74 +1824,56 @@ function loadHologram(url, idx) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
 
-    const PW = 2.15, PH = PW * H / W;                 // 3:4 holo-screen
-    const photoMat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uMap: { value: tex }, uTime: __holoTime, uOpacity: { value: 0 } },
-      vertexShader: __holoVert, fragmentShader: __holoFrag,
-    });
+    // photo ≈ 60% of the panel height → reads after the text, doesn't steal it
+    const PH = PANEL_H * 0.6, PW = PH * 3 / 4;
+    const photoMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
     const photo = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), photoMat);
+    photo.position.z = 0.05;
 
-    // soft glow on the wall behind the screen
-    const glowMat = new THREE.MeshBasicMaterial({
-      map: __holoGlowTex, transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    });
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.5, PH * 1.2), glowMat);
-    glow.position.set(0, -0.2, -1.55);   // tight against the wall, mostly behind the photo
+    // brushed-metal frame behind (rounded) → metal border around the photo
+    const frameMat = new THREE.MeshBasicMaterial({ map: __frameTex, transparent: true, opacity: 0, depthWrite: false });
+    const frame = new THREE.Mesh(new THREE.PlaneGeometry(PW + 0.16, PH + 0.16), frameMat);
+    frame.position.z = 0.02;
 
-    // small metal projector + emissive slot, mounted on the wall below
-    const proj = new THREE.Mesh(
-      new THREE.BoxGeometry(0.72, 0.22, 0.42),
-      new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.95, roughness: 0.3, envMapIntensity: 1.2 })
-    );
-    proj.position.set(0, -PH * 0.5 - 0.55, -1.1);
-    const slotMat = new THREE.MeshBasicMaterial({
-      color: 0xbfd4ff, transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-    });
-    const slot = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.08), slotMat);
-    slot.position.set(0, -PH * 0.5 - 0.44, -0.9); slot.rotation.x = -0.7;
+    // top + bottom metal clamps gripping the plate
+    const clampMat = __exhibitMetal();
+    const clampTop = new THREE.Mesh(new THREE.BoxGeometry(PW * 0.42, 0.12, 0.18), clampMat);
+    clampTop.position.set(0, PH * 0.5 - 0.02, 0.08);
+    const clampBot = new THREE.Mesh(new THREE.BoxGeometry(PW * 0.42, 0.12, 0.18), clampMat);
+    clampBot.position.set(0, -PH * 0.5 + 0.02, 0.08);
 
-    // very faint conical light beam projector → screen
-    const P = new THREE.Vector3(0, -PH * 0.5 - 0.46, -1.0);
-    const C = new THREE.Vector3(0, -0.1, -0.05);
-    const dir = C.clone().sub(P); const len = dir.length();
-    const beamMat = new THREE.MeshBasicMaterial({
-      color: 0xaecbff, transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false,
-    });
-    const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(PW * 0.6, 0.08, len, 28, 1, true), beamMat
-    );
-    beam.position.copy(P).addScaledVector(dir, 0.5);
-    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    // standoff arm + wall mount plate (local −Z points at the wall)
+    const ARM = 0.6;
+    const armMat = __exhibitMetal();
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, ARM), armMat);
+    arm.position.set(0, 0, -ARM / 2 - 0.02);
+    const mount = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.08), armMat);
+    mount.position.set(0, 0, -ARM - 0.04);
 
     const group = new THREE.Group();
-    group.add(glow, beam, photo, proj, slot);
+    group.add(mount, arm, frame, photo, clampTop, clampBot);
     const panel = aboutPanels[idx];
-    const ah = panel.angle - 0.72;                    // beside the text panel
-    const RH = 5.15;                                  // floats in front of the wall
-    group.position.set(Math.sin(ah) * RH, panel.y + 0.15, Math.cos(ah) * RH);
-    group.lookAt(0, panel.y + 0.15, 0);               // face the room centre (inward)
+    const ah = panel.angle - 0.72;                   // beside the story panel
+    const RH = ROOM_R - ARM - 0.06;                  // plate stands ARM off the wall
+    const gy = panel.y - 0.45;                        // a touch lower → read after the text
+    group.position.set(Math.sin(ah) * RH, gy, Math.cos(ah) * RH);
+    group.lookAt(0, gy, 0);                           // face the room centre (inward)
     aboutScene.add(group);
 
-    holograms[idx] = {
+    exhibits[idx] = {
       group,
       setOpacity: (o) => {
-        photoMat.uniforms.uOpacity.value = o;
-        glowMat.opacity = o * 0.4;
-        slotMat.opacity = o * 0.85;
-        beamMat.opacity = o * 0.055;
+        photoMat.opacity = o;
+        frameMat.opacity = o;
+        clampMat.opacity = o;
+        armMat.opacity = o;
       },
     };
   };
-  img.onerror = () => console.warn('[holo] failed to load', url);
+  img.onerror = () => console.warn('[exhibit] failed to load', url);
   img.src = url;
 }
-
-
-PANEL_IMAGES.forEach((url, idx) => { if (url) loadHologram(url, idx); });
+PANEL_IMAGES.forEach((url, idx) => { if (url) loadArchivePhoto(url, idx); });
 
 // Pick the indices in the particle pool that this burst will use. Prefer
 // dead slots so existing rings keep flying undisturbed; if not enough are
@@ -2521,13 +2488,12 @@ function aboutTick() {
     // the colour columns baked into the wall's emissive map.
     void tickLightLines;
 
-    // Animate the holograms and ease each one's opacity toward its target.
-    __holoTime.value = t;
-    for (let i = 0; i < holograms.length; i++) {
-      const ho = holograms[i];
-      if (!ho) continue;
+    // Ease each archive exhibit's opacity toward its target.
+    for (let i = 0; i < exhibits.length; i++) {
+      const ex = exhibits[i];
+      if (!ex) continue;
       PANEL_CLOUD_OP[i] += (PANEL_CLOUD_TARGET_OP[i] - PANEL_CLOUD_OP[i]) * 0.12;
-      ho.setOpacity(PANEL_CLOUD_OP[i]);
+      ex.setOpacity(PANEL_CLOUD_OP[i]);
     }
 
     // TRAVEL CAMERA — the operator rides UP the cylindrical shaft.
@@ -2589,12 +2555,11 @@ function aboutTick() {
       pLookZ + (aLookZ - pLookZ) * k
     );
 
-    // ---- Hologram fade ----
-    // Each hologram is FIXED in space beside its panel (built in loadHologram);
-    // here we only drive its opacity — bright when its panel is framed, hidden
-    // once the camera leaves the wall for the doubt zone.
-    for (let i = 0; i < holograms.length; i++) {
-      if (!holograms[i]) continue;
+    // ---- Archive exhibit fade ----
+    // Each exhibit is FIXED on the wall beside its panel; here we only drive its
+    // opacity — visible when its panel is framed, hidden in the doubt zone.
+    for (let i = 0; i < exhibits.length; i++) {
+      if (!exhibits[i]) continue;
       const near = 1 - Math.min(1, Math.abs(fIdx - i)); // 1 when framed
       PANEL_CLOUD_TARGET_OP[i] = near * (1 - k);         // hide once in doubt zone
     }
