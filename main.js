@@ -1744,12 +1744,12 @@ const streakMat = new THREE.ShaderMaterial({
 const streaks = new THREE.Points(streakGeo, streakMat);
 portalGroup.add(streaks);
 
-// ===== PER-PANEL ARCHIVE EXHIBITS =====
-// Each SceneA panel has a PHYSICAL archive print: a real photo on a rounded
-// glass plate in a brushed-metal frame, mounted on the cylinder wall by a metal
-// standoff arm + a wall plate + top/bottom clamps. It reads as a record in YAO
-// FLAME LAB's archive — a second exhibit beside the story panel, not a floating
-// hologram. (No projector, beam or holographic shader.)
+// ===== PER-PANEL WALL-EMBEDDED ARCHIVE WINDOWS =====
+// Each SceneA panel has a recessed observation window cut straight INTO the
+// cylinder wall: a rectangular hole is alpha-cut through the metal, a metal-
+// lined recess goes back into the wall, and the real photo sits on the recessed
+// back face behind only a hairline metal rim. The photo BELONGS to the wall — a
+// lab archive window, not a framed picture hung on it.
 const PANEL_IMAGES = [
   'img/p1.jpg', 'img/p2.jpg', 'img/p3.jpg',
   'img/p4.jpg', 'img/p5.jpg', 'img/p6.jpg',
@@ -1758,64 +1758,93 @@ const exhibits = new Array(6).fill(null);
 const PANEL_CLOUD_TARGET_OP = new Array(6).fill(0);
 const PANEL_CLOUD_OP = new Array(6).fill(0);
 
-function __roundRectPath(x, w, h, r) {
-  x.beginPath();
-  x.moveTo(r, 0);
-  x.arcTo(w, 0, w, h, r);
-  x.arcTo(w, h, 0, h, r);
-  x.arcTo(0, h, 0, 0, r);
-  x.arcTo(0, 0, w, 0, r);
-  x.closePath();
-}
-// brushed-metal frame texture (rounded) — shows as the border around the photo
-function __buildFrameTex() {
-  const c = document.createElement('canvas'); c.width = 320; c.height = 416;
-  const x = c.getContext('2d');
-  const g = x.createLinearGradient(0, 0, 320, 416);
-  g.addColorStop(0, '#d8dce5'); g.addColorStop(0.5, '#969cab'); g.addColorStop(1, '#c4c9d4');
-  __roundRectPath(x, 320, 416, 26); x.fillStyle = g; x.fill();
-  for (let i = 0; i < 240; i++) {
-    x.strokeStyle = `rgba(255,255,255,${Math.random() * 0.06})`;
-    const px = Math.random() * 320;
-    x.beginPath(); x.moveTo(px, 0); x.lineTo(px, 416); x.stroke();
-  }
-  x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = 3;
-  __roundRectPath(x, 317, 413, 26); x.stroke();
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-const __frameTex = __buildFrameTex();
-const __exhibitMetal = () => new THREE.MeshStandardMaterial({
-  color: 0xc4c9d4, metalness: 0.92, roughness: 0.3, envMapIntensity: 1.2,
-  transparent: true, opacity: 0,
-});
+const NICHE_PW = 2.4, NICHE_PH = 3.2, NICHE_DEPTH = 0.4;  // larger, comparable to the panel
+const NICHE_ANGLE_OFF = -0.72;
+function __nicheAt(i) { const p = aboutPanels[i]; return { a: p.angle + NICHE_ANGLE_OFF, y: p.y }; }
 
+// 1) Cut the six window holes through the wall (alphaMap + alphaTest).
+(function cutWallWindows() {
+  const AW = 2048, AH = 4096;
+  const c = document.createElement('canvas'); c.width = AW; c.height = AH;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, AW, AH);          // wall = opaque
+  x.fillStyle = '#000';                                    // holes = transparent
+  const hw = (NICHE_PW / ROOM_R) / (2 * Math.PI) * AW / 2;
+  const hh = (NICHE_PH / ROOM_H) * AH / 2;
+  for (let i = 0; i < 6; i++) {
+    const { a, y } = __nicheAt(i);
+    let U = (a / (2 * Math.PI)) % 1; if (U < 0) U += 1;
+    const V = (y + ROOM_H / 2) / ROOM_H;
+    const cx = U * AW, cy = (1 - V) * AH;
+    for (const off of [-AW, 0, AW]) {                      // wrap across the UV seam
+      x.beginPath();
+      x.roundRect(cx - hw + off, cy - hh, 2 * hw, 2 * hh, 12);
+      x.fill();
+    }
+  }
+  const alphaTex = new THREE.CanvasTexture(c);
+  wallMat.alphaMap = alphaTex;
+  wallMat.alphaTest = 0.5;
+  wallMat.needsUpdate = true;
+})();
+
+// 2) Build the recess + back-face photo for each window.
+const __nicheMetal = () => new THREE.MeshStandardMaterial({
+  color: 0x8e94a2, metalness: 0.9, roughness: 0.42, envMapIntensity: 1.0, side: THREE.DoubleSide,
+});
+for (let i = 0; i < 6; i++) {
+  const { a, y } = __nicheAt(i);
+  const RB = ROOM_R + NICHE_DEPTH;                         // photo sits behind the wall
+  const group = new THREE.Group();
+  // dark back-face photo (filled in once the image loads)
+  const photoMat = new THREE.MeshBasicMaterial({ color: 0x0d0f14 });
+  const photo = new THREE.Mesh(new THREE.PlaneGeometry(NICHE_PW, NICHE_PH), photoMat);
+  // recess liner: four metal walls from the back face to the opening
+  const m = __nicheMetal();
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(NICHE_PW, NICHE_DEPTH), m);
+  top.position.set(0, NICHE_PH / 2, NICHE_DEPTH / 2); top.rotation.x = Math.PI / 2;
+  const bot = new THREE.Mesh(new THREE.PlaneGeometry(NICHE_PW, NICHE_DEPTH), m);
+  bot.position.set(0, -NICHE_PH / 2, NICHE_DEPTH / 2); bot.rotation.x = -Math.PI / 2;
+  const left = new THREE.Mesh(new THREE.PlaneGeometry(NICHE_DEPTH, NICHE_PH), m);
+  left.position.set(-NICHE_PW / 2, 0, NICHE_DEPTH / 2); left.rotation.y = Math.PI / 2;
+  const right = new THREE.Mesh(new THREE.PlaneGeometry(NICHE_DEPTH, NICHE_PH), m);
+  right.position.set(NICHE_PW / 2, 0, NICHE_DEPTH / 2); right.rotation.y = -Math.PI / 2;
+  // hairline metal rim flush at the opening (z = DEPTH ⇒ wall surface)
+  const rim = __nicheMetal();
+  const barH = new THREE.BoxGeometry(NICHE_PW + 0.06, 0.045, 0.06);
+  const barV = new THREE.BoxGeometry(0.045, NICHE_PH + 0.06, 0.06);
+  const rimT = new THREE.Mesh(barH, rim); rimT.position.set(0, NICHE_PH / 2, NICHE_DEPTH);
+  const rimB = new THREE.Mesh(barH, rim); rimB.position.set(0, -NICHE_PH / 2, NICHE_DEPTH);
+  const rimL = new THREE.Mesh(barV, rim); rimL.position.set(-NICHE_PW / 2, 0, NICHE_DEPTH);
+  const rimR = new THREE.Mesh(barV, rim); rimR.position.set(NICHE_PW / 2, 0, NICHE_DEPTH);
+  group.add(photo, top, bot, left, right, rimT, rimB, rimL, rimR);
+  group.position.set(Math.sin(a) * RB, y, Math.cos(a) * RB);
+  group.lookAt(0, y, 0);                                   // +Z faces inward through the hole
+  aboutScene.add(group);
+  exhibits[i] = { photoMat };
+}
+
+// 3) Load each photo (gentle archival grade) onto its window's back face.
 function loadArchivePhoto(url, idx) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    // 3:4 centre-crop (biased up), rounded corners, gentle archival grade
-    // (−18% saturation, tiny cool tint, light film grain). No hologram FX.
-    const W = 384, H = 512, targetAR = W / H;
+    const W = 384, H = 512, targetAR = W / H;               // 3:4
     let cw = img.width, ch = img.height;
     if (cw / ch > targetAR) cw = ch * targetAR; else ch = cw / targetAR;
     const sx = (img.width - cw) / 2, sy = (img.height - ch) * 0.32;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
-    __roundRectPath(ctx, W, H, 26); ctx.save(); ctx.clip();
     ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
-    ctx.restore();
     const id = ctx.getImageData(0, 0, W, H), d = id.data;
-    const SAT = 0.82;
+    const SAT = 0.82;                                       // gentle grade only
     for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] === 0) continue;                  // keep rounded corners transparent
       const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      let R = lum + (r - lum) * SAT;
-      let G = lum + (g - lum) * SAT;
-      let B = lum + (b - lum) * SAT;
-      const grain = (Math.random() - 0.5) * 0.05;    // light film grain
-      R += grain; G += grain; B += grain + 0.012;     // tiny cool lift
-      d[i]     = Math.max(0, Math.min(255, R * 255));
+      let R = lum + (r - lum) * SAT, G = lum + (g - lum) * SAT, B = lum + (b - lum) * SAT;
+      const grain = (Math.random() - 0.5) * 0.05;
+      R += grain; G += grain; B += grain + 0.012;            // tiny cool lift
+      d[i] = Math.max(0, Math.min(255, R * 255));
       d[i + 1] = Math.max(0, Math.min(255, G * 255));
       d[i + 2] = Math.max(0, Math.min(255, B * 255));
     }
@@ -1823,54 +1852,10 @@ function loadArchivePhoto(url, idx) {
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
-
-    // photo ≈ 60% of the panel height → reads after the text, doesn't steal it
-    const PH = PANEL_H * 0.6, PW = PH * 3 / 4;
-    const photoMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
-    const photo = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), photoMat);
-    photo.position.z = 0.05;
-
-    // brushed-metal frame behind (rounded) → metal border around the photo
-    const frameMat = new THREE.MeshBasicMaterial({ map: __frameTex, transparent: true, opacity: 0, depthWrite: false });
-    const frame = new THREE.Mesh(new THREE.PlaneGeometry(PW + 0.16, PH + 0.16), frameMat);
-    frame.position.z = 0.02;
-
-    // top + bottom metal clamps gripping the plate
-    const clampMat = __exhibitMetal();
-    const clampTop = new THREE.Mesh(new THREE.BoxGeometry(PW * 0.42, 0.12, 0.18), clampMat);
-    clampTop.position.set(0, PH * 0.5 - 0.02, 0.08);
-    const clampBot = new THREE.Mesh(new THREE.BoxGeometry(PW * 0.42, 0.12, 0.18), clampMat);
-    clampBot.position.set(0, -PH * 0.5 + 0.02, 0.08);
-
-    // standoff arm + wall mount plate (local −Z points at the wall)
-    const ARM = 0.6;
-    const armMat = __exhibitMetal();
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, ARM), armMat);
-    arm.position.set(0, 0, -ARM / 2 - 0.02);
-    const mount = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.08), armMat);
-    mount.position.set(0, 0, -ARM - 0.04);
-
-    const group = new THREE.Group();
-    group.add(mount, arm, frame, photo, clampTop, clampBot);
-    const panel = aboutPanels[idx];
-    const ah = panel.angle - 0.72;                   // beside the story panel
-    const RH = ROOM_R - ARM - 0.06;                  // plate stands ARM off the wall
-    const gy = panel.y - 0.45;                        // a touch lower → read after the text
-    group.position.set(Math.sin(ah) * RH, gy, Math.cos(ah) * RH);
-    group.lookAt(0, gy, 0);                           // face the room centre (inward)
-    aboutScene.add(group);
-
-    exhibits[idx] = {
-      group,
-      setOpacity: (o) => {
-        photoMat.opacity = o;
-        frameMat.opacity = o;
-        clampMat.opacity = o;
-        armMat.opacity = o;
-      },
-    };
+    const ex = exhibits[idx];
+    if (ex) { ex.photoMat.map = tex; ex.photoMat.color.set(0xffffff); ex.photoMat.needsUpdate = true; }
   };
-  img.onerror = () => console.warn('[exhibit] failed to load', url);
+  img.onerror = () => console.warn('[window] failed to load', url);
   img.src = url;
 }
 PANEL_IMAGES.forEach((url, idx) => { if (url) loadArchivePhoto(url, idx); });
@@ -2488,13 +2473,7 @@ function aboutTick() {
     // the colour columns baked into the wall's emissive map.
     void tickLightLines;
 
-    // Ease each archive exhibit's opacity toward its target.
-    for (let i = 0; i < exhibits.length; i++) {
-      const ex = exhibits[i];
-      if (!ex) continue;
-      PANEL_CLOUD_OP[i] += (PANEL_CLOUD_TARGET_OP[i] - PANEL_CLOUD_OP[i]) * 0.12;
-      ex.setOpacity(PANEL_CLOUD_OP[i]);
-    }
+    // (Archive windows are part of the wall — always visible, no opacity tween.)
 
     // TRAVEL CAMERA — the operator rides UP the cylindrical shaft.
     // Phase 1 (scroll 0→0.66): frame the ten wall panels one by one (6 SceneA +
@@ -2554,15 +2533,6 @@ function aboutTick() {
       pLookY + (aLookY - pLookY) * k,
       pLookZ + (aLookZ - pLookZ) * k
     );
-
-    // ---- Archive exhibit fade ----
-    // Each exhibit is FIXED on the wall beside its panel; here we only drive its
-    // opacity — visible when its panel is framed, hidden in the doubt zone.
-    for (let i = 0; i < exhibits.length; i++) {
-      if (!exhibits[i]) continue;
-      const near = 1 - Math.min(1, Math.abs(fIdx - i)); // 1 when framed
-      PANEL_CLOUD_TARGET_OP[i] = near * (1 - k);         // hide once in doubt zone
-    }
 
     // SceneB doubt voices materialise and billboard to the camera.
     tickSceneB(sp, t);
