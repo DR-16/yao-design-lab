@@ -1774,29 +1774,30 @@ function __buildHoloGlowTex() {
 const __holoGlowTex = __buildHoloGlowTex();
 
 const __holoVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+// Photo first (80%), projection cues second (20%): the image stays solid and
+// legible; only a whisper of scanlines/noise + a hairline cool edge hint that
+// it is a projection. No heavy blue filter, no wide white feather.
 const __holoFrag = /* glsl */`
   uniform sampler2D uMap; uniform float uTime; uniform float uOpacity;
   varying vec2 vUv;
   float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main(){
     vec2 uv = vUv;
-    // occasional horizontal glitch band (a clean shift, not a frayed edge)
-    float row = floor(uv.y * 46.0);
-    float ga = hash(vec2(row, floor(uTime * 9.0)));
-    uv.x += step(0.93, ga) * (hash(vec2(row, floor(uTime * 9.0) + 3.0)) - 0.5) * 0.05;
+    // rare + tiny horizontal glitch band (clean shift, not a frayed edge)
+    float row = floor(uv.y * 52.0);
+    float ga = hash(vec2(row, floor(uTime * 6.0)));
+    uv.x += step(0.978, ga) * (hash(vec2(row, floor(uTime * 6.0) + 3.0)) - 0.5) * 0.018;
     vec4 tx = texture2D(uMap, uv);
-    float scan = 0.80 + 0.20 * sin(vUv.y * 660.0);               // scanlines
-    float n = hash(vUv * vec2(311.0, 127.0) + uTime);            // noise
-    vec3 col = tx.rgb * (0.55 + 0.55 * scan);                     // keep the photo legible
-    col += vec3(0.10, 0.17, 0.30) * 0.42;                         // blue-white glow lift
-    col += (n - 0.5) * 0.06;                                      // noise
+    vec3 col = tx.rgb;                                            // the REAL photo
+    col *= 0.94 + 0.06 * sin(vUv.y * 720.0);                      // faint scanlines
+    col += (hash(vUv * vec2(311.0, 127.0) + uTime) - 0.5) * 0.025; // faint noise
+    col += vec3(0.035, 0.05, 0.085);                             // tiny cool lift (subconscious)
+    // hairline cool edge — a thin frame, not a glowing halo
     float e = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    float edge = 1.0 - smoothstep(0.0, 0.018, e);                // crisp glowing border
-    col += vec3(0.45, 0.65, 1.0) * edge * 0.6;
-    float bar = smoothstep(0.5, 0.0, abs(fract(vUv.y * 0.5 - uTime * 0.12) - 0.5));
-    col += vec3(0.3, 0.45, 0.8) * bar * 0.14;                     // slow rolling scan bar
-    float a = tx.a * uOpacity * (0.74 + 0.06 * scan) + edge * uOpacity * 0.3;
-    if (a < 0.008) discard;
+    float edge = 1.0 - smoothstep(0.0, 0.006, e);
+    col += vec3(0.30, 0.45, 0.70) * edge * 0.28;
+    float a = tx.a * uOpacity * 0.93;                            // mostly solid → legible
+    if (a < 0.01) discard;
     gl_FragColor = vec4(col, a);
   }
 `;
@@ -1814,14 +1815,24 @@ function loadHologram(url, idx) {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
     ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
+    // GENTLE "digital archive" grade — keep the REAL photo (face, glasses, tie,
+    // jacket texture all readable): only mute the saturation a little and add a
+    // faint cool tint + slight contrast. No heavy silver duotone that flattens
+    // the subject.
     const id = ctx.getImageData(0, 0, W, H), d = id.data;
+    const SAT = 0.7;                        // keep 70% of the original colour
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      let Lc = (lum - 0.5) * 1.4 + 0.5; Lc = Lc < 0 ? 0 : Lc > 1 ? 1 : Lc;
-      d[i] = (0.06 + 0.88 * Lc) * 255;
-      d[i + 1] = (0.075 + 0.90 * Lc) * 255;
-      d[i + 2] = (0.11 + 0.96 * Lc) * 255;
+      let R = lum + (r - lum) * SAT;
+      let G = lum + (g - lum) * SAT;
+      let B = lum + (b - lum) * SAT;
+      R = (R - 0.5) * 1.06 + 0.50;           // slight contrast
+      G = (G - 0.5) * 1.06 + 0.50;
+      B = (B - 0.5) * 1.06 + 0.53;           // tiny cool lift
+      d[i]     = Math.max(0, Math.min(255, R * 255));
+      d[i + 1] = Math.max(0, Math.min(255, G * 255));
+      d[i + 2] = Math.max(0, Math.min(255, B * 255));
     }
     ctx.putImageData(id, 0, 0);
     const tex = new THREE.CanvasTexture(cv);
@@ -1841,8 +1852,8 @@ function loadHologram(url, idx) {
       map: __holoGlowTex, transparent: true, opacity: 0,
       blending: THREE.AdditiveBlending, depthWrite: false,
     });
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.8, PH * 1.45), glowMat);
-    glow.position.set(0, 0, -1.35);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.5, PH * 1.2), glowMat);
+    glow.position.set(0, -0.2, -1.55);   // tight against the wall, mostly behind the photo
 
     // small metal projector + emissive slot, mounted on the wall below
     const proj = new THREE.Mesh(
@@ -1884,9 +1895,9 @@ function loadHologram(url, idx) {
       group,
       setOpacity: (o) => {
         photoMat.uniforms.uOpacity.value = o;
-        glowMat.opacity = o * 0.8;
-        slotMat.opacity = o * 0.95;
-        beamMat.opacity = o * 0.1;
+        glowMat.opacity = o * 0.4;
+        slotMat.opacity = o * 0.85;
+        beamMat.opacity = o * 0.055;
       },
     };
   };
