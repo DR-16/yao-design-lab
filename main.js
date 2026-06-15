@@ -2270,7 +2270,26 @@ function buildScrollStops() {
 // they can immediately start the next step — no "infinite chain locks".
 let __scrollLockUntil = 0;
 let __lastWheelAt = 0;
-const QUIET_MS = 180; // user must pause this long between flicks
+const QUIET_MS = 80;            // softer flick gate — was 180
+let __queuedDir = 0;            // last-direction queue (one-deep) for inputs that
+//                                 arrive while a step animation is in flight
+let __queueTimer = null;
+function __consumeQueue() {
+  __queueTimer = null;
+  if (__queuedDir === 0) return;
+  if (performance.now() < __scrollLockUntil) {
+    __queueTimer = setTimeout(__consumeQueue, __scrollLockUntil - performance.now() + 10);
+    return;
+  }
+  const d = __queuedDir; __queuedDir = 0;
+  __lastWheelAt = 0;             // queued step bypasses the quiet gate
+  doStep(d);
+}
+function __queueStep(dir) {
+  __queuedDir = dir;             // latest direction wins
+  if (__queueTimer) clearTimeout(__queueTimer);
+  __queueTimer = setTimeout(__consumeQueue, Math.max(20, __scrollLockUntil - performance.now() + 10));
+}
 
 function nearestStopIndex(curProg) {
   const stops = buildScrollStops();
@@ -2288,8 +2307,7 @@ function doStep(dir) {
   const curIdx = nearestStopIndex(aboutScroll.scrollTop / max);
   const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
   if (nextIdx === curIdx) return;
-  const crossing = (curIdx === 5 && nextIdx === 6) || (curIdx === 6 && nextIdx === 5);
-  const duration = crossing ? 1500 : 500;
+  const duration = 320;          // snappier step (was 500 / 1500 special-case)
   smoothScrollAbout(stops[nextIdx] * max, duration);
   __scrollLockUntil = performance.now() + duration;
 }
@@ -2297,11 +2315,12 @@ function doStep(dir) {
 function onAboutWheel(e) {
   e.preventDefault();
   const now = performance.now();
+  const dir = e.deltaY > 0 ? 1 : -1;
+  if (now < __scrollLockUntil) { __queueStep(dir); return; }   // queue, don't drop
   const gap = now - __lastWheelAt;
   __lastWheelAt = now;
-  if (now < __scrollLockUntil) return;  // animation in progress
-  if (gap < QUIET_MS) return;           // still in last flick's momentum tail
-  doStep(e.deltaY > 0 ? 1 : -1);
+  if (gap < QUIET_MS) { __queueStep(dir); return; }            // even momentum-tail queues
+  doStep(dir);
 }
 aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
 
@@ -2314,12 +2333,14 @@ aboutScroll?.addEventListener('touchstart', (e) => {
 }, { passive: true });
 aboutScroll?.addEventListener('touchmove', (e) => {
   const now = performance.now();
-  if (now < __scrollLockUntil || __touchStartY == null) { e.preventDefault(); return; }
+  if (__touchStartY == null) { e.preventDefault(); return; }
   const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
   if (Math.abs(dy) < 30) return;
   e.preventDefault();
   __touchStartY = null;
-  doStep(dy > 0 ? 1 : -1);
+  const dir = dy > 0 ? 1 : -1;
+  if (now < __scrollLockUntil) { __queueStep(dir); return; }   // queue swipes too
+  doStep(dir);
 }, { passive: false });
 
 // ---------- Enter / exit transitions ----------
