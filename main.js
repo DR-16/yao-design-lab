@@ -1235,11 +1235,10 @@ function buildCeilingTex() {
 }
 // The four SceneB theme sentences live ENGRAVED into the metal ceiling — they
 // read as glowing reflections on the polished disc, not pasted labels.
+// Ceiling sentences are temporarily blanked — that band is reserved for the
+// SceneC copy and will be filled later. The metal disc + skylight stay.
 const CEIL_LINES = [
-  { en: 'Too Many Ideas…',                cn: '我经常思考很多' },
-  { en: 'Not Everything Becomes Reality', cn: '但并非所有都会成真' },
-  { en: 'However The Process Changed Me', cn: '即使如此 过程改变了我' },
-  { en: 'So I Built This Lab',            cn: '于是我建造了这个实验室' },
+  { en: '', cn: '' }, { en: '', cn: '' }, { en: '', cn: '' }, { en: '', cn: '' },
 ];
 function buildCeilingEmissive(lang) {
   const c = document.createElement('canvas');
@@ -1346,17 +1345,25 @@ const PANEL_DATA = [
 // with a "WHY THIS LAB EXISTS" eyebrow) and carry placeholder text for now.
 const PANEL_DATA_B = [
   { tag: 'WHY THIS LAB EXISTS · 01',
-    en: { h: 'Section One', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
-    cn: { h: '板块一', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+    en: { h: 'Ideas Are Usually Invisible',
+          p: 'Most ideas are never seen. This lab exists to make those ideas visible — to give them a place where they can be explored, questioned, and shared.' },
+    cn: { h: '想法通常是看不见的',
+          p: '大多数想法从未被看见。这个实验室的存在，是为了让这些想法被看见——给它们一个可以被探索、被质疑、被分享的地方。' } },
   { tag: 'WHY THIS LAB EXISTS · 02',
-    en: { h: 'Section Two', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
-    cn: { h: '板块二', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+    en: { h: 'Projects Tell A Different Story',
+          p: 'Finished work only shows the outcome. What interests me more is everything behind it: the experiments, revisions, failures, and unexpected turns. This lab focuses on the process, not just the result.' },
+    cn: { h: '项目讲述的是另一种故事',
+          p: '完成的作品只展示结果。我更感兴趣的是它背后的一切：实验、修改、失败，以及意料之外的转折。这个实验室关注的是过程，而不只是结果。' } },
   { tag: 'WHY THIS LAB EXISTS · 03',
-    en: { h: 'Section Three', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
-    cn: { h: '板块三', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+    en: { h: 'Different Worlds Can Meet Here',
+          p: 'Badminton, business, artificial intelligence, photography, design, and storytelling may seem unrelated. Yet within this space, they are able to intersect, influence one another, and become part of the same creative journey.' },
+    cn: { h: '不同世界可以在这里相遇',
+          p: '羽毛球、商业、人工智能、摄影、设计、叙事，看似毫无关联。但在这个空间里，它们能彼此交汇、相互影响，成为同一段创作旅程的一部分。' } },
   { tag: 'WHY THIS LAB EXISTS · 04',
-    en: { h: 'Section Four', p: '(Awaiting your copy — send me the text for this panel and I will set it.)' },
-    cn: { h: '板块四', p: '（待填写——把这一栏的文案发我，我来排版。）' } },
+    en: { h: 'This Is An Ongoing Experiment',
+          p: 'This is not the final version of a portfolio. It is an evolving laboratory of ideas. New projects will appear, old projects will be reimagined, and the experiment itself will continue to grow.' },
+    cn: { h: '这是一场持续进行的实验',
+          p: '这不是一份作品集的最终版本。它是一个不断演化的想法实验室。新项目会出现，旧项目会被重新构想，实验本身也会继续生长。' } },
 ];
 const ALL_PANEL_DATA = PANEL_DATA.concat(PANEL_DATA_B);
 const PANEL_ARC = 1.05;             // radians of circumference each panel spans
@@ -2510,11 +2517,16 @@ function aboutTick() {
     const aRad = 1.9;
     const topY = aboutPanels[N - 1].y;
     const riseY = topY + aE * ((CEIL_Y - 9) - topY) + bob * 0.4;
-    const aPosX = Math.sin(spiral) * aRad, aPosZ = Math.cos(spiral) * aRad, aPosY = riseY;
     const finale = Math.max(0, Math.min(1, (sp - 0.92) / 0.08));   // pitch up 0.92→1.0
     const fE = finale * finale;
+    // At the final page, pull the camera onto the central axis AND look almost
+    // straight up so the ceiling disc sits fronto-parallel and the four lines
+    // read horizontal (instead of looking up at an angle and seeing the text
+    // skewed into spokes). A small forward offset keeps lookAt non-degenerate.
+    const orbit = aRad * (1 - fE);
+    const aPosX = Math.sin(spiral) * orbit, aPosZ = Math.cos(spiral) * orbit, aPosY = riseY;
     const aLookX = -Math.sin(spiral) * 2.0 * (1 - fE);
-    const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE);
+    const aLookZ = -Math.cos(spiral) * 2.0 * (1 - fE) - 0.001 * fE;
     const aLookY = riseY + 1.4 + fE * (CEIL_Y + 2 - riseY);
 
     // ---- blend the two poses ----
