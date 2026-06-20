@@ -2327,17 +2327,23 @@ function onAboutWheel(e) {
   if (now < __scrollLockUntil) { __queueStep(dir); return; }
   doStep(dir);
 }
-aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
+// Attach the wheel/touch listeners to aboutView so events over BOTH the inner
+// scroller AND the WebGL canvas (siblings inside aboutView) reach the gesture
+// handler — otherwise wheels over the canvas (common in SceneB where the
+// staircase content is hidden) bypass it and trigger native multi-step jumps.
+// Use capture:true so we receive them before any child handler.
+const __wheelHost = aboutView || aboutScroll;
+__wheelHost?.addEventListener('wheel', onAboutWheel, { passive: false, capture: true });
 
-// Touch swipe → same lock model. Each touchstart resets the timestamp gate,
-// so each new finger-down can immediately count as a fresh user intent.
+// Touch swipe → same lock model. Each touchstart resets the gesture gate so a
+// new finger-down counts as a fresh user intent.
 let __touchStartY = null;
-aboutScroll?.addEventListener('touchstart', (e) => {
+__wheelHost?.addEventListener('touchstart', (e) => {
   __touchStartY = e.touches[0]?.clientY ?? null;
-  __inGesture = false;             // a new touch is always a fresh gesture
+  __inGesture = false;
   if (__gestureEndTimer) { clearTimeout(__gestureEndTimer); __gestureEndTimer = null; }
-}, { passive: true });
-aboutScroll?.addEventListener('touchmove', (e) => {
+}, { passive: true, capture: true });
+__wheelHost?.addEventListener('touchmove', (e) => {
   const now = performance.now();
   if (__touchStartY == null) { e.preventDefault(); return; }
   const dy = __touchStartY - (e.touches[0]?.clientY ?? __touchStartY);
@@ -2345,9 +2351,9 @@ aboutScroll?.addEventListener('touchmove', (e) => {
   e.preventDefault();
   __touchStartY = null;
   const dir = dy > 0 ? 1 : -1;
-  if (now < __scrollLockUntil) { __queueStep(dir); return; }   // queue swipes too
+  if (now < __scrollLockUntil) { __queueStep(dir); return; }
   doStep(dir);
-}, { passive: false });
+}, { passive: false, capture: true });
 
 // ---------- Enter / exit transitions ----------
 let mode = 'hero'; // 'hero' | 'about'
