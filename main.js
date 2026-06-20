@@ -1235,37 +1235,115 @@ function buildCeilingTex() {
 }
 // The four SceneB theme sentences live ENGRAVED into the metal ceiling — they
 // read as glowing reflections on the polished disc, not pasted labels.
-// Ceiling sentences are temporarily blanked — that band is reserved for the
-// SceneC copy and will be filled later. The metal disc + skylight stay.
-const CEIL_LINES = [
-  { en: '', cn: '' }, { en: '', cn: '' }, { en: '', cn: '' }, { en: '', cn: '' },
-];
+// SceneC manifesto, written DIRECTLY on the polished ceiling — no text boxes,
+// no backing pills. Layout (canvas 1024 wide × 1024 tall):
+//   top    manifesto      (italic serif, 2 lines)
+//   mid    2 YEARS goal   (small-cap label + sans body)
+//   mid    5 YEARS goal   (same)
+//   foot   CREATE • TEST • FAIL • LEARN • REPEAT (tracked small caps)
+// Horizontal-mirrored so it reads correctly when the camera looks up at the
+// disc from below.
+const CEIL_COPY = {
+  en: {
+    manifesto: ['There is no final version.', 'Only the next one.'],
+    y2: { label: '2 YEARS', body: 'Build a creative platform with 1,000 active users.' },
+    y5: { label: '5 YEARS', body: 'Generate over $200,000 through projects, products, and ideas created inside this lab.' },
+    motto: 'CREATE  •  TEST  •  FAIL  •  LEARN  •  REPEAT',
+  },
+  cn: {
+    manifesto: ['没有最终版本。', '只有下一个。'],
+    y2: { label: '2 年', body: '打造一个拥有 1,000 名活跃用户的创作平台。' },
+    y5: { label: '5 年', body: '通过这个实验室里诞生的项目、产品与想法，创造超过 $200,000 的价值。' },
+    motto: '创造  •  试验  •  失败  •  学习  •  再来',
+  },
+};
+
+function __ceilWrap(ctx, text, maxW) {
+  const isCJK = /[一-鿿]/.test(text);
+  if (isCJK) {
+    // wrap per-character for CJK (no spaces)
+    const out = []; let cur = '';
+    for (const ch of text) {
+      if (ctx.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  const words = text.split(' '), out = []; let cur = '';
+  for (const w of words) {
+    const t = (cur ? cur + ' ' : '') + w;
+    if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = w; }
+    else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 function buildCeilingEmissive(lang) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 1024;
   const x = c.getContext('2d');
   x.fillStyle = '#000'; x.fillRect(0, 0, 1024, 1024);
-  // faint central sheen (no hard white disc)
-  const g = x.createRadialGradient(512, 512, 0, 512, 512, 360);
-  g.addColorStop(0.0, 'rgba(208,222,250,0.30)');
+  // faint central sheen
+  const g = x.createRadialGradient(512, 512, 0, 512, 512, 380);
+  g.addColorStop(0.0, 'rgba(208,222,250,0.28)');
   g.addColorStop(1.0, 'rgba(0,0,0,0)');
   x.fillStyle = g; x.fillRect(0, 0, 1024, 1024);
-  // The disc is seen from below, which flips its texture 180°, so pre-rotate
-  // the text so it reads upright on the ceiling.
-  x.translate(512, 512); x.rotate(Math.PI); x.translate(-512, -512);
-  // four theme sentences as glowing reflected text, stacked
+  // Horizontal mirror — when the camera looks straight up at the disc the
+  // texture is seen mirrored on the X-axis, so pre-mirror so it reads upright.
+  x.translate(1024, 0); x.scale(-1, 1);
   x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.shadowColor = 'rgba(200,222,255,0.85)';
+  const copy = CEIL_COPY[lang === 'cn' ? 'cn' : 'en'];
+  const cx = 512, maxW = 800;
+
+  // ---- manifesto (top) ----
   x.font = (lang === 'cn')
-    ? '500 50px "Songti SC", "Times New Roman", serif'
-    : 'italic 56px "Instrument Serif", Georgia, serif';
-  const ys = [350, 444, 580, 674];
-  for (let i = 0; i < CEIL_LINES.length; i++) {
-    const txt = (lang === 'cn') ? CEIL_LINES[i].cn : CEIL_LINES[i].en;
-    x.shadowColor = 'rgba(200,222,255,0.85)'; x.shadowBlur = 22;
-    x.fillStyle = 'rgba(232,240,253,0.95)';
-    x.fillText(txt, 512, ys[i], 770);
-    x.shadowBlur = 0;
-  }
+    ? '500 64px "Songti SC", "Times New Roman", serif'
+    : 'italic 58px "Instrument Serif", Georgia, serif';
+  x.fillStyle = 'rgba(238,243,254,0.96)';
+  x.shadowBlur = 22;
+  x.fillText(copy.manifesto[0], cx, 220, maxW);
+  x.fillText(copy.manifesto[1], cx, 290, maxW);
+
+  // ---- 2 YEARS ----
+  x.shadowBlur = 14;
+  x.fillStyle = 'rgba(170,200,255,0.95)';
+  x.font = (lang === 'cn')
+    ? '600 38px "PingFang SC", "Songti SC", sans-serif'
+    : '700 30px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.y2.label, cx, 420, 600);
+  x.fillStyle = 'rgba(228,236,250,0.92)';
+  x.font = (lang === 'cn')
+    ? '400 30px "PingFang SC", "Hiragino Sans GB", sans-serif'
+    : '400 28px "Helvetica Neue", Arial, sans-serif';
+  let yy = 470;
+  for (const ln of __ceilWrap(x, copy.y2.body, maxW)) { x.fillText(ln, cx, yy, maxW); yy += 40; }
+
+  // ---- 5 YEARS ----
+  yy += 28;
+  x.shadowBlur = 14;
+  x.fillStyle = 'rgba(170,200,255,0.95)';
+  x.font = (lang === 'cn')
+    ? '600 38px "PingFang SC", "Songti SC", sans-serif'
+    : '700 30px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.y5.label, cx, yy, 600); yy += 50;
+  x.fillStyle = 'rgba(228,236,250,0.92)';
+  x.font = (lang === 'cn')
+    ? '400 30px "PingFang SC", "Hiragino Sans GB", sans-serif'
+    : '400 28px "Helvetica Neue", Arial, sans-serif';
+  for (const ln of __ceilWrap(x, copy.y5.body, maxW)) { x.fillText(ln, cx, yy, maxW); yy += 40; }
+
+  // ---- motto (bottom, tracked small caps) ----
+  x.shadowBlur = 10;
+  x.fillStyle = 'rgba(180,196,220,0.75)';
+  x.font = (lang === 'cn')
+    ? '500 22px "PingFang SC", "Songti SC", sans-serif'
+    : '700 20px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.motto, cx, 880, 900);
+  x.shadowBlur = 0;
+
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
