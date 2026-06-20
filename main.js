@@ -2270,9 +2270,18 @@ function buildScrollStops() {
 // they can immediately start the next step — no "infinite chain locks".
 let __scrollLockUntil = 0;
 let __lastWheelAt = 0;
-const QUIET_MS = 80;            // softer flick gate — was 180
-let __queuedDir = 0;            // last-direction queue (one-deep) for inputs that
-//                                 arrive while a step animation is in flight
+// A trackpad "flick" fires 20+ inertia events. Treat one BURST of events as a
+// single gesture: the first event triggers a step, all the others are ignored
+// until the burst ends (no input for GESTURE_END_MS). The queue is for an
+// honest second gesture that arrives while the previous step is still animating.
+const GESTURE_END_MS = 120;
+let __inGesture = false;
+let __gestureEndTimer = null;
+function __markGesture() {
+  if (__gestureEndTimer) clearTimeout(__gestureEndTimer);
+  __gestureEndTimer = setTimeout(() => { __inGesture = false; }, GESTURE_END_MS);
+}
+let __queuedDir = 0;            // one-deep queue
 let __queueTimer = null;
 function __consumeQueue() {
   __queueTimer = null;
@@ -2282,7 +2291,6 @@ function __consumeQueue() {
     return;
   }
   const d = __queuedDir; __queuedDir = 0;
-  __lastWheelAt = 0;             // queued step bypasses the quiet gate
   doStep(d);
 }
 function __queueStep(dir) {
@@ -2316,10 +2324,11 @@ function onAboutWheel(e) {
   e.preventDefault();
   const now = performance.now();
   const dir = e.deltaY > 0 ? 1 : -1;
-  if (now < __scrollLockUntil) { __queueStep(dir); return; }   // queue, don't drop
-  const gap = now - __lastWheelAt;
   __lastWheelAt = now;
-  if (gap < QUIET_MS) { __queueStep(dir); return; }            // even momentum-tail queues
+  __markGesture();                         // keep the burst alive
+  if (__inGesture) return;                 // we already counted this gesture
+  __inGesture = true;
+  if (now < __scrollLockUntil) { __queueStep(dir); return; }
   doStep(dir);
 }
 aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
@@ -2329,7 +2338,8 @@ aboutScroll?.addEventListener('wheel', onAboutWheel, { passive: false });
 let __touchStartY = null;
 aboutScroll?.addEventListener('touchstart', (e) => {
   __touchStartY = e.touches[0]?.clientY ?? null;
-  __lastWheelAt = 0; // a new touch counts as a fresh gesture, bypass quiet check
+  __inGesture = false;             // a new touch is always a fresh gesture
+  if (__gestureEndTimer) { clearTimeout(__gestureEndTimer); __gestureEndTimer = null; }
 }, { passive: true });
 aboutScroll?.addEventListener('touchmove', (e) => {
   const now = performance.now();
