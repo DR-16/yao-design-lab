@@ -1235,14 +1235,9 @@ function buildCeilingTex() {
 }
 // The four SceneB theme sentences live ENGRAVED into the metal ceiling — they
 // read as glowing reflections on the polished disc, not pasted labels.
-// SceneC manifesto, written DIRECTLY on the polished ceiling — no text boxes,
-// no backing pills. Layout (canvas 1024 wide × 1024 tall):
-//   top    manifesto      (italic serif, 2 lines)
-//   mid    2 YEARS goal   (small-cap label + sans body)
-//   mid    5 YEARS goal   (same)
-//   foot   CREATE • TEST • FAIL • LEARN • REPEAT (tracked small caps)
-// Horizontal-mirrored so it reads correctly when the camera looks up at the
-// disc from below.
+// SceneC text floats as a BILLBOARDED plane that always faces the user, so it
+// reads upright no matter where the camera looks. The ceiling itself stays a
+// clean polished disc + skylight; the text is rendered separately below.
 const CEIL_COPY = {
   en: {
     manifesto: ['There is no final version.', 'Only the next one.'],
@@ -1280,70 +1275,17 @@ function __ceilWrap(ctx, text, maxW) {
   return out;
 }
 
-function buildCeilingEmissive(lang) {
+// Ceiling emissive = clean skylight sheen only (no text — SceneC text lives on
+// a billboarded plane that always faces the camera).
+function buildCeilingEmissive(_lang) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 1024;
   const x = c.getContext('2d');
   x.fillStyle = '#000'; x.fillRect(0, 0, 1024, 1024);
-  // faint central sheen
   const g = x.createRadialGradient(512, 512, 0, 512, 512, 380);
-  g.addColorStop(0.0, 'rgba(208,222,250,0.28)');
+  g.addColorStop(0.0, 'rgba(208,222,250,0.30)');
   g.addColorStop(1.0, 'rgba(0,0,0,0)');
   x.fillStyle = g; x.fillRect(0, 0, 1024, 1024);
-  // Horizontal mirror — when the camera looks straight up at the disc the
-  // texture is seen mirrored on the X-axis, so pre-mirror so it reads upright.
-  x.translate(1024, 0); x.scale(-1, 1);
-  x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.shadowColor = 'rgba(200,222,255,0.85)';
-  const copy = CEIL_COPY[lang === 'cn' ? 'cn' : 'en'];
-  const cx = 512, maxW = 800;
-
-  // ---- manifesto (top) ----
-  x.font = (lang === 'cn')
-    ? '500 64px "Songti SC", "Times New Roman", serif'
-    : 'italic 58px "Instrument Serif", Georgia, serif';
-  x.fillStyle = 'rgba(238,243,254,0.96)';
-  x.shadowBlur = 22;
-  x.fillText(copy.manifesto[0], cx, 220, maxW);
-  x.fillText(copy.manifesto[1], cx, 290, maxW);
-
-  // ---- 2 YEARS ----
-  x.shadowBlur = 14;
-  x.fillStyle = 'rgba(170,200,255,0.95)';
-  x.font = (lang === 'cn')
-    ? '600 38px "PingFang SC", "Songti SC", sans-serif'
-    : '700 30px "Helvetica Neue", Arial, sans-serif';
-  x.fillText(copy.y2.label, cx, 420, 600);
-  x.fillStyle = 'rgba(228,236,250,0.92)';
-  x.font = (lang === 'cn')
-    ? '400 30px "PingFang SC", "Hiragino Sans GB", sans-serif'
-    : '400 28px "Helvetica Neue", Arial, sans-serif';
-  let yy = 470;
-  for (const ln of __ceilWrap(x, copy.y2.body, maxW)) { x.fillText(ln, cx, yy, maxW); yy += 40; }
-
-  // ---- 5 YEARS ----
-  yy += 28;
-  x.shadowBlur = 14;
-  x.fillStyle = 'rgba(170,200,255,0.95)';
-  x.font = (lang === 'cn')
-    ? '600 38px "PingFang SC", "Songti SC", sans-serif'
-    : '700 30px "Helvetica Neue", Arial, sans-serif';
-  x.fillText(copy.y5.label, cx, yy, 600); yy += 50;
-  x.fillStyle = 'rgba(228,236,250,0.92)';
-  x.font = (lang === 'cn')
-    ? '400 30px "PingFang SC", "Hiragino Sans GB", sans-serif'
-    : '400 28px "Helvetica Neue", Arial, sans-serif';
-  for (const ln of __ceilWrap(x, copy.y5.body, maxW)) { x.fillText(ln, cx, yy, maxW); yy += 40; }
-
-  // ---- motto (bottom, tracked small caps) ----
-  x.shadowBlur = 10;
-  x.fillStyle = 'rgba(180,196,220,0.75)';
-  x.font = (lang === 'cn')
-    ? '500 22px "PingFang SC", "Songti SC", sans-serif'
-    : '700 20px "Helvetica Neue", Arial, sans-serif';
-  x.fillText(copy.motto, cx, 880, 900);
-  x.shadowBlur = 0;
-
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -1391,6 +1333,100 @@ const lightShaft = new THREE.Mesh(
   })
 );
 aboutScene.add(lightShaft);
+
+// ---- SceneC text plane (billboarded, always faces the camera) -------------
+function __sceneCWrap(ctx, text, maxW) {
+  const isCJK = /[一-鿿]/.test(text);
+  if (isCJK) {
+    const out = []; let cur = '';
+    for (const ch of text) {
+      if (ctx.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  const words = text.split(' '); const out = []; let cur = '';
+  for (const w of words) {
+    const t = (cur ? cur + ' ' : '') + w;
+    if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = w; }
+    else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function buildSceneCCanvas(lang) {
+  const c = document.createElement('canvas');
+  c.width = 1280; c.height = 1600;        // 4:5 portrait
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, 1280, 1600);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  const copy = CEIL_COPY[lang === 'cn' ? 'cn' : 'en'];
+  const cx = 640, MAXW = 1080;
+  // ---- manifesto ----
+  x.shadowColor = 'rgba(190,215,255,0.85)'; x.shadowBlur = 28;
+  x.fillStyle = 'rgba(238,243,254,0.97)';
+  x.font = (lang === 'cn')
+    ? '500 100px "Songti SC", "Times New Roman", serif'
+    : 'italic 92px "Instrument Serif", Georgia, serif';
+  x.fillText(copy.manifesto[0], cx, 200, MAXW);
+  x.fillText(copy.manifesto[1], cx, 320, MAXW);
+  // ---- 2 YEARS ----
+  x.shadowBlur = 14;
+  x.fillStyle = 'rgba(180,210,255,0.95)';
+  x.font = (lang === 'cn')
+    ? '600 52px "PingFang SC", "Songti SC", sans-serif'
+    : '700 44px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.y2.label, cx, 540, 800);
+  x.fillStyle = 'rgba(228,236,250,0.95)';
+  x.font = (lang === 'cn')
+    ? '400 44px "PingFang SC", "Hiragino Sans GB", sans-serif'
+    : '400 40px "Helvetica Neue", Arial, sans-serif';
+  let yy = 620;
+  for (const ln of __sceneCWrap(x, copy.y2.body, MAXW)) { x.fillText(ln, cx, yy, MAXW); yy += 58; }
+  // ---- 5 YEARS ----
+  yy += 50;
+  x.shadowBlur = 14;
+  x.fillStyle = 'rgba(180,210,255,0.95)';
+  x.font = (lang === 'cn')
+    ? '600 52px "PingFang SC", "Songti SC", sans-serif'
+    : '700 44px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.y5.label, cx, yy, 800); yy += 80;
+  x.fillStyle = 'rgba(228,236,250,0.95)';
+  x.font = (lang === 'cn')
+    ? '400 44px "PingFang SC", "Hiragino Sans GB", sans-serif'
+    : '400 40px "Helvetica Neue", Arial, sans-serif';
+  for (const ln of __sceneCWrap(x, copy.y5.body, MAXW)) { x.fillText(ln, cx, yy, MAXW); yy += 58; }
+  // ---- motto (bottom) ----
+  x.shadowBlur = 10;
+  x.fillStyle = 'rgba(180,196,220,0.78)';
+  x.font = (lang === 'cn')
+    ? '500 30px "PingFang SC", "Songti SC", sans-serif'
+    : '700 28px "Helvetica Neue", Arial, sans-serif';
+  x.fillText(copy.motto, cx, 1520, 1180);
+  x.shadowBlur = 0;
+  return c;
+}
+function buildSceneCTexture(lang) {
+  const t = new THREE.CanvasTexture(buildSceneCCanvas(lang));
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+const sceneCMat = new THREE.MeshBasicMaterial({
+  map: buildSceneCTexture(__ceilLang()),
+  transparent: true, opacity: 0, depthWrite: false,
+});
+const sceneCPlane = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 6.75), sceneCMat);
+sceneCPlane.renderOrder = 8;
+aboutScene.add(sceneCPlane);
+function redrawSceneC(lang) {
+  const old = sceneCMat.map;
+  sceneCMat.map = buildSceneCTexture(lang === 'cn' ? 'cn' : 'en');
+  sceneCMat.needsUpdate = true;
+  if (old) old.dispose();
+}
+window.__redrawSceneC = redrawSceneC;
 
 // =============================================================================
 // WALL-MOUNTED CONTENT PANELS  —  the six SceneA steps, embedded in the wall
@@ -1565,6 +1601,7 @@ function redrawAboutPanels(lang) {
   }
   // also redraw the SceneB theme sentences engraved into the metal ceiling
   if (typeof redrawCeiling === 'function') redrawCeiling(__aboutLang);
+  if (window.__redrawSceneC) window.__redrawSceneC(__aboutLang);
 }
 window.__redrawAboutPanels = redrawAboutPanels;
 // Redraw once the web fonts load so headings pick up Syne (panels) and the
@@ -2659,6 +2696,18 @@ function aboutTick() {
 
     // SceneB doubt voices materialise and billboard to the camera.
     tickSceneB(sp, t);
+
+    // SceneC text plane — billboard to the camera, fade in at the final page.
+    const appearC = Math.max(0, Math.min(1, (sp - 0.88) / 0.06));
+    sceneCMat.opacity = appearC;
+    if (appearC > 0) {
+      aboutCam.updateMatrixWorld();
+      const e = aboutCam.matrixWorld.elements;
+      const fwd = new THREE.Vector3(-e[8], -e[9], -e[10]);
+      const D = 6.4;
+      sceneCPlane.position.copy(aboutCam.position).addScaledVector(fwd, D);
+      sceneCPlane.quaternion.copy(aboutCam.quaternion);
+    }
 
     // Hard-hide the retired tunnel point cloud so it never floats in the room.
     portalGroup.visible = false;
