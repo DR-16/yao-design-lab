@@ -197,6 +197,11 @@ flameGroup.add(glowMesh);
 
 flameGroup.position.y = -0.4;
 flameGroup.scale.setScalar(1.0);
+// Homepage restructure: the flame model + glowing chip labels + "Four burns" card
+// were removed. Keep the THREE.Group + uniforms intact so the existing animation
+// loop and About-view transitions don't have to be unpicked — just hide the group
+// from the render pass so it adds no visual cost beyond the uTime update.
+flameGroup.visible = false;
 
 // ---------- Cylinder: 3 hollow rotating rings ----------
 const cylinderGroup = new THREE.Group();
@@ -371,6 +376,9 @@ document.addEventListener('mouseenter', () => cursorEl.classList.add('visible'))
 window.addEventListener('blur', () => cursorEl.classList.remove('visible'));
 
 // ---------- Scroll-driven animation ----------
+// `categoriesEl` previously toggled the orbiting "Economy / Emotion / Welfare /
+// Creative" ember chips. The chips were removed in the editorial restructure;
+// the query stays as `null` so existing toggle sites can short-circuit.
 const categoriesEl = document.querySelector('.categories');
 let scrollProgress = 0; // 0→1 across first viewport: cylinder rises, flame grows
 let exitProgress = 0;   // 0→1 across second viewport: flame fades so work text shows
@@ -473,8 +481,10 @@ function applyState(dt) {
   flameGroup.position.y = -0.4 + ease * 0.7 - exitEase * 1.6;
   flameUniforms.uIntensity.value = (0.65 + ease * 0.55) * (1 - exitEase * 0.45);
 
-  if (ease > 0.75 && exitEase < 0.5) categoriesEl.classList.add('visible');
-  else categoriesEl.classList.remove('visible');
+  if (categoriesEl) {
+    if (ease > 0.75 && exitEase < 0.5) categoriesEl.classList.add('visible');
+    else categoriesEl.classList.remove('visible');
+  }
 
   // Suspend the gentle pointer-parallax while a camera push animation owns
   // the hero camera (entering About). The tween below sets camera.position
@@ -534,15 +544,67 @@ setInterval(() => {
   }
 }, 100);
 
-// ---------- Category buttons ----------
-document.querySelectorAll('.cat').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const cat = btn.dataset.cat;
-    // For now: pulse the flame and log. Hook up to project routes later.
-    flameUniforms.uIntensity.value = 1.6;
-    setTimeout(() => { flameUniforms.uIntensity.value = 0.55 + scrollProgress * 0.5; }, 400);
-    console.log('category:', cat);
-  });
+// ---------- Editorial signage reveal ----------
+// FOUR BURNS / FOUR LANGUAGES / FOUR ELEMENTS / ONE FLAME — each .ed-line
+// fades + rises into place when its centre enters the viewport. The final
+// "ONE FLAME" line lights with the accent colour once revealed.
+const edLines = Array.from(document.querySelectorAll('.ed-line'));
+if (edLines.length) {
+  const edObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) {
+        e.target.classList.add('revealed');
+      } else if (e.boundingClientRect.top > window.innerHeight) {
+        // user scrolled back above; allow re-reveal on next downward pass
+        e.target.classList.remove('revealed');
+      }
+    }
+  }, { threshold: 0.45 });
+  edLines.forEach((el) => edObserver.observe(el));
+}
+
+// ---------- Exhibition coverflow carousels ----------
+// Each .ex-stack is a horizontal scroller; per-cover transforms are written
+// every scroll frame so the card sitting at the stack's centre stands
+// forward and flat, while cards on either side rotate Y, push back in Z,
+// shrink, and dim — the "fan blade" pose with real depth, not flat cards.
+document.querySelectorAll('.ex-stack').forEach((stack) => {
+  const covers = stack.querySelectorAll('.cover');
+  if (!covers.length) return;
+
+  let raf = 0;
+  function update() {
+    raf = 0;
+    const rect = stack.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    // half-window over which a card transitions from focused → fully fanned
+    const range = rect.width * 0.45;
+    covers.forEach((c) => {
+      const r = c.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      let t = (cx - centerX) / range;       // -1 (left edge) .. +1 (right edge)
+      if (t < -1.6) t = -1.6;
+      if (t >  1.6) t =  1.6;
+      const abs = Math.abs(t);
+      const ry  = -t * 38;                  // tilt out toward viewer
+      const tz  = -abs * 220;               // push back as it leaves centre
+      const tx  = -t * 30;                  // pull side cards slightly outward
+      const sc  = 1 - abs * 0.22;
+      const op  = Math.max(0.22, 1 - abs * 0.5);
+      c.style.transform =
+        `translate3d(${tx}px, 0, ${tz}px) rotateY(${ry}deg) scale(${sc})`;
+      c.style.opacity = String(op);
+      // z-index so the focused card actually paints over its neighbours
+      c.style.zIndex = String(100 - Math.round(abs * 50));
+    });
+  }
+  function schedule() {
+    if (!raf) raf = requestAnimationFrame(update);
+  }
+  stack.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  // initial pose — wait one frame so layout has settled (padding-inline etc.)
+  requestAnimationFrame(update);
 });
 
 // =====================================================================
@@ -2372,8 +2434,13 @@ function buildScrollStops() {
   // doubt-swarm stops: two — a lower and an upper view of the voices …
   arr.push(0.77);
   arr.push(0.88);
-  // … then the final reflective-ceiling page.
-  arr.push(0.985);
+  // … then the final reflective-ceiling page. MUST be 1.0 so the finale
+  // easing (which ramps over sp ∈ [0.92, 1.0]) reaches fE = 1: camera lands
+  // exactly on the central axis (orbit = 0), the skylight is dead centre,
+  // the up-vector blend completes, and the billboarded SceneC text stops
+  // tilting. Setting this below 1.0 leaves the camera off-axis at the final
+  // stop and the whole composition slants.
+  arr.push(1.0);
   return arr;
 }
 
@@ -2473,6 +2540,16 @@ function __exitThroughSkylight() {
     mode = 'hero';
     // reset the about scroll so re-entry starts fresh
     aboutScroll.scrollTop = 0;
+    // CRITICAL: hero camera was rammed up against a ring by playCameraPushToRing
+    // when the user first entered the About view; if we don't reset it here,
+    // scrolling back up to the hero page from #work shows the cylinder pressed
+    // right against the lens — distorted and filling the screen. The user is
+    // landing on #work (well past the hero), so snap the camera home instantly
+    // instead of tweening; by the time they scroll back, it's in the right pose.
+    camera.position.set(0, 0, responsiveCamZ);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    __heroTransiting = false;
     // fade the flash out over the next 600ms
     const el = __exitFlashEl;
     const t0 = performance.now();
@@ -2732,6 +2809,16 @@ function aboutTick() {
       pPosY + (aPosY - pPosY) * k,
       pPosZ + (aPosZ - pPosZ) * k
     );
+    // When easing into SceneC the camera ends up on the central axis looking
+    // straight up at the skylight. Three.js's default camera.up = (0,1,0)
+    // becomes parallel to the forward vector at that pose — pure gimbal lock,
+    // so the camera's roll angle flips arbitrarily and the billboarded SceneC
+    // text spins around the forward axis. Blend the up vector toward world
+    // -Z as we approach the SceneC pose (tracked by fE) so the roll always
+    // has a stable horizontal reference, and lookAt produces a consistent
+    // quaternion the text plane can copy.
+    const upBlend = Math.max(0, Math.min(1, fE * 1.4));
+    aboutCam.up.set(0, 1 - upBlend, -upBlend).normalize();
     aboutCam.lookAt(
       pLookX + (aLookX - pLookX) * k,
       pLookY + (aLookY - pLookY) * k,
@@ -2759,6 +2846,8 @@ function aboutTick() {
       // pull camera straight up toward the skylight at CEIL_Y - 0.4
       const targetY = CEIL_Y - 0.4;
       aboutCam.position.set(0, __exitStartY + (targetY - __exitStartY) * exE, 0);
+      // straight-up look — same gimbal-lock fix as the SceneC pose above
+      aboutCam.up.set(0, 0, -1);
       aboutCam.lookAt(0, CEIL_Y + 6, 0);               // look up into the white
       // SceneC text fades out as we dive in
       appearC = Math.max(0, 1 - ex * 1.4);

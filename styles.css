@@ -114,7 +114,7 @@ body.lang-en [data-lang="cn"] { display: none !important; }
 body.lang-cn [data-lang="en"] { display: none !important; }
 /* For Chinese, drop English letter-spacing on nav so it looks right */
 body.lang-cn .nav a { letter-spacing: 0.12em; text-transform: none; }
-body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
+body.lang-cn .ex-eyebrow { letter-spacing: 0.32em; }
 
 /* ================================================================
    ABOUT VIEW — opens when user clicks the top cylinder ring (WHO I AM)
@@ -168,8 +168,9 @@ body.lang-cn .work-eyebrow { letter-spacing: 0.32em; }
 body.mode-about #bg,
 body.mode-about .topbar,
 body.mode-about .hero-text,
-body.mode-about .categories,
-body.mode-about .work {
+body.mode-about .gateway,
+body.mode-about .editorial,
+body.mode-about .exhibition {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.55s ease;
@@ -722,148 +723,221 @@ main { position: relative; }
   opacity: 0.55;
 }
 
-.categories {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 6;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-.categories.visible { opacity: 1; }
-.categories.visible .cat { pointer-events: auto; }
+/* ================================================================
+   POST-HERO REDESIGN
+   The page now reads top-to-bottom as a museum walk:
+     1. .hero            — the rings (existing)
+     2. .gateway         — a pure-black breath, the foyer
+     3. .editorial       — four oversize lines, revealed in sequence
+     4. .exhibition      — four columns, each a category index card with a
+                           horizontal carousel of project covers
+   Everything sits on the same dark backdrop; the hero stripes stay parked
+   behind .hero only and are hidden below it by a solid #02000a covering.
+   ================================================================ */
 
-/* category touchpoints: ember sparks rising from the flame.
-   no chip / no border — just a glowing word + a faint radial halo. */
-.cat {
-  position: absolute;
-  background: transparent;
-  border: none;
-  padding: 14px 18px;
-  color: rgba(255, 215, 150, 0.95);
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  font-family: inherit;
-  font-size: 16px;
-  letter-spacing: 0.14em;
-  cursor: none;
-  transform: translate(-50%, -50%);
-  text-shadow:
-    0 0 6px rgba(255, 140, 50, 0.85),
-    0 0 18px rgba(220, 60, 20, 0.65),
-    0 0 36px rgba(120, 10, 5, 0.45);
-  transition: color 0.25s ease, transform 0.25s ease, text-shadow 0.25s ease;
-  isolation: isolate;
-}
-/* the ember halo behind the word */
-.cat::before {
-  content: "";
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle at 50% 50%,
-    rgba(255, 130, 40, 0.32) 0%,
-    rgba(180, 30, 5, 0.22) 30%,
-    rgba(40, 0, 0, 0.0) 65%);
-  pointer-events: none;
-  z-index: -1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-/* a thin rising "wick" line from the word toward the flame centre — feels like the spark is tethered to the fire */
-.cat::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  width: 1px;
-  height: 70px;
-  background: linear-gradient(180deg,
-    rgba(255, 170, 80, 0) 0%,
-    rgba(255, 140, 50, 0.6) 40%,
-    rgba(255, 90, 25, 0.85) 100%);
-  pointer-events: none;
-  opacity: 0.7;
-  transition: opacity 0.3s ease, height 0.3s ease;
-}
-/* economy + welfare are on the left side: wick rises up-right toward centre */
-.cat[data-cat="economy"]::after  { top: 100%; transform: translateX(-50%) rotate(-20deg); transform-origin: top center; }
-.cat[data-cat="welfare"]::after  { bottom: 100%; transform: translateX(-50%) rotate(180deg) rotate(20deg); transform-origin: bottom center; }
-/* emotion + creative are on the right: wick rises up-left */
-.cat[data-cat="emotion"]::after  { top: 100%; transform: translateX(-50%) rotate(20deg); transform-origin: top center; }
-.cat[data-cat="creative"]::after { bottom: 100%; transform: translateX(-50%) rotate(180deg) rotate(-20deg); transform-origin: bottom center; }
-
-.cat:hover {
-  color: #ffefc8;
-  transform: translate(-50%, -50%) scale(1.08);
-  text-shadow:
-    0 0 8px rgba(255, 220, 130, 1),
-    0 0 24px rgba(255, 120, 30, 0.9),
-    0 0 48px rgba(220, 40, 10, 0.6);
-}
-.cat:hover::before {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.15);
-}
-.cat:hover::after { opacity: 1; height: 90px; }
-
-.cat-num {
-  font-family: "Times New Roman", serif;
-  font-style: italic;
-  opacity: 0.7;
-  font-size: 13px;
-  color: rgba(255, 180, 100, 0.85);
-}
-.cat-name {
-  font-weight: 600;
-}
-
-.cat[data-cat="economy"]  { left: 22%; top: 38%; }
-.cat[data-cat="emotion"]  { left: 78%; top: 32%; }
-.cat[data-cat="welfare"]  { left: 26%; top: 70%; }
-.cat[data-cat="creative"] { left: 76%; top: 66%; }
-
-.scroll-spacer {
-  height: 100vh;
-}
-
-.work {
+/* The hero canvas is position:fixed, so once the user scrolls past .hero the
+   stripes would otherwise bleed through. A solid dark wash from .gateway
+   onward keeps the editorial sections in true neutral museum black —
+   intentionally NOT the body's slightly-violet --bg, which would pick up a
+   purple cast under the placeholder cards. */
+.gateway,
+.editorial,
+.exhibition {
   position: relative;
   z-index: 2;
-  min-height: 60vh;
-  padding: 80px 32px 140px;
+  background: #000;
+}
+
+/* Gateway: a black "curtain" descending over the hero. The hero canvas is
+   position:fixed and stays parked underneath until pushed away; without a
+   gradient, the solid black top edge looked like a hard cut. The linear
+   gradient lets the colour stripes + rings bleed up through the top of the
+   gateway and dissolve into black over ~50% of the section, then stay
+   solid for the rest of the breath. */
+.gateway {
+  height: 130vh;
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, 0)     0%,
+    rgba(0, 0, 0, 0.55) 26%,
+    rgba(0, 0, 0, 0.92) 52%,
+    #000                 70%);
+}
+
+/* Editorial signage. Each line is set in a heavy serif at a poster scale.
+   Lines are stacked vertically with generous vertical breathing room so the
+   reader experiences them one at a time as they scroll. */
+.editorial {
+  padding: 18vh 8vw 22vh;
+}
+.editorial-track {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 14vh;
+  align-items: flex-start;
 }
-.work-inner {
-  max-width: 820px;
-  position: relative;
-  padding: 36px 40px;
-  background: linear-gradient(180deg, rgba(20,4,4,0.55), rgba(20,4,4,0.25));
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+.ed-line {
+  font-family: "Instrument Serif", "Times New Roman", "Songti SC", serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(56px, 11vw, 184px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: rgba(244, 239, 230, 0.92);
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  /* alternate alignment so the lines feel typeset, not stacked */
 }
-.work-eyebrow {
+.ed-line[data-rev="1"] { align-self: flex-end;   text-align: right; }
+.ed-line[data-rev="2"] { align-self: center; }
+.ed-line[data-rev="3"] { align-self: flex-end;   text-align: right; }
+.ed-line.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* "ONE FLAME" is the resolution line — picks up the hero's accent so the
+   whole sequence reads as: four ways of burning → one fire. */
+.ed-line.ed-final {
+  color: #fff;
+  text-shadow:
+    0 0 24px rgba(255, 216, 77, 0.18),
+    0 0 60px rgba(255, 130, 40, 0.12);
+}
+.ed-line.ed-final em,
+.ed-line.ed-final {
+  font-style: italic;
+}
+
+/* Exhibition floor. Four columns side-by-side, each a category index card
+   with a number, a name, and a vertical stack of 9:16 portrait covers. */
+.exhibition {
+  padding: 10vh 6vw 14vh;
+}
+.ex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6vh;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ex-eyebrow {
   font-size: 12px;
-  letter-spacing: 0.4em;
-  opacity: 0.7;
-  margin-bottom: 18px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
 }
-.work h2 {
-  font-family: "Times New Roman", "Songti SC", serif;
-  font-size: clamp(34px, 5vw, 64px);
-  font-weight: 600;
-  line-height: 1.05;
-  margin-bottom: 24px;
+/* 2×2 grid of category cells. Each cell takes a generous chunk of viewport
+   width so the inline horizontal carousel inside it has room to breathe. */
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(40px, 5vw, 84px) clamp(32px, 4vw, 64px);
 }
-.work-lede {
-  font-size: 16px;
-  line-height: 1.7;
-  opacity: 0.85;
-  max-width: 60ch;
+.ex-col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  /* the carousel inside is wider than the grid track — without min-width:0
+     the grid cell would stretch to fit the carousel and break the 2-column
+     layout. The same fix is applied on .ex-stack below. */
+  min-width: 0;
+}
+.ex-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ex-num {
+  font-family: "Instrument Serif", "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.ex-name {
+  font-family: "Instrument Serif", "Times New Roman", "Songti SC", serif;
+  font-weight: 400;
+  font-size: clamp(22px, 2vw, 32px);
+  letter-spacing: -0.005em;
+  color: rgba(244, 239, 230, 0.95);
+}
+
+/* Coverflow carousel. The .ex-stack is a horizontal scroller with perspective
+   on it; per-cover transforms are written by JS each scroll frame, producing
+   a fan-blade effect — centred card stands forward and flat, neighbouring
+   cards rotate Y, push back in Z, shrink, and dim. Scroll-snap centres the
+   nearest card so it always settles onto a "focused" pose, like flipping a
+   physical photo album. */
+.ex-stack {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* generous vertical padding so rotated cards don't get clipped by edges */
+  padding: 40px 0 56px;
+  /* the side padding makes the first & last card reachable to center.
+     calc(50% - half_cover_width) where cover width = clamp(160, 17vw, 240). */
+  padding-inline: calc(50% - clamp(80px, 8.5vw, 120px));
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
+  -webkit-overflow-scrolling: touch;
+}
+.ex-stack::-webkit-scrollbar { display: none; }
+/* 9:16 portrait placeholder. The cards overlap visually (negative margin) so
+   the fan-blade effect has actual layered cards behind the focused one,
+   not just side-by-side cards rotated. Transform is set by JS each frame. */
+.cover {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(160px, 17vw, 240px);
+  aspect-ratio: 9 / 16;
+  /* overlap neighbours so the focused card sits in front of the side ones */
+  margin-inline: clamp(-44px, -3.6vw, -30px);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.025);
+  text-decoration: none;
+  overflow: hidden;
+  scroll-snap-align: center;
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  /* JS owns transform/opacity; smooth them so easing fills in between scroll
+     events and the snap-settle pose. */
+  transition: opacity 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+.cover:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+}
+.cover-label {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  font-family: "Instrument Serif", "Times New Roman", serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 880px) {
+  .ex-grid { grid-template-columns: 1fr; row-gap: 7vh; }
+  .cover { width: 56vw; }
+}
+@media (max-width: 560px) {
+  .ed-line { font-size: clamp(48px, 16vw, 88px); }
+  .cover { width: 64vw; }
 }
 
 /* mouse halo: a radial purple→cyan glow that follows the pointer.
@@ -906,8 +980,4 @@ main { position: relative; }
 @media (max-width: 720px) {
   html, body { cursor: auto; }
   .cursor { display: none; }
-  .cat[data-cat="economy"]  { left: 18%; top: 40%; }
-  .cat[data-cat="emotion"]  { left: 82%; top: 36%; }
-  .cat[data-cat="welfare"]  { left: 22%; top: 72%; }
-  .cat[data-cat="creative"] { left: 78%; top: 68%; }
 }

@@ -48,57 +48,90 @@
       </div>
 
       <canvas id="stage"></canvas>
+    </section>
 
-      <div class="categories" aria-hidden="true">
-        <button class="cat" data-cat="economy">
-          <span class="cat-num">01</span>
-          <span class="cat-name">
-            <span data-lang="en">Economy</span><span data-lang="cn">经济</span>
-          </span>
-        </button>
-        <button class="cat" data-cat="emotion">
-          <span class="cat-num">02</span>
-          <span class="cat-name">
-            <span data-lang="en">Emotion</span><span data-lang="cn">情感</span>
-          </span>
-        </button>
-        <button class="cat" data-cat="welfare">
-          <span class="cat-num">03</span>
-          <span class="cat-name">
-            <span data-lang="en">Welfare</span><span data-lang="cn">公益</span>
-          </span>
-        </button>
-        <button class="cat" data-cat="creative">
-          <span class="cat-num">04</span>
-          <span class="cat-name">
-            <span data-lang="en">Creative</span><span data-lang="cn">创意</span>
-          </span>
-        </button>
+    <!-- Pure-black gateway: a hard cut from the hero's coloured world to the
+         exhibition. No imagery, no decoration — just dark space the viewer
+         falls through before the editorial signage emerges. -->
+    <section class="gateway" aria-hidden="true"></section>
+
+    <!-- Editorial signage: oversized typography in pure black space. Lines
+         reveal one by one as the user scrolls — like walking through a
+         museum vestibule of carved titles before the gallery opens. -->
+    <section id="work" class="editorial">
+      <div class="editorial-track">
+        <h2 class="ed-line" data-rev="0"><span data-lang="en">FOUR BURNS</span><span data-lang="cn">四种燃烧</span></h2>
+        <h2 class="ed-line" data-rev="1"><span data-lang="en">FOUR LANGUAGES</span><span data-lang="cn">四种语言</span></h2>
+        <h2 class="ed-line" data-rev="2"><span data-lang="en">FOUR ELEMENTS</span><span data-lang="cn">四种元素</span></h2>
+        <h2 class="ed-line ed-final" data-rev="3"><span data-lang="en">ONE FLAME</span><span data-lang="cn">同一团火</span></h2>
       </div>
     </section>
 
-    <section class="scroll-spacer"></section>
-
-    <section id="work" class="work">
-      <div class="work-inner">
-        <p class="work-eyebrow">
-          <span data-lang="en">Selected Work</span>
-          <span data-lang="cn">作品集</span>
-        </p>
-        <h2>
-          <span data-lang="en">Four burns. Four languages.</span>
-          <span data-lang="cn">四种燃烧，四种语言。</span>
-        </h2>
-        <p class="work-lede" data-lang="en">
-          Every fire grows from a different element — from the logic of markets, to the dim glow of feeling,
-          to the echo of crowds, to the chance of creation. Tap any of the four touchpoints above to enter its category.
-        </p>
-        <p class="work-lede" data-lang="cn">
-          每一团火都从不同的元素生长——从市场的逻辑、情绪的微光、人群的回响，到创造的偶然。
-          点击上方四个触点，进入对应的作品类别。
-        </p>
+    <!-- Four-category exhibition floor: the four themes laid out side-by-side
+         as a single horizontal directory. Each column shows its category
+         number, name and a vertical column of 9:16 cover placeholders that
+         the user will later replace with real project covers. -->
+    <section class="exhibition">
+      <header class="ex-header">
+        <span class="ex-eyebrow" data-lang="en">THE FLOOR</span>
+        <span class="ex-eyebrow" data-lang="cn">展厅</span>
+      </header>
+      <div class="ex-grid">
+        <article class="ex-col" data-cat="economy">
+          <div class="ex-meta">
+            <span class="ex-num">01</span>
+            <h3 class="ex-name"><span data-lang="en">Economy</span><span data-lang="cn">经济</span></h3>
+          </div>
+          <div class="ex-stack" data-cover-count="3">
+            <a class="cover" data-slot="1"><span class="cover-label">01 / 01</span></a>
+            <a class="cover" data-slot="2"><span class="cover-label">01 / 02</span></a>
+            <a class="cover" data-slot="3"><span class="cover-label">01 / 03</span></a>
+            <a class="cover" data-slot="4"><span class="cover-label">01 / 04</span></a>
+            <a class="cover" data-slot="5"><span class="cover-label">01 / 05</span></a>
+          </div>
+        </article>
+        <article class="ex-col" data-cat="emotion">
+          <div class="ex-meta">
+            <span class="ex-num">02</span>
+            <h3 class="ex-name"><span data-lang="en">Emotion</span><span data-lang="cn">情感</span></h3>
+          </div>
+          <div class="ex-stack" data-cover-count="3">
+            <a class="cover" data-slot="1"><span class="cover-label">02 / 01</span></a>
+            <a class="cover" data-slot="2"><span class="cover-label">02 / 02</span></a>
+            <a class="cover" data-slot="3"><span class="cover-label">02 / 03</span></a>
+            <a class="cover" data-slot="4"><span class="cover-label">02 / 04</span></a>
+            <a class="cover" data-slot="5"><span class="cover-label">02 / 05</span></a>
+          </div>
+        </article>
+        <article class="ex-col" data-cat="welfare">
+          <div class="ex-meta">
+            <span class="ex-num">03</span>
+            <h3 class="ex-name"><span data-lang="en">Welfare</span><span data-lang="cn">公益</span></h3>
+          </div>
+          <div class="ex-stack" data-cover-count="3">
+            <a class="cover" data-slot="1"><span class="cover-label">03 / 01</span></a>
+            <a class="cover" data-slot="2"><span class="cover-label">03 / 02</span></a>
+            <a class="cover" data-slot="3"><span class="cover-label">03 / 03</span></a>
+            <a class="cover" data-slot="4"><span class="cover-label">03 / 04</span></a>
+            <a class="cover" data-slot="5"><span class="cover-label">03 / 05</span></a>
+          </div>
+        </article>
+        <article class="ex-col" data-cat="creative">
+          <div class="ex-meta">
+            <span class="ex-num">04</span>
+            <h3 class="ex-name"><span data-lang="en">Creative</span><span data-lang="cn">创意</span></h3>
+          </div>
+          <div class="ex-stack" data-cover-count="3">
+            <a class="cover" data-slot="1"><span class="cover-label">04 / 01</span></a>
+            <a class="cover" data-slot="2"><span class="cover-label">04 / 02</span></a>
+            <a class="cover" data-slot="3"><span class="cover-label">04 / 03</span></a>
+            <a class="cover" data-slot="4"><span class="cover-label">04 / 04</span></a>
+            <a class="cover" data-slot="5"><span class="cover-label">04 / 05</span></a>
+          </div>
+        </article>
       </div>
     </section>
+
   </main>
 
   <!-- ===== ABOUT VIEW ===== Triggered by clicking the top cylinder ring (WHO I AM).
