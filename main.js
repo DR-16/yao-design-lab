@@ -323,10 +323,10 @@ const envTex = makeEnvTexture();
 scene.environment = envTex;
 
 cylinderGroup.position.y = -0.7;
-// Shift left so the cylinder sits under the YAO/DESIGN cluster (left side
-// of the viewport), not under the whole word group's centre. Tuned against
-// the title's current left-anchored position (~23–30vw).
-cylinderGroup.position.x = -3.6;
+// Shift left so the cylinder sits under the YAO/DESIGN cluster (their
+// combined centre falls around 40vw — about 10vw left of viewport centre,
+// ≈ 2 world units in the camera's frame at z=9.5).
+cylinderGroup.position.x = -2.0;
 cylinderGroup.rotation.x = -0.16;
 
 // ---------- Drag interaction (rotate rings) ----------
