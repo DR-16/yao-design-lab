@@ -19,7 +19,6 @@ html, body {
   font-family: "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  cursor: none;
 }
 html { background: var(--bg); }
 
@@ -940,44 +939,6 @@ main { position: relative; }
   .cover { width: 64vw; }
 }
 
-/* mouse halo: a radial purple→cyan glow that follows the pointer.
-   when the pointer leaves, the area returns to its original colour (no trail). */
-/* mouse cursor: a small purple→cyan dot, normal cursor size */
-.cursor {
-  position: fixed;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  z-index: 100;
-  opacity: 0;
-  background:
-    radial-gradient(circle at 40% 40%,
-      rgba(217, 70, 239, 1) 0%,
-      rgba(168, 85, 247, 1) 38%,
-      rgba(34, 211, 238, 1) 100%);
-  box-shadow:
-    0 0 6px rgba(168, 85, 247, 0.75),
-    0 0 14px rgba(34, 211, 238, 0.55);
-  transition: width 0.2s ease, height 0.2s ease;
-  will-change: left, top;
-}
-.cursor.drag {
-  width: 34px;
-  height: 34px;
-  background:
-    radial-gradient(circle at 40% 40%,
-      rgba(232, 121, 249, 1) 0%,
-      rgba(168, 85, 247, 1) 45%,
-      rgba(34, 211, 238, 1) 100%);
-  box-shadow:
-    0 0 10px rgba(217, 70, 239, 0.85),
-    0 0 20px rgba(34, 211, 238, 0.6);
-}
-.cursor.visible { opacity: 1; }
-
-@media (max-width: 720px) {
-  html, body { cursor: auto; }
-  .cursor { display: none; }
-}
+/* Custom cursor halo retired — the JS handler is kept in main.js but the
+   element is hidden so we use the OS pointer. */
+.cursor { display: none !important; }

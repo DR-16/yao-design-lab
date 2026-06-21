@@ -603,6 +603,25 @@ document.querySelectorAll('.ex-stack').forEach((stack) => {
   }
   stack.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
+
+  // Mouse-wheel → horizontal pan. Mac trackpads natively emit deltaX for
+  // two-finger horizontal swipes, but a regular mouse wheel only produces
+  // deltaY — so without this, desktop users with a wheel mouse can't flip
+  // through the cards at all. We redirect vertical wheel into scrollLeft
+  // ONLY while the carousel has room left in that direction; once it hits
+  // an edge, we release the event and the page resumes vertical scroll.
+  stack.addEventListener('wheel', (e) => {
+    // user is already swiping horizontally — native handles it
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const max = stack.scrollWidth - stack.clientWidth;
+    const goingRight = e.deltaY > 0;
+    const atEdge = (goingRight && stack.scrollLeft >= max - 1) ||
+                   (!goingRight && stack.scrollLeft <= 0);
+    if (atEdge) return;          // let the page take over
+    e.preventDefault();
+    stack.scrollLeft += e.deltaY;
+  }, { passive: false });
+
   // initial pose — wait one frame so layout has settled (padding-inline etc.)
   requestAnimationFrame(update);
 });
