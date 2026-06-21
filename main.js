@@ -2718,15 +2718,23 @@ document.querySelectorAll('a[data-nav="about"]').forEach((a) => {
 // over a fixed duration so the user perceives a guided pan from wherever
 // they are to the target section, no matter the distance.
 let __pageScrollRAF = 0;
-function pageScrollTo(targetY, duration = 1200) {
+function pageScrollTo(targetY) {
   if (__pageScrollRAF) cancelAnimationFrame(__pageScrollRAF);
   const startY = window.scrollY;
   const dist = targetY - startY;
   if (Math.abs(dist) < 2) return;
+  // Distance-adaptive duration: short hops feel tight, long pans take their
+  // time. ~0.6ms per pixel, clamped to a sensible range, so a full-page jump
+  // reads as a deliberate guided pan instead of a flick.
+  const duration = Math.max(1400, Math.min(2800, Math.abs(dist) * 0.6));
   const t0 = performance.now();
   function tick() {
     const t = Math.min(1, (performance.now() - t0) / duration);
-    const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    // easeInOutQuart — long, soft acceleration with a long settle. Feels
+    // closer to a physical scroll wheel coasting to a stop.
+    const k = t < 0.5
+      ? 8 * t * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 4) / 2;
     window.scrollTo(0, startY + dist * k);
     if (t < 1) __pageScrollRAF = requestAnimationFrame(tick);
     else __pageScrollRAF = 0;
@@ -2745,7 +2753,7 @@ document.querySelectorAll('a[data-nav="work"]').forEach((a) => {
     // so the about-view fade and the page pan don't fight each other
     setTimeout(() => {
       const top = work.getBoundingClientRect().top + window.scrollY;
-      pageScrollTo(top, 1200);
+      pageScrollTo(top);
     }, fromAbout ? 220 : 0);
   });
 });
