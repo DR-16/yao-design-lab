@@ -415,7 +415,9 @@ window.addEventListener('scroll', () => {
 // ---------- Resize ----------
 // Responsive baseline: as the viewport gets taller / bigger, push the cylinder down
 // and pull the camera back a bit so the title has breathing room above it.
-let responsiveCylinderY = -0.7;
+// Baseline is now pushed down (~-3.6) so the cylinder lives in the lower half
+// of the viewport and the editorial poster has the upper half to itself.
+let responsiveCylinderY = -3.6;
 let responsiveCamZ = 9.5;
 
 function onResize() {
@@ -429,7 +431,7 @@ function onResize() {
   const tallness = Math.max(0, Math.min(1.5, (1.6 - aspect)));   // 0 on widescreen, ~1 on portrait/tall
   const bigness  = Math.max(0, Math.min(1.5, (h - 800) / 600));  // 0 at 800px tall, 1 at 1400px+
   responsiveCamZ = 9.5 + tallness * 2.5 + bigness * 1.2;
-  responsiveCylinderY = -0.7 - tallness * 0.5 - bigness * 0.45;
+  responsiveCylinderY = -3.6 - tallness * 0.5 - bigness * 0.45;
 
   camera.position.z = responsiveCamZ;
   camera.updateProjectionMatrix();
@@ -461,10 +463,14 @@ function applyState(dt) {
     r.mesh.material.transparent = ease > 0.001;
   });
 
+  // Hero title parallax on scroll: only nudge Y, never X. Previously this
+  // wrote `translate(-50%, …)` because the title was a centred block; the
+  // title is now absolutely-positioned full-viewport, so a -50% X shift
+  // pushes everything off-screen left and YAO/DESIGN disappear.
   const heroEl = document.querySelector('.hero-text');
   if (heroEl) {
     heroEl.style.opacity = String(1 - Math.min(1, ease * 1.4));
-    heroEl.style.transform = `translate(-50%, ${-ease * 60}px)`;
+    heroEl.style.transform = `translateY(${-ease * 60}px)`;
   }
 
   // exit fade: as user scrolls past hero into work, flame drops + dims

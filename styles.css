@@ -90,9 +90,11 @@ html { background: var(--bg); }
 }
 
 .brand {
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  font-size: 15px;
+  font-family: "Bodoni Moda", "Didot", "Times New Roman", serif;
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  font-variation-settings: "opsz" 96;   /* display cut — taller, finer strokes */
 }
 .brand .dot { color: var(--accent); }
 
@@ -669,31 +671,142 @@ main { position: relative; }
 }
 
 .hero-text {
+  /* Full-viewport overlay. Title elements are absolutely positioned in
+     vw/vh, copied 1:1 from the typo editor — no container scaling. */
   position: fixed;
-  left: 50%;
-  top: clamp(20px, 5vh, 70px);
-  transform: translateX(-50%);
-  text-align: center;
+  inset: 0;
+  left: 0;
+  top: 0;
+  transform: none;
   z-index: 5;
   pointer-events: none;
-  width: min(1600px, 92vw);
+  width: 100vw;
+  height: 100vh;
+  display: block;
   will-change: opacity, transform;
 }
-
-.hero-text .sub {
-  margin-top: 10px;
-}
+.hero-title { display: contents; }
 
 .hero-text h1 {
-  font-family: "Times New Roman", "Songti SC", serif;
-  font-size: clamp(40px, 7vw, 110px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.0;
+  /* Big Shoulders Display — the most extreme tall/narrow display sans on
+     Google Fonts. Letters are stretched vertically so 4–5× the height of
+     their width. Light weight + generous tracking keeps it airy, not
+     industrial. */
+  font-family: "Big Shoulders Display", "Oswald", "Bebas Neue", sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  line-height: 0.9;
   color: var(--paper);
   text-shadow: 0 6px 30px rgba(0,0,0,0.25);
+  text-transform: uppercase;
+}
+
+/* Hero title — 4×2 grid composition.
+   Cells in the grid (numbered left-to-right, top-to-bottom):
+     [1] [2] [3] [4]
+     [5] [6] [7] [8]
+   Layout:
+     YAO     → cell 1                  (top-left, smaller)
+     DESIGN  → spans cells 2–3 / 6–7   (huge middle block, italic accent)
+     LAB     → cell 8                  (bottom-right, smaller)
+   This staircase deliberately drops the baselines off-parallel — YAO sits
+   high-left, LAB drops low-right, DESIGN dominates the centre. The hero
+   text wrapper is overridden from the centred default so the grid drives
+   placement, not text-align. */
+.hw {
+  display: block;
+  line-height: 0.85;
+}
+/* Three-step staircase ↘  +  slogan in the LOWER-LEFT negative pocket.
+   12-col grid, 3 rows:
+       row 1: [YAO ...........]                                 ← step 1
+       row 2:           [DESIGN ............]                   ← step 2
+       row 3:                           [.... LAB]              ← step 3
+   The void on the left of rows 2–3 (under YAO) is exactly where the slogan
+   lives — left-aligned italic, the counterweight to LAB on the right. */
+/* YAO — top-left, tall narrow caps. Sized up so it reads as a brand mark
+   (peer to DESIGN), not just a kicker. Wider tracking welds the three
+   letters into a recognisable unit. */
+/* YAO — editor 1:1 */
+.hw-yao {
+  position: absolute;
+  left: 28.81vw;
+  top: 21.28vh;
+  margin: 0;
+  font-size: 7.5vw;
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 300;
+  font-style: normal;
+  letter-spacing: 0.24em;
+  line-height: 0.85;
+  text-transform: uppercase;
+  color: #f4efe6;
+}
+/* DESIGN — editor 1:1 */
+.hw-design {
+  position: absolute;
+  left: 23.01vw;
+  top: 34.81vh;
+  margin: 0;
+  font-size: 8.3vw;
+  font-family: "Instrument Serif", "Bodoni Moda", "Times New Roman", serif;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.5em;
+  line-height: 0.85;
+  text-transform: none;
+  color: #ffd84d;
   white-space: nowrap;
 }
+/* LAB — editor 1:1, vertical stack of L A B */
+.hw-lab {
+  position: absolute;
+  left: 72.35vw;
+  top: 10.67vh;
+  margin: 0;
+  font-size: 15.7vw;
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 300;
+  font-style: normal;
+  letter-spacing: 0em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+  color: #f4efe6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+}
+.hw-lab > span {
+  display: block;
+}
+/* Slogan — under YAO, on the left side. Spans the two rows that DESIGN/LAB
+   occupy so it visually fills the staircase's reverse-side negative space.
+   Italic serif and a tiny accent rule above echo magazine deck caption style. */
+/* Slogan — editor 1:1 */
+.hero-text .hero-slogan {
+  position: absolute;
+  left: 56.51vw;
+  top: 51.52vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: "Instrument Serif", "Bodoni Moda", "Times New Roman", "Songti SC", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.4vw;
+  letter-spacing: 0.015em;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: none;
+  color: #f4efe6;
+  opacity: 1;
+}
+
+/* Phones: vw-based positions already scale, but the slogan can clip awkwardly
+   below the fold on very tall portrait viewports. No grid overrides needed
+   since we switched to absolute positioning from the editor. */
 @media (max-width: 560px) {
   .hero-text h1 {
     white-space: normal;
@@ -702,8 +815,14 @@ main { position: relative; }
   }
 }
 .hero-text h1 em {
+  /* DESIGN — Instrument Serif italic, sized via .hw-design above. The serif
+     italic against the narrow sans caps creates the deliberate clash that
+     anchors the staircase composition. */
+  font-family: "Instrument Serif", "Bodoni Moda", "Times New Roman", serif;
   font-style: italic;
   font-weight: 400;
+  letter-spacing: -0.005em;
+  text-transform: none;
   color: var(--accent);
 }
 
@@ -859,11 +978,14 @@ main { position: relative; }
   color: rgba(255, 255, 255, 0.5);
 }
 .ex-name {
-  font-family: "Instrument Serif", "Times New Roman", "Songti SC", serif;
-  font-weight: 400;
-  font-size: clamp(22px, 2vw, 32px);
-  letter-spacing: -0.005em;
+  /* match the hero — same tall/narrow Big Shoulders so all the "named"
+     things on the page share a typographic family. Uppercase by design. */
+  font-family: "Big Shoulders Display", "Oswald", sans-serif;
+  font-weight: 300;
+  font-size: clamp(32px, 3vw, 48px);
+  letter-spacing: 0.06em;
   color: rgba(244, 239, 230, 0.95);
+  text-transform: uppercase;
 }
 
 /* Coverflow carousel. The .ex-stack is a horizontal scroller with perspective
