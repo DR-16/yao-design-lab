@@ -2713,16 +2713,40 @@ document.querySelectorAll('a[data-nav="about"]').forEach((a) => {
     enterAbout(0);
   });
 });
+// Custom smooth-scroll: Safari's native `behavior: 'smooth'` is too snappy
+// for long jumps — feels like a hard cut. This one runs an easeInOutCubic
+// over a fixed duration so the user perceives a guided pan from wherever
+// they are to the target section, no matter the distance.
+let __pageScrollRAF = 0;
+function pageScrollTo(targetY, duration = 1200) {
+  if (__pageScrollRAF) cancelAnimationFrame(__pageScrollRAF);
+  const startY = window.scrollY;
+  const dist = targetY - startY;
+  if (Math.abs(dist) < 2) return;
+  const t0 = performance.now();
+  function tick() {
+    const t = Math.min(1, (performance.now() - t0) / duration);
+    const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    window.scrollTo(0, startY + dist * k);
+    if (t < 1) __pageScrollRAF = requestAnimationFrame(tick);
+    else __pageScrollRAF = 0;
+  }
+  __pageScrollRAF = requestAnimationFrame(tick);
+}
+
 document.querySelectorAll('a[data-nav="work"]').forEach((a) => {
   a.addEventListener('click', (e) => {
     e.preventDefault();
-    if (mode === 'about') exitAbout();
+    const fromAbout = (mode === 'about');
+    if (fromAbout) exitAbout();
     const work = document.getElementById('work');
-    if (work) {
+    if (!work) return;
+    // wait for exitAbout's CSS transition to start (~150ms) before panning,
+    // so the about-view fade and the page pan don't fight each other
+    setTimeout(() => {
       const top = work.getBoundingClientRect().top + window.scrollY;
-      // tiny defer so the exitAbout transition starts before we scroll
-      setTimeout(() => window.scrollTo({ top, behavior: 'smooth' }), mode === 'about' ? 50 : 0);
-    }
+      pageScrollTo(top, 1200);
+    }, fromAbout ? 220 : 0);
   });
 });
 
