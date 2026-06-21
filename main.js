@@ -1363,9 +1363,12 @@ function buildSceneCCanvas(lang) {
   x.textAlign = 'center'; x.textBaseline = 'middle';
   const copy = CEIL_COPY[lang === 'cn' ? 'cn' : 'en'];
   const cx = 640, MAXW = 1080;
+  // DEEP INK text + soft white halo — high contrast against the silver ceiling.
+  const INK = 'rgba(8, 10, 16, 0.97)';
+  const INK_SOFT = 'rgba(14, 18, 28, 0.85)';
   // ---- manifesto ----
-  x.shadowColor = 'rgba(190,215,255,0.85)'; x.shadowBlur = 28;
-  x.fillStyle = 'rgba(238,243,254,0.97)';
+  x.shadowColor = 'rgba(255,255,255,0.85)'; x.shadowBlur = 22;
+  x.fillStyle = INK;
   x.font = (lang === 'cn')
     ? '500 100px "Songti SC", "Times New Roman", serif'
     : 'italic 92px "Instrument Serif", Georgia, serif';
@@ -1373,12 +1376,12 @@ function buildSceneCCanvas(lang) {
   x.fillText(copy.manifesto[1], cx, 320, MAXW);
   // ---- 2 YEARS ----
   x.shadowBlur = 14;
-  x.fillStyle = 'rgba(180,210,255,0.95)';
+  x.fillStyle = INK;
   x.font = (lang === 'cn')
-    ? '600 52px "PingFang SC", "Songti SC", sans-serif'
-    : '700 44px "Helvetica Neue", Arial, sans-serif';
+    ? '700 52px "PingFang SC", "Songti SC", sans-serif'
+    : '800 44px "Helvetica Neue", Arial, sans-serif';
   x.fillText(copy.y2.label, cx, 540, 800);
-  x.fillStyle = 'rgba(228,236,250,0.95)';
+  x.fillStyle = INK_SOFT;
   x.font = (lang === 'cn')
     ? '400 44px "PingFang SC", "Hiragino Sans GB", sans-serif'
     : '400 40px "Helvetica Neue", Arial, sans-serif';
@@ -1387,22 +1390,22 @@ function buildSceneCCanvas(lang) {
   // ---- 5 YEARS ----
   yy += 50;
   x.shadowBlur = 14;
-  x.fillStyle = 'rgba(180,210,255,0.95)';
+  x.fillStyle = INK;
   x.font = (lang === 'cn')
-    ? '600 52px "PingFang SC", "Songti SC", sans-serif'
-    : '700 44px "Helvetica Neue", Arial, sans-serif';
+    ? '700 52px "PingFang SC", "Songti SC", sans-serif'
+    : '800 44px "Helvetica Neue", Arial, sans-serif';
   x.fillText(copy.y5.label, cx, yy, 800); yy += 80;
-  x.fillStyle = 'rgba(228,236,250,0.95)';
+  x.fillStyle = INK_SOFT;
   x.font = (lang === 'cn')
     ? '400 44px "PingFang SC", "Hiragino Sans GB", sans-serif'
     : '400 40px "Helvetica Neue", Arial, sans-serif';
   for (const ln of __sceneCWrap(x, copy.y5.body, MAXW)) { x.fillText(ln, cx, yy, MAXW); yy += 58; }
   // ---- motto (bottom) ----
   x.shadowBlur = 10;
-  x.fillStyle = 'rgba(180,196,220,0.78)';
+  x.fillStyle = 'rgba(8,10,16,0.78)';
   x.font = (lang === 'cn')
-    ? '500 30px "PingFang SC", "Songti SC", sans-serif'
-    : '700 28px "Helvetica Neue", Arial, sans-serif';
+    ? '600 30px "PingFang SC", "Songti SC", sans-serif'
+    : '800 28px "Helvetica Neue", Arial, sans-serif';
   x.fillText(copy.motto, cx, 1520, 1180);
   x.shadowBlur = 0;
   return c;
@@ -2502,41 +2505,31 @@ function emitShockwave() {
   ringGeo.attributes.life.needsUpdate     = true;
 }
 
-function enterAbout(startSceneIdx /* 0 = scene A, 1 = scene B */) {
+function enterAbout(startSceneIdx /* 0=SceneA, 1=SceneB, 2=SceneC */) {
   if (mode === 'about') return;
   mode = 'about';
-
-  const ringIdx = startSceneIdx === 1 ? 1 : 0;
+  const ringIdx = Math.max(0, Math.min(2, startSceneIdx | 0));
 
   // Step 1: hero camera physically rams into the clicked ring.
   // Step 2 (mid-push): hero shell starts fading + about-view enters.
-  // Step 3 (push end): about-view fully active, scroll state initialised.
+  // Step 3 (push end): about-view fully active; scroll is set INSTANTLY to the
+  // requested stop (no smooth animation through panels, so it doesn't auto-fly
+  // through intermediate stops or get caught by the snap/gesture system).
   playCameraPushToRing(ringIdx, 650, () => {
-    // unfreeze hero camera so it can resume parallax if the user ever exits about
     setTimeout(() => { __heroTransiting = false; }, 600);
   });
-
-  // half-way through the push, start crossfading the world to the about view
-  setTimeout(() => {
-    document.body.classList.add('mode-about');
-  }, 200);
+  setTimeout(() => { document.body.classList.add('mode-about'); }, 200);
   setTimeout(() => {
     aboutView.classList.add('active');
     aboutView.setAttribute('aria-hidden', 'false');
-    if (startSceneIdx === 1) {
-      aboutScroll.scrollTop = 0;
-      requestAnimationFrame(() => {
-        const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
-        aboutScroll.scrollTop = max * (SCENE_A_END - 0.02);
-        updateAboutScroll();
-        setTimeout(() => {
-          smoothScrollAbout(max * (PORTAL_END + 0.05), 1500);
-        }, 650);
-      });
-    } else {
-      aboutScroll.scrollTop = 0;
-      updateAboutScroll();
-    }
+    const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
+    const stops = buildScrollStops();
+    // SceneA → first panel (stop 0); SceneB → first SceneB content panel
+    // (stop 6 = panel 7); SceneC → first doubt-zone stop (10), one scroll
+    // up to upper doubt, two scrolls up to the ceiling.
+    const targetIdx = ringIdx === 2 ? 10 : ringIdx === 1 ? 6 : 0;
+    aboutScroll.scrollTop = stops[targetIdx] * max;
+    updateAboutScroll();
   }, 480);
 }
 // Reverse of playCameraPushToRing — eases the hero camera from wherever it
@@ -2595,11 +2588,11 @@ window.addEventListener('pointerup', (e) => {
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(rings.map(r => r.mesh), false);
   if (!hits.length) return;
-  // ring 0 (top, WHO I AM) → about scene A; ring 1 (middle, WHY THIS LAB
-  // EXISTS) → about scene B (jumps directly to panel 7). ring 2 falls back
-  // to scene A for now (scene C not built).
+  // ring 0 (WHO I AM) → SceneA panel 1
+  // ring 1 (WHY THIS LAB EXISTS) → SceneB first content panel (stop 6)
+  // ring 2 (FIRE AHEAD) → doubt-zone + ceiling (stop 10)
   const idx = rings.findIndex(r => r.mesh === hits[0].object);
-  enterAbout(idx === 1 ? 1 : 0);
+  enterAbout(idx === 2 ? 2 : idx === 1 ? 1 : 0);
 });
 
 // ---------- About scene resize ----------
