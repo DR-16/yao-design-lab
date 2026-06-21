@@ -2698,6 +2698,34 @@ function exitAbout() {
 aboutClose?.addEventListener('click', exitAbout);
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitAbout(); });
 
+// Topbar nav wiring:
+//   ABOUT → open the about view at SceneA (WHO I AM), same as clicking the
+//           top cylinder ring. Intercept the anchor so we run the camera
+//           push instead of an unhelpful jump-to-#about (which doesn't exist).
+//   WORK  → smooth-scroll the homepage to the exhibition section (id="work"
+//           was moved from the editorial title to "THE FLOOR"), so default
+//           anchor behaviour already does the right thing — but if we're
+//           currently inside the about view, close it first.
+document.querySelectorAll('a[data-nav="about"]').forEach((a) => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (mode === 'about') return;
+    enterAbout(0);
+  });
+});
+document.querySelectorAll('a[data-nav="work"]').forEach((a) => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (mode === 'about') exitAbout();
+    const work = document.getElementById('work');
+    if (work) {
+      const top = work.getBoundingClientRect().top + window.scrollY;
+      // tiny defer so the exitAbout transition starts before we scroll
+      setTimeout(() => window.scrollTo({ top, behavior: 'smooth' }), mode === 'about' ? 50 : 0);
+    }
+  });
+});
+
 // ---------- Click the top ring (WHO I AM) → open about ----------
 let __clickStart = null;
 window.addEventListener('pointerdown', (e) => {
