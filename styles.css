@@ -761,7 +761,7 @@ main { position: relative; }
 /* LAB — editor 1:1, vertical stack of L A B */
 .hw-lab {
   position: absolute;
-  left: 72.35vw;
+  left: 75.35vw;
   top: 10.67vh;
   margin: 0;
   font-size: 15.7vw;
@@ -787,7 +787,7 @@ main { position: relative; }
 /* Slogan — editor 1:1 */
 .hero-text .hero-slogan {
   position: absolute;
-  left: 56.51vw;
+  left: 59.51vw;
   top: 51.52vh;
   margin: 0;
   padding: 0;
