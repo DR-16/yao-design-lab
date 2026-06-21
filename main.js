@@ -2427,11 +2427,62 @@ function doStep(dir) {
   const stops = buildScrollStops();
   const max = Math.max(1, aboutScroll.scrollHeight - aboutScroll.clientHeight);
   const curIdx = nearestStopIndex(aboutScroll.scrollTop / max);
+  // At the FINAL stop, scrolling DOWN one more time pushes the camera into the
+  // ceiling skylight and loops back to the homepage WORK section.
+  if (dir > 0 && curIdx >= stops.length - 1) { __exitThroughSkylight(); return; }
   const nextIdx = Math.max(0, Math.min(stops.length - 1, curIdx + dir));
   if (nextIdx === curIdx) return;
-  const duration = 320;          // snappier step (was 500 / 1500 special-case)
+  const duration = 320;
   smoothScrollAbout(stops[nextIdx] * max, duration);
   __scrollLockUntil = performance.now() + duration;
+}
+
+// --------- Exit through the skylight → homepage WORK section ----------------
+let __exiting = false;
+let __exitStart = 0;
+let __exitStartY = 0;
+const __EXIT_MS = 1100;
+let __exitFlashEl = null;
+function __ensureFlash() {
+  if (__exitFlashEl) return __exitFlashEl;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:#ffffff;opacity:0;pointer-events:none;z-index:9000;mix-blend-mode:normal;transition:none;';
+  document.body.appendChild(el);
+  __exitFlashEl = el;
+  return el;
+}
+function __exitThroughSkylight() {
+  if (__exiting) return;
+  __exiting = true;
+  __exitStart = performance.now();
+  __exitStartY = aboutCam.position.y;
+  __ensureFlash();
+  // lock all input for the duration of the exit
+  __scrollLockUntil = performance.now() + __EXIT_MS + 200;
+  setTimeout(() => {
+    // jump main page to the WORK section
+    const work = document.getElementById('work');
+    if (work) {
+      const top = work.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top, behavior: 'instant' in window ? 'instant' : 'auto' });
+    }
+    // tear about-view down
+    aboutView.classList.remove('active');
+    aboutView.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('mode-about');
+    mode = 'hero';
+    // reset the about scroll so re-entry starts fresh
+    aboutScroll.scrollTop = 0;
+    // fade the flash out over the next 600ms
+    const el = __exitFlashEl;
+    const t0 = performance.now();
+    function fadeOut() {
+      const t = Math.min(1, (performance.now() - t0) / 600);
+      el.style.opacity = String(1 - t);
+      if (t < 1) requestAnimationFrame(fadeOut); else { el.style.opacity = '0'; __exiting = false; }
+    }
+    requestAnimationFrame(fadeOut);
+  }, __EXIT_MS);
 }
 
 function onAboutWheel(e) {
@@ -2691,8 +2742,7 @@ function aboutTick() {
     tickSceneB(sp, t);
 
     // SceneC text plane — billboard to the camera, fade in at the final page.
-    const appearC = Math.max(0, Math.min(1, (sp - 0.88) / 0.06));
-    sceneCMat.opacity = appearC;
+    let appearC = Math.max(0, Math.min(1, (sp - 0.88) / 0.06));
     if (appearC > 0) {
       aboutCam.updateMatrixWorld();
       const e = aboutCam.matrixWorld.elements;
@@ -2701,6 +2751,21 @@ function aboutTick() {
       sceneCPlane.position.copy(aboutCam.position).addScaledVector(fwd, D);
       sceneCPlane.quaternion.copy(aboutCam.quaternion);
     }
+
+    // ---- Exit-through-the-skylight animation (loops back to homepage WORK) ----
+    if (__exiting) {
+      const ex = Math.min(1, (performance.now() - __exitStart) / __EXIT_MS);
+      const exE = ex * ex;                             // ease-in (accelerating dive)
+      // pull camera straight up toward the skylight at CEIL_Y - 0.4
+      const targetY = CEIL_Y - 0.4;
+      aboutCam.position.set(0, __exitStartY + (targetY - __exitStartY) * exE, 0);
+      aboutCam.lookAt(0, CEIL_Y + 6, 0);               // look up into the white
+      // SceneC text fades out as we dive in
+      appearC = Math.max(0, 1 - ex * 1.4);
+      // white flash grows from 0 → 1 (eased late so it peaks at the end)
+      if (__exitFlashEl) __exitFlashEl.style.opacity = String(exE);
+    }
+    sceneCMat.opacity = appearC;
 
     // Hard-hide the retired tunnel point cloud so it never floats in the room.
     portalGroup.visible = false;
