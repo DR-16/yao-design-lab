@@ -326,7 +326,7 @@ cylinderGroup.position.y = -0.7;
 // Shift left so the cylinder sits under the YAO/DESIGN cluster (their
 // combined centre falls around 40vw — about 10vw left of viewport centre,
 // ≈ 2 world units in the camera's frame at z=9.5).
-cylinderGroup.position.x = -1.3;
+cylinderGroup.position.x = -1.7;
 cylinderGroup.rotation.x = -0.16;
 
 // ---------- Drag interaction (rotate rings) ----------
@@ -461,7 +461,9 @@ function applyState(dt) {
   const ease = p * p * (3 - 2 * p);
 
   cylinderGroup.position.y = responsiveCylinderY + ease * 6.2;
-  cylinderGroup.scale.setScalar(1 - ease * 0.2);
+  // Base scale 0.85 so the cylinder reads as a supporting visual mark next
+  // to YAO/DESIGN rather than overpowering them; still shrinks on scroll.
+  cylinderGroup.scale.setScalar(0.85 * (1 - ease * 0.2));
   rings.forEach(r => {
     r.mesh.material.opacity = 1 - ease;
     r.mesh.material.transparent = ease > 0.001;
