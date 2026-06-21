@@ -326,7 +326,7 @@ cylinderGroup.position.y = -0.7;
 // Shift left so the cylinder sits under the YAO/DESIGN cluster (their
 // combined centre falls around 40vw — about 10vw left of viewport centre,
 // ≈ 2 world units in the camera's frame at z=9.5).
-cylinderGroup.position.x = -3.5;
+cylinderGroup.position.x = -1.3;
 cylinderGroup.rotation.x = -0.16;
 
 // ---------- Drag interaction (rotate rings) ----------
