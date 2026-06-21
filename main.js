@@ -326,7 +326,7 @@ cylinderGroup.position.y = -0.7;
 // Shift left so the cylinder sits under the YAO/DESIGN cluster (their
 // combined centre falls around 40vw — about 10vw left of viewport centre,
 // ≈ 2 world units in the camera's frame at z=9.5).
-cylinderGroup.position.x = -1.6;
+cylinderGroup.position.x = -1.5;
 cylinderGroup.rotation.x = -0.16;
 
 // ---------- Drag interaction (rotate rings) ----------
@@ -419,9 +419,9 @@ window.addEventListener('scroll', () => {
 // ---------- Resize ----------
 // Responsive baseline: as the viewport gets taller / bigger, push the cylinder down
 // and pull the camera back a bit so the title has breathing room above it.
-// Baseline is now pushed down (~-1.0) so the cylinder lives in the lower half
+// Baseline is now pushed down (~-1.5) so the cylinder lives in the lower half
 // of the viewport and the editorial poster has the upper half to itself.
-let responsiveCylinderY = -1.0;
+let responsiveCylinderY = -1.5;
 let responsiveCamZ = 9.5;
 
 function onResize() {
@@ -435,7 +435,7 @@ function onResize() {
   const tallness = Math.max(0, Math.min(1.5, (1.6 - aspect)));   // 0 on widescreen, ~1 on portrait/tall
   const bigness  = Math.max(0, Math.min(1.5, (h - 800) / 600));  // 0 at 800px tall, 1 at 1400px+
   responsiveCamZ = 9.5 + tallness * 2.5 + bigness * 1.2;
-  responsiveCylinderY = -1.0 - tallness * 0.5 - bigness * 0.45;
+  responsiveCylinderY = -1.5 - tallness * 0.5 - bigness * 0.45;
 
   camera.position.z = responsiveCamZ;
   camera.updateProjectionMatrix();
@@ -975,7 +975,7 @@ for (let layer = 0; layer < TUNNEL_LAYERS; layer++) {
     // unit-radius ring on XY plane, z = -1 -3 -5 -7 ... going into the distance
     tunnelPos[k*3+0] = Math.cos(a);
     tunnelPos[k*3+1] = Math.sin(a);
-    tunnelPos[k*3+2] = -1.0 - layer * 2.2;
+    tunnelPos[k*3+2] = -1.5 - layer * 2.2;
     tunnelDepth[k] = layer;
     const c = RING_PALETTE[(layer + Math.floor(i/12)) % RING_PALETTE.length];
     const jitter = 0.8 + ((i * 0.137 + layer * 0.31) % 1) * 0.4;
