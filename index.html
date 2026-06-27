@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@300;400;500&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400&family=Instrument+Serif:ital@0;1&family=Italiana&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260626b" />
+  <link rel="stylesheet" href="styles.css?v=20260626c" />
 </head>
 <body class="lang-en">
   <!-- SVG turbulence + displacement filter used to distort the SceneB doubt
@@ -34,7 +34,7 @@
     <nav class="nav">
       <a href="#about" data-nav="about"><span data-lang="en">About</span><span data-lang="cn">关于</span></a>
       <a href="#work"  data-nav="work"><span data-lang="en">Work</span><span data-lang="cn">作品</span></a>
-      <a href="#contact"><span data-lang="en">Contact</span><span data-lang="cn">联络</span></a>
+      <a href="#contact" data-nav="contact"><span data-lang="en">Contact</span><span data-lang="cn">联络</span></a>
     </nav>
   </header>
 
@@ -128,6 +128,31 @@
             <a class="cover" data-slot="5"><span class="cover-label">04 / 05</span></a>
           </div>
         </article>
+      </div>
+    </section>
+
+    <!-- Contact — sits at the very bottom of the homepage. The CONTACT link
+         in the topbar scrolls here (smooth-pan handled in main.js by the
+         existing data-nav="contact" handler). Plain typography on black,
+         matches the gallery mood; rows are easy to extend later. -->
+    <section id="contact" class="contact">
+      <div class="contact-inner">
+        <p class="contact-eyebrow"><span data-lang="en">Contact</span><span data-lang="cn">联络</span></p>
+        <h2 class="contact-name">Daniel R<span class="contact-loc">  ·  CA</span></h2>
+        <dl class="contact-rows">
+          <div class="contact-row">
+            <dt>WeChat</dt>
+            <dd>yj0919jy</dd>
+          </div>
+          <div class="contact-row is-empty">
+            <dt>TikTok</dt>
+            <dd>—</dd>
+          </div>
+          <div class="contact-row is-empty">
+            <dt>Instagram</dt>
+            <dd>—</dd>
+          </div>
+        </dl>
       </div>
     </section>
 
@@ -293,6 +318,6 @@
       }
     }
   </script>
-  <script type="module" src="main.js?v=20260626d"></script>
+  <script type="module" src="main.js?v=20260626e"></script>
 </body>
 </html>

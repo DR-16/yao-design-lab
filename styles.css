@@ -218,7 +218,8 @@ body.mode-about .topbar,
 body.mode-about .hero-text,
 body.mode-about .gateway,
 body.mode-about .editorial,
-body.mode-about .exhibition {
+body.mode-about .exhibition,
+body.mode-about .contact {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.55s ease;
@@ -917,10 +918,80 @@ main { position: relative; }
    purple cast under the placeholder cards. */
 .gateway,
 .editorial,
-.exhibition {
+.exhibition,
+.contact {
   position: relative;
   z-index: 2;
   background: #000;
+}
+
+/* Contact section — final page of the homepage. Minimal type-on-black
+   block; rows align as a clean two-column "label / value" definition list. */
+.contact {
+  padding: 14vh 8vw 16vh;
+}
+.contact-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.contact-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 28px;
+}
+.contact-name {
+  font-family: "Instrument Serif", "Bodoni Moda", "Times New Roman", "Songti SC", serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(48px, 6vw, 96px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: rgba(244, 239, 230, 0.95);
+  margin-bottom: 48px;
+}
+.contact-loc {
+  font-style: normal;
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 300;
+  font-size: 0.45em;
+  letter-spacing: 0.18em;
+  vertical-align: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
+  margin-left: 0.4em;
+}
+.contact-rows {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.contact-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: baseline;
+  gap: 24px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.contact-row:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.contact-row dt {
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.contact-row dd {
+  margin: 0;
+  font-family: "Instrument Serif", "Times New Roman", "Songti SC", serif;
+  font-size: clamp(20px, 1.8vw, 28px);
+  color: rgba(244, 239, 230, 0.95);
+  font-feature-settings: "tnum";
+}
+.contact-row.is-empty dd {
+  color: rgba(255, 255, 255, 0.28);
 }
 
 /* Gateway: a black "curtain" descending over the hero. The hero canvas is

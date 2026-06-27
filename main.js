@@ -2970,6 +2970,22 @@ document.querySelectorAll('a[data-nav="work"]').forEach((a) => {
   });
 });
 
+// Same pattern for CONTACT — smooth-pan to the contact section at the
+// very bottom of the homepage. Closes about-view first if open.
+document.querySelectorAll('a[data-nav="contact"]').forEach((a) => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const fromAbout = (mode === 'about');
+    if (fromAbout) exitAbout();
+    const contact = document.getElementById('contact');
+    if (!contact) return;
+    setTimeout(() => {
+      const top = contact.getBoundingClientRect().top + window.scrollY;
+      pageScrollTo(top);
+    }, fromAbout ? 220 : 0);
+  });
+});
+
 // ---------- Click the top ring (WHO I AM) → open about ----------
 let __clickStart = null;
 window.addEventListener('pointerdown', (e) => {
