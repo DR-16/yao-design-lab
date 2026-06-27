@@ -672,17 +672,59 @@ if (edLines.length) {
 // forward and flat, while cards on either side rotate Y, push back in Z,
 // shrink, and dim — the "fan blade" pose with real depth, not flat cards.
 document.querySelectorAll('.ex-stack').forEach((stack) => {
-  const covers = stack.querySelectorAll('.cover');
-  if (!covers.length) return;
+  const originals = Array.from(stack.children).filter(n => n.classList && n.classList.contains('cover'));
+  if (!originals.length) return;
+
+  // -----------------------------------------------------------------
+  // Infinite-loop padding: clone the original cover set so the strip is
+  // always > 3× wider than the visible carousel. With sparse content
+  // (1–2 real projects per category) the strip would otherwise have
+  // nothing to scroll. The loop unit = originals.length cards; we keep
+  // 2 copies before the originals + 3 copies after (5 total renders of
+  // the project set). On scroll near either end we silently jump scroll-
+  // Left by one loop unit so the user can swipe forever.
+  // -----------------------------------------------------------------
+  const LOOP_BEFORE = 2;
+  const LOOP_AFTER  = 3;
+  const cloneSet = () => originals.map(c => {
+    const cl = c.cloneNode(true);
+    cl.dataset.cloned = '1';
+    // disable the "soon" pseudo on clones? keep — visually consistent
+    return cl;
+  });
+  // append AFTER copies
+  for (let i = 0; i < LOOP_AFTER; i++) {
+    cloneSet().forEach(c => stack.appendChild(c));
+  }
+  // prepend BEFORE copies (in reverse order so original order is preserved)
+  for (let i = 0; i < LOOP_BEFORE; i++) {
+    cloneSet().reverse().forEach(c => stack.insertBefore(c, stack.firstChild));
+  }
+  stack.dataset.loop = '1';
 
   let raf = 0;
+  let loopUnitW = 0;
+  function measureLoopUnit() {
+    // total scrollable width / total copies = width of one originals-set
+    const totalCopies = 1 + LOOP_BEFORE + LOOP_AFTER;
+    loopUnitW = stack.scrollWidth / totalCopies;
+  }
+  // start scroll position in the middle (just past the BEFORE block)
+  requestAnimationFrame(() => {
+    measureLoopUnit();
+    stack.scrollLeft = loopUnitW * LOOP_BEFORE;
+  });
+  window.addEventListener('resize', () => {
+    measureLoopUnit();
+  });
+
   function update() {
     raf = 0;
     const rect = stack.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
-    // half-window over which a card transitions from focused → fully fanned
     const range = rect.width * 0.45;
-    covers.forEach((c) => {
+    // re-query each frame so clones are included
+    stack.querySelectorAll('.cover').forEach((c) => {
       const r = c.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       let t = (cx - centerX) / range;       // -1 (left edge) .. +1 (right edge)
@@ -704,30 +746,28 @@ document.querySelectorAll('.ex-stack').forEach((stack) => {
   function schedule() {
     if (!raf) raf = requestAnimationFrame(update);
   }
-  stack.addEventListener('scroll', schedule, { passive: true });
+  // Seamless wraparound on scroll: when the user pushes past the BEFORE
+  // or AFTER buffer, silently shift scrollLeft by one loop unit. Because
+  // adjacent units render identical cards in the same positions, this
+  // jump is invisible — the user can keep swiping forever.
+  stack.addEventListener('scroll', () => {
+    if (loopUnitW > 0) {
+      if (stack.scrollLeft < loopUnitW * 0.5) {
+        stack.scrollLeft += loopUnitW;
+      } else if (stack.scrollLeft > loopUnitW * (LOOP_BEFORE + LOOP_AFTER + 0.5)) {
+        stack.scrollLeft -= loopUnitW;
+      }
+    }
+    schedule();
+  }, { passive: true });
   window.addEventListener('resize', schedule);
 
-  // Mouse-wheel → horizontal pan. Mac trackpads natively emit deltaX for
-  // two-finger horizontal swipes, but a regular mouse wheel only produces
-  // deltaY — so without this, desktop users with a wheel mouse can't flip
-  // through the cards at all. We redirect vertical wheel into scrollLeft
-  // ONLY while the carousel has room left in that direction; once it hits
-  // an edge, we release the event and the page resumes vertical scroll.
+  // Mouse-wheel → horizontal pan. With infinite loop the "atEdge" check
+  // is gone: scrollLeft never reaches a real edge anymore. So vertical
+  // wheel ALWAYS converts to horizontal when the cursor is on a cover.
   stack.addEventListener('wheel', (e) => {
-    // ONLY intercept the wheel when the cursor is literally over a
-    // portrait card. Wheel events that land in the carousel's padding,
-    // gaps between cards, or the empty area above/below the cards are
-    // left alone so the page can scroll vertically — fixes the "鼠标划
-    // 不动" problem where the whole exhibition row was eating wheel
-    // events even when the cursor wasn't aimed at a card.
     if (!e.target.closest('.cover')) return;
-    // user is already swiping horizontally — native handles it
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    const max = stack.scrollWidth - stack.clientWidth;
-    const goingRight = e.deltaY > 0;
-    const atEdge = (goingRight && stack.scrollLeft >= max - 1) ||
-                   (!goingRight && stack.scrollLeft <= 0);
-    if (atEdge) return;          // let the page take over
     e.preventDefault();
     stack.scrollLeft += e.deltaY;
   }, { passive: false });
