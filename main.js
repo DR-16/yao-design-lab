@@ -1165,22 +1165,23 @@ function buildAboutEnvTexture() {
   c.height = 1024;
   const ctx = c.getContext('2d');
 
-  // NEUTRAL SILVER STUDIO ENVIRONMENT.
-  // The room must read as polished SILVER aluminium, so the reflected world is
-  // a clean bright studio: a light upper "sky", a softbox-lit mid, a darker
-  // floor band, plus a few bright softbox pools and vertical light strips that
-  // give the metal something crisp to mirror. Colour is intentionally absent
-  // here — all hue in the room comes from the emissive neon columns and the
-  // random colour light lines, never from tinting the metal itself.
+  // DARK GALLERY ENVIRONMENT.
+  // Big rebalance: the reflected world is now a near-black room with a few
+  // bright softbox pools and crisp vertical light strips. The metal walls
+  // reflect this dim world → walls read as dark polished aluminium. The
+  // softboxes & strips still give the metal crisp specular highlights so it
+  // doesn't look like dull paint; they're now LOCAL bright spots against a
+  // dark base, not a uniform studio bath.
   const g = ctx.createLinearGradient(0, 0, 0, 1024);
-  g.addColorStop(0.00, '#eef1f7');   // bright sky
-  g.addColorStop(0.40, '#c4c9d4');
-  g.addColorStop(0.62, '#878d9c');
-  g.addColorStop(1.00, '#2b2f3a');   // darker ground
+  g.addColorStop(0.00, '#1a1d24');   // dim "sky"
+  g.addColorStop(0.40, '#13151b');
+  g.addColorStop(0.62, '#0c0e13');
+  g.addColorStop(1.00, '#05060a');   // near-black ground
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 2048, 1024);
 
-  // Bright softbox pools across the upper band — crisp highlights on the metal.
+  // Bright softbox pools — keep them bright vs. the now-dark base; they're
+  // what gives the metal its specular pop.
   ctx.globalCompositeOperation = 'lighter';
   const softboxes = [
     { u: 0.12, v: 0.20, rx: 240, ry: 90 },
@@ -1191,22 +1192,49 @@ function buildAboutEnvTexture() {
   for (const sb of softboxes) {
     const cx = sb.u * 2048, cy = sb.v * 1024;
     const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(sb.rx, sb.ry) * 1.5);
-    rg.addColorStop(0.00, 'rgba(255,255,255,0.95)');
-    rg.addColorStop(0.40, 'rgba(255,255,255,0.45)');
+    rg.addColorStop(0.00, 'rgba(255,255,255,0.85)');
+    rg.addColorStop(0.40, 'rgba(255,255,255,0.30)');
     rg.addColorStop(1.00, 'rgba(255,255,255,0)');
     ctx.fillStyle = rg;
     ctx.beginPath(); ctx.ellipse(cx, cy, sb.rx, sb.ry, 0, 0, Math.PI * 2); ctx.fill();
   }
-  // Tall vertical light strips — reflect as bright machined rails on the wall.
-  const strips = [0.04, 0.27, 0.50, 0.73, 0.96];
-  for (const u of strips) {
-    const cx = u * 2048;
-    const rg = ctx.createLinearGradient(cx - 26, 0, cx + 26, 0);
-    rg.addColorStop(0.0, 'rgba(255,255,255,0)');
-    rg.addColorStop(0.5, 'rgba(255,255,255,0.5)');
-    rg.addColorStop(1.0, 'rgba(255,255,255,0)');
-    ctx.fillStyle = rg;
-    ctx.fillRect(cx - 26, 120, 52, 620);
+  // Vertical light strips — irregular widths, peaks, and vertical extents
+  // so the metal wall reflects something that reads as REAL studio rigging
+  // (slightly different fixtures at slightly different positions) instead
+  // of a "Photoshop white gradient × 5". Each strip also gets a soft top
+  // and bottom falloff plus subtle horizontal jitter via the gradient
+  // stops, so the highlight on the wall feels organic.
+  const strips = [
+    { u: 0.05, w: 30, peak: 0.58, top: 90,  bot: 760 },
+    { u: 0.22, w: 18, peak: 0.74, top: 140, bot: 690 },
+    { u: 0.38, w: 38, peak: 0.45, top: 180, bot: 720 },
+    { u: 0.51, w: 22, peak: 0.70, top: 110, bot: 800 },
+    { u: 0.67, w: 28, peak: 0.55, top: 160, bot: 700 },
+    { u: 0.81, w: 16, peak: 0.78, top: 130, bot: 770 },
+    { u: 0.94, w: 34, peak: 0.50, top: 100, bot: 740 },
+  ];
+  for (const s of strips) {
+    const cx = s.u * 2048;
+    // horizontal gradient — soft sides, slightly biased peak so the strip
+    // doesn't look mirror-symmetric
+    const hg = ctx.createLinearGradient(cx - s.w, 0, cx + s.w, 0);
+    hg.addColorStop(0.0,  'rgba(255,255,255,0)');
+    hg.addColorStop(0.42, 'rgba(255,255,255,' + (s.peak * 0.6).toFixed(2) + ')');
+    hg.addColorStop(0.55, 'rgba(255,255,255,' + s.peak.toFixed(2) + ')');
+    hg.addColorStop(1.0,  'rgba(255,255,255,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(cx - s.w, s.top, s.w * 2, s.bot - s.top);
+    // vertical fade mask — keep the middle hot, fade the ends
+    const vg = ctx.createLinearGradient(0, s.top, 0, s.bot);
+    vg.addColorStop(0.0, 'rgba(0,0,0,0.8)');
+    vg.addColorStop(0.2, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.8, 'rgba(0,0,0,0)');
+    vg.addColorStop(1.0, 'rgba(0,0,0,0.8)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = vg;
+    ctx.fillRect(cx - s.w, s.top, s.w * 2, s.bot - s.top);
+    ctx.restore();
   }
   // A whisper of the four brand colours, very faint, low on the wall only.
   const tints = [
@@ -1324,19 +1352,23 @@ function buildWallEmissiveTex() {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-const wallMat = new THREE.MeshStandardMaterial({
+// PhysicalMaterial unlocks `clearcoat`, which adds a proper Fresnel-driven
+// edge sheen on top of the metal base — exactly what stops the dark wall
+// from reading as black plastic. The base stays dark (low envMapIntensity,
+// no ambient boost) but glancing angles catch a thin polished rim, the
+// classic "深色拉丝铝" look.
+const wallMat = new THREE.MeshPhysicalMaterial({
   map: buildWallColorTex(),
-  metalness: 0.96,
-  // tighter roughness → sharper reflections on the brushed aluminium;
-  // structural seams + ring details still read because of the diffuse
-  // base, but the wall now catches LIGHT instead of glowing on its own.
-  roughness: 0.11,
-  envMapIntensity: 2.2,             // wall pulls in more rim-light bounce
+  metalness: 0.98,
+  roughness: 0.18,                  // anisotropic-ish brushed surface
+  envMapIntensity: 1.0,             // base reflectivity dim
+  clearcoat: 0.65,                  // thin gloss layer over the brushed base
+  clearcoatRoughness: 0.22,         // not mirror-clean — has a hint of haze
   emissive: 0xffffff,
   emissiveMap: buildWallEmissiveTex(),
-  // neon columns are now LOCAL accents (drop from 1.25 to 0.55) — they
-  // stay visible as discrete light strips, but no longer wash the wall.
-  emissiveIntensity: 0.55,
+  // neon columns drop further (was 0.55) — the new coloured PointLights
+  // below will do the actual room lighting from those positions.
+  emissiveIntensity: 0.35,
   side: THREE.BackSide,
 });
 const roomWall = new THREE.Mesh(
@@ -1531,6 +1563,33 @@ aboutScene.add(wallRimL);
 const wallRimR = new THREE.PointLight(0xd8e8ff, 5.0, 14, 2.5);
 wallRimR.position.set( 6.5, -1.5, 0);
 aboutScene.add(wallRimR);
+
+// Four COLOURED PointLights, one per neon column, placed JUST inside the
+// wall at the same angular position as the emissive seams ([1,4,7,10]/12).
+// Quadratic decay + short range so each lamp only stains the metal around
+// it (violet → purple cast on nearby wall, red → warm edge highlight, etc).
+// Two lights per lamp at different heights so the colour spill runs the
+// length of the column instead of being a single point hot-spot.
+const LAMP_COLOURS = [
+  { seam: 1,  hex: 0xc026d3 },   // violet
+  { seam: 4,  hex: 0xfbbf24 },   // yellow
+  { seam: 7,  hex: 0x4b7dff },   // blue
+  { seam: 10, hex: 0xff3c3c },   // red
+];
+const __lampR = ROOM_R - 0.6;
+LAMP_COLOURS.forEach(({ seam, hex }) => {
+  const ang = (seam / 12) * Math.PI * 2;
+  const cx  = Math.sin(ang) * __lampR;
+  const cz  = Math.cos(ang) * __lampR;
+  // two stacked lights — lower & upper, each contributing colour bleed to
+  // a different vertical band of the wall around the lamp.
+  const low  = new THREE.PointLight(hex, 1.6, 5.0, 2.3);
+  low.position.set(cx, FLOOR_Y + 3.5, cz);
+  aboutScene.add(low);
+  const high = new THREE.PointLight(hex, 1.4, 5.0, 2.3);
+  high.position.set(cx, FLOOR_Y + 9.0, cz);
+  aboutScene.add(high);
+});
 // volumetric shaft cone widening down from the opening
 const lightShaft = new THREE.Mesh(
   new THREE.CylinderGeometry(ROOM_R * 0.55, ROOM_R * 0.99, ROOM_H, 64, 1, true),
@@ -1793,11 +1852,13 @@ for (let i = 0; i < PANEL_COUNT; i++) {
     angle - PANEL_ARC / 2, PANEL_ARC
   );
   const mat = new THREE.MeshStandardMaterial({
-    // emissiveIntensity bumped from 0.85 → 1.15 so the text panels stay
-    // crisp and legible after the room ambient dropped by a third. They
-    // now "own" their own light instead of relying on the room.
+    // Panels self-light (emissiveIntensity 1.15) so the text stays crisp.
+    // Slight metalness + envMapIntensity gives the curved panel sides a
+    // soft rim reflection from the env — the panel "lifts" 5% off the
+    // wall behind it without using a drop shadow.
     map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.15,
-    metalness: 0.1, roughness: 0.65, side: THREE.BackSide,
+    metalness: 0.30, roughness: 0.55, envMapIntensity: 0.6,
+    side: THREE.BackSide,
     transparent: true,
   });
   const mesh = new THREE.Mesh(geo, mat);
@@ -2184,7 +2245,10 @@ function loadArchivePhoto(url, idx) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = aboutRenderer.capabilities.getMaxAnisotropy();
     const ex = exhibits[idx];
-    if (ex) { ex.photoMat.map = tex; ex.photoMat.color.set(0xffffff); ex.photoMat.needsUpdate = true; }
+    // Tint the photo to 0xdadada (~85% of full white) — pulls the photo's
+    // overall brightness down ~15% so it stops being the eye magnet in a
+    // dark gallery, while faces/clothing stay readable.
+    if (ex) { ex.photoMat.map = tex; ex.photoMat.color.set(0xdadada); ex.photoMat.needsUpdate = true; }
   };
   img.onerror = () => console.warn('[window] failed to load', url);
   img.src = url;
