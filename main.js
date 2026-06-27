@@ -672,59 +672,16 @@ if (edLines.length) {
 // forward and flat, while cards on either side rotate Y, push back in Z,
 // shrink, and dim — the "fan blade" pose with real depth, not flat cards.
 document.querySelectorAll('.ex-stack').forEach((stack) => {
-  const originals = Array.from(stack.children).filter(n => n.classList && n.classList.contains('cover'));
-  if (!originals.length) return;
-
-  // -----------------------------------------------------------------
-  // Infinite-loop padding: clone the original cover set so the strip is
-  // always > 3× wider than the visible carousel. With sparse content
-  // (1–2 real projects per category) the strip would otherwise have
-  // nothing to scroll. The loop unit = originals.length cards; we keep
-  // 2 copies before the originals + 3 copies after (5 total renders of
-  // the project set). On scroll near either end we silently jump scroll-
-  // Left by one loop unit so the user can swipe forever.
-  // -----------------------------------------------------------------
-  const LOOP_BEFORE = 2;
-  const LOOP_AFTER  = 3;
-  const cloneSet = () => originals.map(c => {
-    const cl = c.cloneNode(true);
-    cl.dataset.cloned = '1';
-    // disable the "soon" pseudo on clones? keep — visually consistent
-    return cl;
-  });
-  // append AFTER copies
-  for (let i = 0; i < LOOP_AFTER; i++) {
-    cloneSet().forEach(c => stack.appendChild(c));
-  }
-  // prepend BEFORE copies (in reverse order so original order is preserved)
-  for (let i = 0; i < LOOP_BEFORE; i++) {
-    cloneSet().reverse().forEach(c => stack.insertBefore(c, stack.firstChild));
-  }
-  stack.dataset.loop = '1';
+  const covers = stack.querySelectorAll('.cover');
+  if (!covers.length) return;
 
   let raf = 0;
-  let loopUnitW = 0;
-  function measureLoopUnit() {
-    // total scrollable width / total copies = width of one originals-set
-    const totalCopies = 1 + LOOP_BEFORE + LOOP_AFTER;
-    loopUnitW = stack.scrollWidth / totalCopies;
-  }
-  // start scroll position in the middle (just past the BEFORE block)
-  requestAnimationFrame(() => {
-    measureLoopUnit();
-    stack.scrollLeft = loopUnitW * LOOP_BEFORE;
-  });
-  window.addEventListener('resize', () => {
-    measureLoopUnit();
-  });
-
   function update() {
     raf = 0;
     const rect = stack.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const range = rect.width * 0.45;
-    // re-query each frame so clones are included
-    stack.querySelectorAll('.cover').forEach((c) => {
+    covers.forEach((c) => {
       const r = c.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       let t = (cx - centerX) / range;       // -1 (left edge) .. +1 (right edge)
@@ -746,28 +703,22 @@ document.querySelectorAll('.ex-stack').forEach((stack) => {
   function schedule() {
     if (!raf) raf = requestAnimationFrame(update);
   }
-  // Seamless wraparound on scroll: when the user pushes past the BEFORE
-  // or AFTER buffer, silently shift scrollLeft by one loop unit. Because
-  // adjacent units render identical cards in the same positions, this
-  // jump is invisible — the user can keep swiping forever.
-  stack.addEventListener('scroll', () => {
-    if (loopUnitW > 0) {
-      if (stack.scrollLeft < loopUnitW * 0.5) {
-        stack.scrollLeft += loopUnitW;
-      } else if (stack.scrollLeft > loopUnitW * (LOOP_BEFORE + LOOP_AFTER + 0.5)) {
-        stack.scrollLeft -= loopUnitW;
-      }
-    }
-    schedule();
-  }, { passive: true });
+  stack.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
 
-  // Mouse-wheel → horizontal pan. With infinite loop the "atEdge" check
-  // is gone: scrollLeft never reaches a real edge anymore. So vertical
-  // wheel ALWAYS converts to horizontal when the cursor is on a cover.
+  // Mouse-wheel → horizontal pan, but only when the cursor is over a
+  // cover AND there's actually horizontal overflow to scroll. If a
+  // category has so few cards that the strip fits in the viewport, the
+  // wheel falls through to the page so vertical scroll still works.
   stack.addEventListener('wheel', (e) => {
     if (!e.target.closest('.cover')) return;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const max = stack.scrollWidth - stack.clientWidth;
+    if (max <= 1) return;  // no horizontal room → let page scroll
+    const goingRight = e.deltaY > 0;
+    const atEdge = (goingRight && stack.scrollLeft >= max - 1) ||
+                   (!goingRight && stack.scrollLeft <= 0);
+    if (atEdge) return;
     e.preventDefault();
     stack.scrollLeft += e.deltaY;
   }, { passive: false });
