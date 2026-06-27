@@ -22,15 +22,62 @@ html, body {
 }
 html { background: var(--bg); }
 
+/* Register the idle-alpha as an animatable custom property so transitions
+   on its value smoothly interpolate the mask gradient (browsers can't
+   transition mask-image as a whole, but they CAN transition a registered
+   custom property that feeds into the gradient). */
+@property --idle-alpha {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
 #bg {
   position: fixed; inset: 0;
   background: var(--bg);
   z-index: -2;
   overflow: hidden;
+  /* Spotlight position — main.js writes --spot-x/--spot-y in client px as
+     the cursor moves. The mask lives on #bg (NOT on the stripes) because
+     #bg is viewport-sized with no rotation, so --spot-x in clientX maps
+     directly to mask coords. If the mask were on .bg-stripe it would be
+     in the rotated 200vw-wide stripe's local coordinate space, and the
+     spotlight would land in the wrong viewport position. */
+  --spot-x: 50vw;
+  --spot-y: 50vh;
+  --idle-alpha: 0.08;
+  transition: opacity 0.7s ease;
+  /* Interactive spotlight. Default state is near-black: --idle-alpha = 0.07
+     dims the entire colour-stripe layer to a whisper. A soft radial pool
+     ~25vw across reveals everything to full brightness within it, with a
+     long feathered falloff (no hard edges) so it reads as a real beam of
+     light hitting a dark gallery wall. JS lerps spot-x/spot-y toward the
+     mouse so the pool drifts with inertia, not a 1:1 lock. */
+  -webkit-mask-image: radial-gradient(
+    circle 17vw at var(--spot-x) var(--spot-y),
+    rgba(255, 255, 255, 1)                    0%,
+    rgba(255, 255, 255, 0.86)                18%,
+    rgba(255, 255, 255, 0.46)                45%,
+    rgba(255, 255, 255, 0.16)                72%,
+    rgba(255, 255, 255, var(--idle-alpha))  100%);
+          mask-image: radial-gradient(
+    circle 17vw at var(--spot-x) var(--spot-y),
+    rgba(255, 255, 255, 1)                    0%,
+    rgba(255, 255, 255, 0.86)                18%,
+    rgba(255, 255, 255, 0.46)                45%,
+    rgba(255, 255, 255, 0.16)                72%,
+    rgba(255, 255, 255, var(--idle-alpha))  100%);
 }
 
+/* Additive light layer — sits over the hero with mix-blend-mode: screen so
+   the beam doesn't just "uncover" the bg, it actively brightens text, the
+   3D cylinder, and the nav bar when it crosses them. Warm-white tint so
+   the light feels stage-incandescent instead of clinical LED. Slightly
+   smaller than the bg mask so its hot pool falls INSIDE the revealed bg
+   area, not over the dim falloff edges. */
+
 /* 4 diagonal colour stripes — 1 + 3 share one direction, 2 + 4 share the other.
-   Updated by main.js on scroll for parallax. */
+   Updated by main.js on scroll for parallax. No own mask; #bg masks them all. */
 .bg-stripe {
   position: absolute;
   left: -50vw;
@@ -727,6 +774,16 @@ main { position: relative; }
 /* YAO — top-left, tall narrow caps. Sized up so it reads as a brand mark
    (peer to DESIGN), not just a kicker. Wider tracking welds the three
    letters into a recognisable unit. */
+/* Hero title text — dimmed by default so the gallery feels dark and quiet.
+   The screen-blend #spotlight beam adds light when the cursor passes,
+   pushing the letters from grey to bright white. */
+.hw, .hero-text .hero-slogan {
+  color: #888581;          /* low-key default — readable but not loud */
+  text-shadow: 0 0 14px rgba(255, 245, 220, 0.08);
+}
+.hw-design {
+  color: #d8a83c !important;  /* warmer, more readable gold against the dim bg */
+}
 /* YAO — editor 1:1 */
 .hw-yao {
   position: absolute;

@@ -23,16 +23,27 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 0, 9.5);
 
 // ---------- Lights ----------
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const key = new THREE.DirectionalLight(0xffffff, 1.1);
+// Interactive spotlight mode: the WHOLE hero is dark by default. Static
+// scene lights are dropped to a near-shadow level so the cylinder reads as
+// a silhouette in the gloom. Most of the illumination now comes from
+// `cursorLight` (below), a roaming PointLight that follows the cursor.
+scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+const key = new THREE.DirectionalLight(0xffffff, 0.18);
 key.position.set(3, 4, 5);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0xff9a6b, 0.8);
+const rim = new THREE.DirectionalLight(0xff9a6b, 0.10);
 rim.position.set(-4, 1, -3);
 scene.add(rim);
-const fillBelow = new THREE.PointLight(0xffb347, 1.2, 12);
+const fillBelow = new THREE.PointLight(0xffb347, 0.25, 12);
 fillBelow.position.set(0, -2.2, 1.5);
 scene.add(fillBelow);
+
+// Cursor-follow PointLight — the "torch" the user is holding. Brighter
+// and more focused than before so the contrast between lit area and
+// surrounding gloom is harsher; matches the smaller CSS spotlight.
+const cursorLight = new THREE.PointLight(0xfff0c8, 4.5, 11, 1.7);
+cursorLight.position.set(0, 0, 4);
+scene.add(cursorLight);
 
 // ---------- Flame (shader-based) ----------
 const flameGroup = new THREE.Group();
@@ -404,11 +415,91 @@ function updateStripes() {
 }
 updateStripes();
 
+// ---------- Interactive spotlight ----------
+// Page starts dark. There is no "entry reveal" — the gallery is quiet from
+// frame one, the user gets to discover colour by moving the cursor.
+// The cursor position is the TARGET; smoothX/smoothY chase it with a lerp
+// each frame, giving the beam a touch of physical inertia (it trails the
+// mouse subtly, never snaps). The same smoothed position drives:
+//   1. CSS --spot-x/--spot-y on #bg          → reveals the colour stripes
+//   2. CSS --spot-x/--spot-y on #spotlight    → additive screen-blend brightens text & nav
+//   3. cursorLight.position in the 3D scene  → wakes the cylinder's metal reflection
+const bgEl = document.getElementById('bg');
+// Single-layer spotlight: ONLY the #bg radial mask reveals colour stripes.
+// No additive overlay, no trail canvas. The "trail" you see is just the
+// pool decaying back to dim after the cursor stops moving — see _spotFade.
+
+let _spotTargetX = window.innerWidth  / 2;
+let _spotTargetY = window.innerHeight / 2;
+let _spotSmoothX = _spotTargetX;
+let _spotSmoothY = _spotTargetY;
+const SPOT_LERP = 0.14;
+// _spotFade is the "is the spotlight lit" multiplier (1=full, 0=gone).
+// The cursor keeps moving its TARGET, but if no movement happens for
+// IDLE_HOLD_MS, _spotFade eases down to 0 over IDLE_FADE_MS — gives the
+// pool a soft trail-off after the user stops. Snaps back to 1 on the next
+// move so the spotlight "wakes up" instantly under the new cursor.
+let _spotFade = 1;
+let _lastMoveAt = performance.now();
+const IDLE_HOLD_MS = 500;    // grace period before the fade starts
+const IDLE_FADE_MS = 2000;   // duration of the dim-out
+
+window.addEventListener('pointermove', (e) => {
+  _spotTargetX = e.clientX;
+  _spotTargetY = e.clientY;
+  _lastMoveAt  = performance.now();
+}, { passive: true });
+
+function spotLoop() {
+  // (1) cursor position lerp — natural inertia, beam trails the cursor a bit
+  _spotSmoothX += (_spotTargetX - _spotSmoothX) * SPOT_LERP;
+  _spotSmoothY += (_spotTargetY - _spotSmoothY) * SPOT_LERP;
+  const x = _spotSmoothX + 'px', y = _spotSmoothY + 'px';
+  if (bgEl) {
+    bgEl.style.setProperty('--spot-x', x);
+    bgEl.style.setProperty('--spot-y', y);
+  }
+  // (2) idle-fade — recompute _spotFade based on time since last move.
+  // Brighten-up snaps fast (target wins immediately); dim-down follows the
+  // 2-second ease curve. Pure JS so it composes with the scroll-fade later.
+  const since = performance.now() - _lastMoveAt;
+  let targetFade;
+  if (since < IDLE_HOLD_MS) {
+    targetFade = 1;
+  } else {
+    const t = Math.min(1, (since - IDLE_HOLD_MS) / IDLE_FADE_MS);
+    // ease-out cubic so the last 20% takes most of the visible time
+    targetFade = 1 - (t * t * t);
+  }
+  if (targetFade > _spotFade) {
+    _spotFade += (targetFade - _spotFade) * 0.30;  // quick wake-up
+  } else {
+    _spotFade = targetFade;
+  }
+  // applied to opacity in the scroll handler so the scroll-fade and the
+  // idle-fade compose cleanly (multiplicative).
+  if (bgEl) {
+    const scrollDim = Math.max(0, 1 - scrollProgress * 1.1);
+    bgEl.style.opacity = String(scrollDim * _spotFade);
+  }
+  // (3) 3D cursor-follow point light tracks the same smoothed position so
+  // the cylinder's metal surface lights up under the cursor's beam.
+  const ndcX = (_spotSmoothX / window.innerWidth)  * 2 - 1;
+  const ndcY = -((_spotSmoothY / window.innerHeight) * 2 - 1);
+  const vHalf = camera.position.z * Math.tan((camera.fov * Math.PI / 180) / 2);
+  cursorLight.position.set(ndcX * vHalf * camera.aspect, ndcY * vHalf, 4);
+  cursorLight.intensity = 4.5 * _spotFade;     // fade the 3D torch too
+  requestAnimationFrame(spotLoop);
+}
+requestAnimationFrame(spotLoop);
+
 function updateScroll() {
   const h = window.innerHeight;
   scrollProgress = Math.min(1, Math.max(0, window.scrollY / h));
   exitProgress = Math.min(1, Math.max(0, (window.scrollY - h) / h));
   updateStripes();
+  // bg opacity now driven by spotLoop (it composes scrollProgress fade
+  // with the idle spotlight fade in one place). No-op here on scroll.
 }
 updateScroll();
 window.addEventListener('scroll', () => {
@@ -670,8 +761,13 @@ const aboutScene  = new THREE.Scene();
 const aboutCam    = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 aboutCam.position.set(0, 0, 3);
 
-aboutScene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const aboutKey = new THREE.PointLight(0xc0d8ff, 1.1, 30);
+// Gallery-tier lighting rebalance:
+//   - Ambient dropped ~34% so the metal wall stops reading as a flat
+//     bright wash; reflections do most of the work.
+//   - Key bumped DOWN; the room's brightness now comes from off-stage
+//     rim lights below + the ceiling skylight, not a generic fill.
+aboutScene.add(new THREE.AmbientLight(0xffffff, 0.25));
+const aboutKey = new THREE.PointLight(0xc0d8ff, 0.50, 30);
 aboutKey.position.set(2, 3, 4);
 aboutScene.add(aboutKey);
 
@@ -1230,12 +1326,17 @@ function buildWallEmissiveTex() {
 }
 const wallMat = new THREE.MeshStandardMaterial({
   map: buildWallColorTex(),
-  metalness: 0.95,
-  roughness: 0.17,                  // polished aluminium — structure still reads
-  envMapIntensity: 1.5,
+  metalness: 0.96,
+  // tighter roughness → sharper reflections on the brushed aluminium;
+  // structural seams + ring details still read because of the diffuse
+  // base, but the wall now catches LIGHT instead of glowing on its own.
+  roughness: 0.11,
+  envMapIntensity: 2.2,             // wall pulls in more rim-light bounce
   emissive: 0xffffff,
   emissiveMap: buildWallEmissiveTex(),
-  emissiveIntensity: 1.25,          // neon columns are accents, not the mood
+  // neon columns are now LOCAL accents (drop from 1.25 to 0.55) — they
+  // stay visible as discrete light strips, but no longer wash the wall.
+  emissiveIntensity: 0.55,
   side: THREE.BackSide,
 });
 const roomWall = new THREE.Mesh(
@@ -1411,12 +1512,25 @@ const ceilGlow = new THREE.Mesh(
 ceilGlow.rotation.x = Math.PI / 2;
 ceilGlow.position.y = CEIL_Y - 0.15;
 aboutScene.add(ceilGlow);
-const ceilKey = new THREE.PointLight(0xeaf2ff, 2.2, ROOM_H * 2.6, 1.3);
+// Skylight key — focused tighter (higher decay, smaller pool) so the metal
+// directly under the opening catches a sharp hot spot instead of a soft
+// diffuse bath that bleaches the whole upper wall.
+const ceilKey = new THREE.PointLight(0xeaf2ff, 2.8, ROOM_H * 2.4, 1.8);
 ceilKey.position.set(0, CEIL_Y - 1.5, 0);
 aboutScene.add(ceilKey);
-const fillKey = new THREE.PointLight(0xbfd0ff, 0.8, ROOM_H * 1.2, 1.6);
+const fillKey = new THREE.PointLight(0xbfd0ff, 0.35, ROOM_H * 1.2, 1.6);
 fillKey.position.set(0, 0, 0);
 aboutScene.add(fillKey);
+// Two off-stage rim lights flank the cylinder wall and produce long
+// architectural highlight streaks on the brushed metal. Higher decay
+// (2.5) keeps them in a narrow band so they read as wall reflections,
+// not a room-wide wash. Intensity bumped because we lost ambient.
+const wallRimL = new THREE.PointLight(0xfff4d8, 5.5, 14, 2.5);
+wallRimL.position.set(-6.5, 2.0, 0);
+aboutScene.add(wallRimL);
+const wallRimR = new THREE.PointLight(0xd8e8ff, 5.0, 14, 2.5);
+wallRimR.position.set( 6.5, -1.5, 0);
+aboutScene.add(wallRimR);
 // volumetric shaft cone widening down from the opening
 const lightShaft = new THREE.Mesh(
   new THREE.CylinderGeometry(ROOM_R * 0.55, ROOM_R * 0.99, ROOM_H, 64, 1, true),
@@ -1679,7 +1793,10 @@ for (let i = 0; i < PANEL_COUNT; i++) {
     angle - PANEL_ARC / 2, PANEL_ARC
   );
   const mat = new THREE.MeshStandardMaterial({
-    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.85,
+    // emissiveIntensity bumped from 0.85 → 1.15 so the text panels stay
+    // crisp and legible after the room ambient dropped by a third. They
+    // now "own" their own light instead of relying on the room.
+    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.15,
     metalness: 0.1, roughness: 0.65, side: THREE.BackSide,
     transparent: true,
   });
