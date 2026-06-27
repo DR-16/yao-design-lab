@@ -714,6 +714,13 @@ document.querySelectorAll('.ex-stack').forEach((stack) => {
   // ONLY while the carousel has room left in that direction; once it hits
   // an edge, we release the event and the page resumes vertical scroll.
   stack.addEventListener('wheel', (e) => {
+    // ONLY intercept the wheel when the cursor is literally over a
+    // portrait card. Wheel events that land in the carousel's padding,
+    // gaps between cards, or the empty area above/below the cards are
+    // left alone so the page can scroll vertically — fixes the "鼠标划
+    // 不动" problem where the whole exhibition row was eating wheel
+    // events even when the cursor wasn't aimed at a card.
+    if (!e.target.closest('.cover')) return;
     // user is already swiping horizontally — native handles it
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     const max = stack.scrollWidth - stack.clientWidth;
