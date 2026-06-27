@@ -660,6 +660,49 @@ body.lang-cn .about-hint { letter-spacing: 0.3em; text-transform: none; }
 
 /* Floating language switcher — pinned to the bottom-right of the user's viewport
    (position: fixed = stays put while page scrolls) */
+/* Portrait-phone rotate hint — small floating chip that only appears on
+   touch-primary devices held in portrait. CSS media query gates visibility;
+   JS only handles the auto-fade-out after a few seconds. */
+.rotate-hint {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translate(-50%, 0);
+  z-index: 250;
+  pointer-events: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(10, 8, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.45);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.rotate-hint svg { flex: 0 0 auto; opacity: 0.85; }
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  .rotate-hint {
+    display: inline-flex;
+    animation: rotateHintPulse 1.8s ease-in-out infinite;
+  }
+  .rotate-hint.visible { opacity: 1; }
+}
+@keyframes rotateHintPulse {
+  0%, 100% { transform: translate(-50%, 0)        scale(1);    }
+  50%      { transform: translate(-50%, -3px)     scale(1.04); }
+}
+/* JS adds .dismissed to permanently hide once user rotates or it auto-fades */
+.rotate-hint.dismissed { opacity: 0 !important; }
+
 .lang-switch {
   position: fixed;
   right: 28px;

@@ -3181,3 +3181,36 @@ try {
   const saved = localStorage.getItem(LANG_KEY);
   if (saved) setLang(saved);
 } catch {}
+
+// ---------- Portrait-phone rotate hint ----------
+// CSS already gates the element to (touch + portrait) via @media. JS only
+// 1) shows it after a tiny delay so it animates IN, 2) auto-dismisses
+// after ~7s so it doesn't sit forever, 3) dismisses immediately the
+// moment the user rotates to landscape, 4) remembers via sessionStorage
+// that the hint has been seen this visit so navigations don't re-show it.
+(() => {
+  const hint = document.getElementById('rotateHint');
+  if (!hint) return;
+  const SEEN_KEY = 'ydl-rotate-hint-seen';
+  let seen = false;
+  try { seen = sessionStorage.getItem(SEEN_KEY) === '1'; } catch {}
+  if (seen) return;
+  // small delay so it doesn't overlap the page's own load splash
+  setTimeout(() => hint.classList.add('visible'), 800);
+  // auto-fade after 7s
+  const fadeTimer = setTimeout(() => hint.classList.add('dismissed'), 7800);
+  // rotated → kill it right away
+  const mql = window.matchMedia('(orientation: landscape)');
+  function onRotate(ev) {
+    if (ev.matches) {
+      clearTimeout(fadeTimer);
+      hint.classList.add('dismissed');
+      try { sessionStorage.setItem(SEEN_KEY, '1'); } catch {}
+    }
+  }
+  if (mql.addEventListener) mql.addEventListener('change', onRotate);
+  else if (mql.addListener) mql.addListener(onRotate);
+  // also mark as seen once the auto-fade fires, so navigating to another
+  // section doesn't bring it back
+  setTimeout(() => { try { sessionStorage.setItem(SEEN_KEY, '1'); } catch {} }, 8000);
+})();

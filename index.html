@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@300;400;500&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400&family=Instrument+Serif:ital@0;1&family=Italiana&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260626c" />
+  <link rel="stylesheet" href="styles.css?v=20260626d" />
 </head>
 <body class="lang-en">
   <!-- SVG turbulence + displacement filter used to distort the SceneB doubt
@@ -302,6 +302,19 @@
     </div>
   </section>
 
+  <!-- Phone-portrait hint: shows ONLY on touch-primary devices held in
+       portrait. CSS media query controls visibility — no UA sniffing.
+       Fades itself out via JS after a few seconds so it doesn't nag. -->
+  <div class="rotate-hint" id="rotateHint" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3"  y="7" width="13" height="10" rx="1.5"></rect>
+      <rect x="17" y="9" width="4"  height="6"  rx="1"></rect>
+      <path d="M8 21 a8 8 0 0 0 8 -8" stroke-dasharray="2 2"></path>
+    </svg>
+    <span data-lang="en">Rotate to landscape for the full experience</span>
+    <span data-lang="cn">横屏观看效果最佳</span>
+  </div>
+
   <div class="lang-switch" id="langSwitch" aria-label="Language switch">
     <button type="button" data-set-lang="en" class="active">EN</button>
     <span class="lang-divider">/</span>
@@ -318,6 +331,6 @@
       }
     }
   </script>
-  <script type="module" src="main.js?v=20260626f"></script>
+  <script type="module" src="main.js?v=20260626g"></script>
 </body>
 </html>
