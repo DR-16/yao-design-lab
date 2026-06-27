@@ -1190,12 +1190,14 @@ main { position: relative; }
   position: relative;
   display: block;
   flex: 0 0 auto;
-  width: clamp(160px, 17vw, 240px);
-  aspect-ratio: 9 / 16;
+  width: clamp(190px, 19.5vw, 280px);
+  aspect-ratio: 1 / 1;
   /* overlap neighbours so the focused card sits in front of the side ones */
   margin-inline: clamp(-44px, -3.6vw, -30px);
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.025);
+  /* Border only shows on empty / placeholder cards. Once an <img> child
+     fills the card, the artwork itself takes over the visual edge. */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #000;
   text-decoration: none;
   overflow: hidden;
   scroll-snap-align: center;
@@ -1209,7 +1211,6 @@ main { position: relative; }
 }
 .cover:hover {
   border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.06);
 }
 .cover-label {
   position: absolute;
@@ -1220,6 +1221,56 @@ main { position: relative; }
   font-size: 12px;
   letter-spacing: 0.22em;
   color: rgba(255, 255, 255, 0.4);
+}
+/* Cover artwork — fills the whole square card. object-fit: cover so a
+   non-square source still gets cropped to fit cleanly (we already pad
+   sources to 1:1 in the pipeline, but this guards against future
+   uploads that aren't exactly square). */
+.cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: transform 0.45s ease;
+}
+.cover:hover img { transform: scale(1.03); }
+/* Caption appears on hover — a small italic label at the bottom-left
+   over a subtle gradient so it's readable on any artwork. */
+.cover-caption {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  padding: 4px 8px;
+  font-family: "Instrument Serif", "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.cover:hover .cover-caption { opacity: 1; }
+/* "Coming soon" — for the AI girlfriend card that has no live URL yet */
+.cover[data-soon]::after {
+  content: "soon";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 7px;
+  border-radius: 2px;
+  z-index: 2;
 }
 
 @media (max-width: 880px) {
