@@ -365,7 +365,7 @@
   }
   .phone-page {
     position: absolute; inset: 0;
-    padding: 22px 10px 12px;
+    padding: 40px 10px 12px;       /* extra top padding so pp-tag has its own row */
     opacity: 0;
     transition: opacity 0.4s ease;
     display: flex; flex-direction: column;
@@ -447,12 +447,15 @@
   }
   .pp-tag {
     position: absolute;
-    top: 22px; right: 8px; z-index: 4;
-    font-family: var(--mono); font-size: 8px;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    font-family: var(--mono); font-size: 7.5px;
     letter-spacing: 0.18em; color: var(--rose);
-    background: rgba(255,248,240,0.92);
-    padding: 1px 5px; border-radius: 4px;
+    background: rgba(255,248,240,0.95);
+    padding: 2px 8px; border-radius: 999px;
     border: 1px solid var(--blush-soft);
+    white-space: nowrap;
   }
 
   /* ---------- thought bubbles ---------- */
@@ -976,80 +979,106 @@
           <div class="pillow"></div>
         </div>
 
-        <!-- the GIRL · 3/4 BACK view (we see her back + sliver of cheek) -->
+        <!-- the GIRL · 3/4 front view, head tilted DOWN at phone, face visible -->
         <div class="girl-wrap">
-          <svg class="girl" viewBox="0 0 420 560" aria-label="girl from behind, holding phone">
-            <!-- crossed legs (in front, brighter pink) -->
+          <svg class="girl" viewBox="0 0 420 560" aria-label="girl looking down at phone in her hands, smiling">
+            <!-- crossed legs in front -->
             <path d="M70 490 Q60 504 90 528 L330 528 Q360 504 350 490 Q260 470 210 474 Q160 470 70 490 Z" fill="#E892A7"/>
             <circle cx="135" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
             <circle cx="285" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
 
-            <!-- HEAD DOME (skin) — pure back-of-head, no face features at all.
-                 She's tilted slightly forward looking down at her phone, so the
-                 crown is more visible than a straight-back view. -->
-            <ellipse cx="215" cy="175" rx="66" ry="72" fill="#FCE0D2"/>
-            <!-- subtle nape shadow where neck meets head -->
-            <path d="M170 218 Q215 232 260 218 Q252 240 215 244 Q178 240 170 218 Z" fill="#E8B5A0" opacity="0.35"/>
-
-            <!-- HAIR · top cap covering the crown -->
-            <path d="M148 178
-                     Q145 110 215 92
-                     Q282 110 282 178
-                     Q278 150 260 134
-                     Q230 118 215 118
-                     Q200 118 170 134
-                     Q152 150 148 178 Z"
+            <!-- LONG hair behind her, flowing down past shoulders -->
+            <path d="M130 180
+                     Q120 110 215 92
+                     Q310 110 300 180
+                     Q318 260 314 410
+                     Q310 480 270 492
+                     Q245 460 215 460
+                     Q185 460 160 492
+                     Q120 480 116 410
+                     Q112 260 130 180 Z"
                   fill="#7B5B9B"/>
+            <!-- hair shading on her left side (away from soft light) -->
+            <path d="M130 180 Q120 110 215 92 L215 460 Q185 460 160 492 Q120 480 116 410 Q112 260 130 180 Z" fill="#5E3F7B" opacity="0.32"/>
 
-            <!-- HAIR · long back, flowing down past shoulders -->
-            <path d="M148 178
-                     Q120 250 130 420
-                     Q138 480 168 488
-                     Q195 462 215 462
-                     Q235 462 262 488
-                     Q292 480 300 420
-                     Q310 250 282 178
-                     Q295 280 270 380
-                     L160 380
-                     Q135 280 148 178 Z"
-                  fill="#7B5B9B"/>
-            <!-- hair shading on right side -->
-            <path d="M215 92 Q282 110 282 178 Q310 250 300 420 Q292 480 262 488 Q240 460 218 460 L215 92 Z"
-                  fill="#5E3F7B" opacity="0.4"/>
-            <!-- highlight strands -->
-            <path d="M195 145 Q205 260 200 400" stroke="#9B7CB6" stroke-width="2.5" fill="none" opacity="0.35"/>
-            <path d="M235 145 Q240 260 240 400" stroke="#9B7CB6" stroke-width="2.5" fill="none" opacity="0.35"/>
-
-            <!-- body (sweater) from behind — shows back/shoulders -->
-            <path d="M115 305
-                     Q120 270 165 260
-                     L255 260
-                     Q300 270 305 305
-                     L320 440
-                     Q320 472 275 476
-                     L145 476
-                     Q100 472 100 440 Z"
+            <!-- BODY (sweater) — slight 3/4 turn -->
+            <path d="M118 305
+                     Q124 270 168 262
+                     L258 262
+                     Q302 270 308 305
+                     L322 442
+                     Q322 472 278 476
+                     L148 476
+                     Q104 472 104 442 Z"
                   fill="#FFB7C5"/>
-            <!-- back shading -->
-            <path d="M115 305 Q120 270 165 260 L210 260 L210 476 L145 476 Q100 472 100 440 Z" fill="#E892A7" opacity="0.3"/>
-            <!-- collar / hood opening at neck -->
-            <ellipse cx="210" cy="262" rx="42" ry="6" fill="#E892A7" opacity="0.55"/>
+            <!-- sweater shading -->
+            <path d="M210 262 L258 262 Q302 270 308 305 L322 442 Q322 472 278 476 L210 476 Z" fill="#E892A7" opacity="0.25"/>
+            <!-- collar -->
+            <ellipse cx="213" cy="265" rx="44" ry="7" fill="#E892A7" opacity="0.55"/>
 
-            <!-- (no face peek — pure back view, smile conveyed by body language + heart) -->
+            <!-- NECK -->
+            <path d="M188 232 L242 232 L240 268 L190 268 Z" fill="#FCE0D2"/>
+            <path d="M188 232 L215 232 L215 268 L190 268 Z" fill="#F0C8B8" opacity="0.4"/>
 
-            <!-- LEFT shoulder/arm (far side from our view) -->
-            <path d="M120 318 Q100 340 108 388 Q115 410 142 414 L182 396 Q172 374 170 340 Z" fill="#FFB7C5"/>
+            <!-- HEAD (skin) — round face, tilted forward (looking down) -->
+            <ellipse cx="215" cy="180" rx="66" ry="74" fill="#FCE0D2"/>
+            <!-- soft jaw shadow (giving the head depth + tilt) -->
+            <path d="M152 188 Q156 232 195 252 L235 252 Q278 232 282 188 Q278 220 256 240 Q230 252 215 252 Q200 252 174 240 Q152 220 152 188 Z" fill="#F0C8B8" opacity="0.45"/>
 
-            <!-- RIGHT shoulder/arm (near side) -->
-            <path d="M298 318 Q320 340 312 388 Q305 412 278 414 L238 396 Q248 374 250 340 Z" fill="#FFB7C5"/>
+            <!-- BANGS over forehead (her hair drapes forward as she leans down) -->
+            <path d="M148 175
+                     Q152 110 215 100
+                     Q278 110 282 175
+                     Q278 155 260 142
+                     Q235 138 215 156
+                     Q195 138 170 142
+                     Q152 155 148 175 Z"
+                  fill="#7B5B9B"/>
+            <!-- side hair locks framing the face -->
+            <path d="M148 175 Q142 240 156 320 Q166 280 162 230 Q158 195 148 175 Z" fill="#7B5B9B"/>
+            <path d="M282 175 Q288 240 274 320 Q264 280 268 230 Q272 195 282 175 Z" fill="#5E3F7B"/>
 
-            <!-- hands gripping phone (in front of her, visible over her lap) -->
-            <ellipse cx="170" cy="412" rx="16" ry="11" fill="#FCE0D2"/>
-            <ellipse cx="250" cy="412" rx="16" ry="11" fill="#FCE0D2"/>
+            <!-- EYES — downcast (looking at phone). Curved closed-eye arcs -->
+            <path d="M178 208 Q188 222 198 208" stroke="#3D2C4A" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M232 208 Q242 222 252 208" stroke="#3D2C4A" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- subtle eyelash hint below each eye (downcast lashes) -->
+            <path d="M180 214 L182 219" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M188 218 L188 223" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M196 214 L194 219" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M234 214 L236 219" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M242 218 L242 223" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <path d="M250 214 L248 219" stroke="#3D2C4A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
 
-            <!-- subtle heart aura between her head + phone -->
-            <g transform="translate(330, 250)">
-              <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#D4517B" opacity="0.55"/>
+            <!-- BROWS — soft, slightly raised (happy) -->
+            <path d="M174 198 Q188 192 200 198" stroke="#5E3F7B" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+            <path d="M230 198 Q244 192 256 198" stroke="#5E3F7B" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+
+            <!-- NOSE — tiny bridge hint -->
+            <path d="M214 218 Q213 228 215 232 Q217 234 220 232" stroke="#E8B5A0" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+
+            <!-- BLUSH cheeks -->
+            <ellipse cx="170" cy="232" rx="14" ry="7" fill="#FFB7C5" opacity="0.55"/>
+            <ellipse cx="260" cy="232" rx="14" ry="7" fill="#FFB7C5" opacity="0.55"/>
+
+            <!-- MOUTH — soft smile -->
+            <path d="M198 248 Q215 258 232 248" stroke="#D4517B" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <!-- tiny lip shading -->
+            <path d="M205 252 Q215 256 225 252" stroke="#E892A7" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.5"/>
+
+            <!-- LEFT arm (her right, our left) holding phone -->
+            <path d="M124 318 Q104 342 112 392 Q119 414 146 416 L188 396 Q176 374 174 340 Z" fill="#FFB7C5"/>
+            <!-- RIGHT arm holding phone -->
+            <path d="M302 318 Q322 342 314 392 Q307 414 280 416 L238 396 Q250 374 252 340 Z" fill="#FFB7C5"/>
+            <!-- hands gripping phone -->
+            <ellipse cx="172" cy="412" rx="17" ry="11" fill="#FCE0D2"/>
+            <ellipse cx="254" cy="412" rx="17" ry="11" fill="#FCE0D2"/>
+
+            <!-- floating heart between head + phone -->
+            <g transform="translate(335, 240)">
+              <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#D4517B" opacity="0.7"/>
+            </g>
+            <g transform="translate(85, 270)">
+              <path d="M0 4 Q-6 -3 -12 3 Q-14 9 0 18 Q14 9 12 3 Q6 -3 0 4 Z" fill="#9B7CB6" opacity="0.55"/>
             </g>
           </svg>
         </div>
