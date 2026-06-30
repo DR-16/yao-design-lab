@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>AIve · 一个会记仇的 AI — Yao Design Lab</title>
+<title>AIve · 卧室里的一个 AI — Yao Design Lab</title>
 <meta name="theme-color" content="#FFF8F0" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,10 +12,13 @@
 
 <style>
   /* =================================================================
-     AIve · behind the design
-     Light warm paper, blush + lavender, soft chat-bubble visual language.
-     Deliberately NOT the same identity as Whiskey on Vinyl — each project
-     under Yao Design Lab gets its own brand world.
+     AIve · 卧室里的一个 AI · scroll-driven scene
+     ----------------------------------------------------------------
+     Layout: a single sticky stage holds the bedroom scene. As you
+     scroll, the "camera" pushes from a wide shot (girl + bedroom +
+     thought bubbles) toward the phone in her hands. Once we're "inside"
+     the phone, further scrolling cycles through screens of UX content.
+     Final pull-out shows the room again under the reflection section.
      ================================================================= */
   :root {
     --cream:        #FFF8F0;
@@ -31,6 +34,7 @@
     --ink:          #3D2C4A;
     --ink-soft:     #5D4A6B;
     --muted:        #8B7593;
+    --skin:         #FCE0D2;
     --rule:         rgba(155,124,182,0.18);
 
     --sans:    "Outfit", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -45,91 +49,386 @@
     background: var(--cream);
     color: var(--ink);
     font-family: var(--serif-zh);
-    font-weight: 400;
     line-height: 1.7;
-    letter-spacing: 0.01em;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
   }
+  /* overflow-x lives on body only; setting it on html breaks position: sticky descendants */
+  body { overflow-x: clip; }
   a { color: inherit; text-decoration: none; }
   img { display: block; max-width: 100%; }
   ::selection { background: var(--blush); color: var(--ink); }
 
-  /* ---------- ambient warmth ---------- */
-  .glow { position: fixed; pointer-events: none; z-index: 0; border-radius: 50%; filter: blur(140px); opacity: 0.55; }
-  .glow-a { top: -20vw; right: -10vw; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(255,183,197,0.5), transparent 60%); }
-  .glow-b { bottom: -25vw; left: -15vw; width: 65vw; height: 65vw; background: radial-gradient(circle, rgba(201,177,217,0.4), transparent 65%); }
-  .grain {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    opacity: 0.06;
-    mix-blend-mode: multiply;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  }
-
   /* ---------- top nav ---------- */
   .proj-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 32px;
-    background: linear-gradient(180deg, rgba(255,248,240,0.85), rgba(255,248,240,0));
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    background: linear-gradient(180deg, rgba(255,248,240,0.7), rgba(255,248,240,0));
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
   .back-link {
     font-family: var(--sans);
-    font-weight: 500;
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    color: var(--ink-soft);
+    font-weight: 500; font-size: 13px;
+    letter-spacing: 0.1em; color: var(--ink-soft);
     text-transform: uppercase;
-    transition: color 0.25s ease;
+    transition: color 0.25s;
   }
   .back-link:hover { color: var(--rose); }
   .nav-brand {
     font-family: var(--sans);
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 0.32em;
+    font-weight: 600; font-size: 12px;
+    letter-spacing: 0.32em; color: var(--ink-soft);
     text-transform: uppercase;
-    color: var(--ink-soft);
   }
 
-  /* ---------- canvas ---------- */
-  main.aive-room {
-    position: relative; z-index: 2;
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 120px 6vw 0;
+  /* ============================================================
+     SCROLL-DRIVEN STAGE
+     The .scroll-track is 600vh tall — its scroll progress drives
+     CSS variables --t (0→1 overall) and --tp (0→1 within "inside
+     the phone" phase). The .scene-stage sticks for the full track.
+     ============================================================ */
+  .scroll-track {
+    position: relative;
+    height: 600vh;            /* set in JS too; tune here for pacing */
+  }
+  .scene-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 60% 30%, rgba(255,212,220,0.55), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 30% 70%, rgba(201,177,217,0.40), transparent 70%),
+      linear-gradient(180deg, #FFF3E8 0%, #FBEEEA 50%, #F5E0E0 100%);
   }
 
-  .chapter { padding: 100px 0; }
-  .chapter-eyebrow {
-    display: inline-flex; align-items: center; gap: 10px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.32em;
-    color: var(--rose);
-    text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-  .chapter-eyebrow::before {
-    content: ""; display: inline-block;
-    width: 22px; height: 1px;
-    background: var(--blush-deep);
+  /* The "camera" wrapper — entire scene scales + translates with scroll */
+  .camera {
+    position: absolute;
+    inset: 0;
+    transform-origin: 54% 60%;       /* push-in target = phone center */
+    transform: translate(0, 0) scale(1);
+    will-change: transform;
   }
 
-  h1.title, h2.title, h3.title {
+  /* ---------- bedroom backdrop ---------- */
+  .bedroom { position: absolute; inset: 0; pointer-events: none; }
+  .wall {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, #FFF1E2 0%, #FCE5DC 60%, #F1D6D2 100%);
+  }
+  /* floor stripe */
+  .floor {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+    background: linear-gradient(180deg, rgba(155,124,182,0.10), rgba(155,124,182,0.22));
+  }
+  /* window */
+  .window {
+    position: absolute;
+    top: 8%; left: 6%;
+    width: 18%; height: 32%;
+    background: linear-gradient(180deg, #FFE9CC, #F8C7B8);
+    border: 8px solid #E8C6BB;
+    border-radius: 14px;
+    box-shadow: inset 0 0 40px rgba(255,255,255,0.5);
+  }
+  .window::before, .window::after {
+    content: ""; position: absolute;
+    background: #E8C6BB;
+  }
+  .window::before { top: 50%; left: -8px; right: -8px; height: 6px; }
+  .window::after  { left: 50%; top: -8px; bottom: -8px; width: 6px; }
+  /* curtain */
+  .curtain {
+    position: absolute;
+    top: 6%; left: 4%;
+    width: 22%; height: 38%;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,183,197,0.85) 0px, rgba(255,183,197,0.85) 8px, rgba(232,146,167,0.55) 8px, rgba(232,146,167,0.55) 14px);
+    border-radius: 4px 4px 18px 18px;
+    opacity: 0.55;
+    transform-origin: top;
+    transform: skewX(-2deg);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+  }
+  /* fairy lights */
+  .lights {
+    position: absolute;
+    top: 6%; left: 26%; right: 8%;
+    height: 90px;
+    pointer-events: none;
+  }
+  .lights svg { width: 100%; height: 100%; overflow: visible; }
+  .lights circle { animation: twinkle 3s ease-in-out infinite; }
+  .lights circle:nth-child(odd)  { animation-delay: 1s; }
+  .lights circle:nth-child(3n)   { animation-delay: 2s; }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.55; r: 5; }
+    50%      { opacity: 1.0;  r: 7; filter: drop-shadow(0 0 8px #FFB7C5); }
+  }
+  /* plant in corner */
+  .plant {
+    position: absolute;
+    bottom: 18%; right: 4%;
+    width: 16%; height: 38%;
+  }
+  /* poster on the wall */
+  .poster {
+    position: absolute;
+    top: 14%; right: 22%;
+    width: 13%; aspect-ratio: 3 / 4;
+    background: linear-gradient(135deg, var(--blush), var(--mist));
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    transform: rotate(-2deg);
+  }
+  .poster::after {
+    content: "♡";
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 36px;
     font-family: var(--sans);
-    font-weight: 700;
-    line-height: 1.12;
-    letter-spacing: -0.015em;
+  }
+
+  /* ---------- bed cushion the girl sits on ---------- */
+  .bed {
+    position: absolute;
+    left: 50%; bottom: 8%;
+    transform: translateX(-50%);
+    width: 60%; height: 22%;
+    background: linear-gradient(180deg, #FFD0DC 0%, #E892A7 100%);
+    border-radius: 50% 50% 30px 30px / 70% 70% 30px 30px;
+    box-shadow: 0 20px 40px rgba(212,81,123,0.25);
+  }
+  .pillow {
+    position: absolute;
+    bottom: 12%; right: 26%;
+    width: 14%; height: 8%;
+    background: var(--cream);
+    border-radius: 50%;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    transform: rotate(-12deg);
+  }
+
+  /* ---------- the girl (3/4 view, offset left) ---------- */
+  .girl-wrap {
+    position: absolute;
+    left: 30%;
+    bottom: 6%;
+    width: 380px;
+    height: 540px;
+    transform: translateX(-50%);
+    z-index: 4;
+  }
+  .girl-wrap svg.girl {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 16px 24px rgba(61,44,74,0.18));
+  }
+
+  /* ---------- the phone — independent, right of the girl, slight perspective tilt ---------- */
+  .phone {
+    position: absolute;
+    left: 54%;
+    top: 60%;
+    width: 180px;
+    height: 320px;
+    transform: translate(-50%, -50%) perspective(1200px) rotateY(-14deg) rotate(-3deg);
+    transform-origin: 50% 50%;
+    background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
+    border-radius: 26px;
+    padding: 6px;
+    z-index: 5;
+    box-shadow:
+      0 16px 36px rgba(61,44,74,0.40),
+      0 0 0 1px rgba(255,255,255,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.10);
+  }
+  .phone-screen {
+    position: relative;
+    width: 100%; height: 100%;
+    background: #FFF8F0;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .phone-screen::before {
+    /* notch */
+    content: "";
+    position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 40px; height: 8px;
+    background: #1A1024;
+    border-radius: 6px;
+    z-index: 5;
+  }
+
+  /* phone page stack — only .active is visible */
+  .phone-page {
+    position: absolute; inset: 0;
+    padding: 22px 10px 10px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .phone-page.active { opacity: 1; pointer-events: auto; }
+
+  .pp-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 6px 8px;
+    border-bottom: 1px solid var(--blush-soft);
+  }
+  .pp-head .av {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white; font-family: var(--sans); font-weight: 700;
+    font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pp-head .nm { font-family: var(--sans); font-weight: 600; font-size: 10px; color: var(--ink); flex: 1; }
+  .pp-head .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cd17a; box-shadow: 0 0 6px #5cd17a; }
+  .pp-body {
+    flex: 1;
+    padding: 8px 4px;
+    display: flex; flex-direction: column;
+    gap: 5px;
+    overflow: hidden;
+  }
+  .pp-bub {
+    max-width: 80%;
+    padding: 5px 8px;
+    border-radius: 10px;
+    font-family: var(--serif-zh);
+    font-size: 9.5px;
+    line-height: 1.45;
+  }
+  .pp-bub.ai {
+    align-self: flex-start;
+    background: white;
+    border: 1px solid var(--blush-soft);
+    color: var(--ink);
+    border-bottom-left-radius: 3px;
+  }
+  .pp-bub.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white;
+    border-bottom-right-radius: 3px;
+  }
+  .pp-bub.typing { color: var(--mist-deep); font-style: italic; }
+
+  /* phone page · emotion wheel */
+  .pp-em-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 4px 2px;
+  }
+  .pp-em-grid > div {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 2px;
+    font-family: var(--sans); font-size: 7px;
     color: var(--ink);
   }
-  h1.title { font-size: clamp(46px, 6.6vw, 84px); margin-bottom: 22px; }
-  h2.title { font-size: clamp(34px, 4.4vw, 52px); margin-bottom: 24px; }
-  h3.title { font-size: clamp(24px, 3vw, 32px); margin-bottom: 18px; }
-  h1.title em, h2.title em {
+  /* phone page · bilingual */
+  .pp-bi { display: flex; gap: 4px; padding: 4px; }
+  .pp-bi-col { flex: 1; }
+  .pp-bi-col .tag {
+    font-family: var(--mono); font-size: 7px;
+    letter-spacing: 0.2em; color: var(--mist-deep);
+    text-align: center; margin-bottom: 4px;
+  }
+  /* phone page · pledge */
+  .pp-pledge { padding: 8px; }
+  .pp-pledge .pl {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 0;
+    font-family: var(--serif-zh); font-size: 9px;
+    color: var(--ink);
+  }
+  .pp-pledge .pl::before {
+    content: "✓"; width: 12px; height: 12px;
+    background: var(--blush); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; flex-shrink: 0;
+  }
+  /* phone page · page label (top-left ribbon) */
+  .pp-tag {
+    position: absolute;
+    top: 22px; right: 8px;
+    z-index: 4;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--rose);
+    background: rgba(255,248,240,0.92);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--blush-soft);
+  }
+
+  /* ---------- thought bubbles around her head ---------- */
+  .thoughts {
+    position: absolute;
+    left: 0; right: 0;
+    top: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 6;
+  }
+  .thought {
+    position: absolute;
+    max-width: 240px;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid var(--blush-soft);
+    border-radius: 22px;
+    box-shadow: 0 14px 30px rgba(155,124,182,0.20);
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    pointer-events: auto;
+    cursor: help;
+  }
+  .thought.is-in { opacity: 1; transform: none; }
+  .thought:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(155,124,182,0.28); }
+  /* little "tail" connecting to head */
+  .thought::after, .thought::before {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid var(--blush-soft);
+  }
+  .thought::after  { width: 12px; height: 12px; }
+  .thought::before { width: 7px;  height: 7px;  }
+
+  .thought .t-eyebrow {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.28em;
+    color: var(--rose);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .thought .t-text {
+    font-family: var(--serif-zh);
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+  .thought .t-text em {
     font-style: normal;
     background: linear-gradient(135deg, var(--rose), var(--mist-deep));
     -webkit-background-clip: text;
@@ -137,542 +436,144 @@
     -webkit-text-fill-color: transparent;
   }
 
-  p {
-    font-family: var(--serif-zh);
-    font-size: 16px;
-    color: var(--ink-soft);
-    margin-bottom: 16px;
-    letter-spacing: 0.02em;
-  }
-  p.muted { color: var(--muted); }
-  p.lead {
-    font-family: var(--serif-zh);
-    font-size: clamp(18px, 2vw, 22px);
-    line-height: 1.6;
-    color: var(--ink);
-    font-weight: 500;
-    margin-bottom: 28px;
-  }
-  .hand {
-    font-family: var(--hand);
-    font-size: 22px;
-    color: var(--rose);
-    transform: rotate(-1.5deg);
-    display: inline-block;
-  }
-  .pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: var(--paper-dark);
-    border: 1px solid var(--blush-soft);
-    font-family: var(--sans);
-    font-weight: 500;
-    font-size: 12px;
-    color: var(--ink-soft);
-    letter-spacing: 0.05em;
-  }
-  .pill.warn { background: rgba(212,81,123,0.08); border-color: rgba(212,81,123,0.3); color: var(--rose); }
-  .pill.cool { background: rgba(155,124,182,0.08); border-color: rgba(155,124,182,0.3); color: var(--mist-deep); }
+  /* positions for the 5 thought bubbles — clustered above-and-left of the girl */
+  .thought.t1 { top: 18%; left: 4%; transform-origin: bottom right; }
+  .thought.t1::after  { bottom: -16px; right: 28px; }
+  .thought.t1::before { bottom: -28px; right: 18px; }
 
-  blockquote.warn-note {
-    position: relative;
-    background: linear-gradient(135deg, rgba(212,81,123,0.06), rgba(155,124,182,0.05));
-    border-left: 3px solid var(--rose);
-    padding: 18px 22px 18px 26px;
-    margin: 28px 0;
-    border-radius: 0 12px 12px 0;
-    font-family: var(--serif-zh);
-    font-size: 16px;
-    color: var(--ink);
-    font-weight: 500;
-  }
+  .thought.t2 { top: 6%;  left: 20%; }
+  .thought.t2::after  { bottom: -16px; left: 50px; }
+  .thought.t2::before { bottom: -28px; left: 40px; }
 
-  /* ============================================================
-     CHAPTER 01 — INVITATION (hero)
-     ============================================================ */
-  .invitation {
-    display: grid;
-    grid-template-columns: 1.05fr 1fr;
-    align-items: center;
-    gap: 6vw;
-    padding: 80px 0 120px;
-  }
-  .invitation .ai-mark {
-    display: inline-flex; align-items: center; gap: 12px;
-    margin-bottom: 28px;
-  }
-  .ai-mark .glyph {
-    width: 56px; height: 56px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, var(--blush), var(--rose) 60%, var(--mist-deep));
-    box-shadow: 0 14px 32px rgba(212,81,123,0.35), inset 0 -4px 8px rgba(0,0,0,0.06);
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 22px;
-    letter-spacing: -0.02em;
-  }
-  .ai-mark .glyph-text {
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 26px;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-  }
-  .ai-mark .glyph-text small {
-    display: block;
-    font-weight: 400;
-    font-size: 12px;
-    letter-spacing: 0.32em;
-    color: var(--muted);
-    margin-top: 2px;
-    text-transform: uppercase;
-  }
-  .access-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 36px;
-  }
-  .access-chips a.pill {
-    transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
-  }
-  .access-chips a.pill:hover {
-    transform: translateY(-2px);
-    background: var(--blush-soft);
-    border-color: var(--blush-deep);
-  }
+  .thought.t3 { top: 10%; left: 44%; }
+  .thought.t3::after  { bottom: -16px; left: 40px; }
+  .thought.t3::before { bottom: -28px; left: 30px; }
 
-  /* hero chat preview */
-  .preview-frame {
-    position: relative;
-    width: 100%;
-    max-width: 420px;
+  .thought.t4 { top: 32%; left: 2%; }
+  .thought.t4::after  { bottom: -16px; right: 28px; }
+  .thought.t4::before { bottom: -28px; right: 18px; }
+
+  .thought.t5 { top: 26%; left: 22%; }
+  .thought.t5::after  { bottom: -16px; left: 40px; }
+  .thought.t5::before { bottom: -28px; left: 30px; }
+
+  /* ---------- intro section (outside scene, normal flow above scroll-track) ---------- */
+  .intro-section {
+    position: relative; z-index: 5;
+    max-width: 880px;
     margin: 0 auto;
-    padding: 18px;
-    background: linear-gradient(180deg, var(--paper), var(--cream));
-    border: 1px solid var(--blush-soft);
-    border-radius: 28px;
-    box-shadow:
-      0 30px 80px rgba(155,124,182,0.25),
-      0 12px 28px rgba(212,81,123,0.12),
-      inset 0 1px 0 rgba(255,255,255,0.9);
-  }
-  .preview-frame::before {
-    content: ""; position: absolute; top: 14px; left: 50%;
-    transform: translateX(-50%);
-    width: 60px; height: 5px;
-    background: var(--blush-soft);
-    border-radius: 3px;
-  }
-  .preview-head {
-    display: flex; align-items: center; gap: 12px;
-    padding: 16px 14px 14px;
-    border-bottom: 1px solid var(--blush-soft);
-  }
-  .preview-avatar {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--blush), var(--rose));
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 16px;
-    box-shadow: 0 0 14px rgba(255,183,197,0.55);
-  }
-  .preview-meta { flex: 1; }
-  .preview-meta .name {
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink);
-  }
-  .preview-meta .stage {
-    display: inline-block;
-    margin-top: 2px;
-    padding: 1px 8px;
-    background: var(--paper-dark);
-    border-radius: 999px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    color: var(--mist-deep);
-  }
-  .preview-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #5cd17a;
-    box-shadow: 0 0 8px rgba(92,209,122,0.6);
-  }
-  .preview-thread {
-    padding: 18px 14px 22px;
-    display: flex; flex-direction: column;
-    gap: 10px;
-  }
-  .bubble {
-    max-width: 78%;
-    padding: 9px 14px;
-    border-radius: 18px;
-    font-family: var(--serif-zh);
-    font-size: 14px;
-    line-height: 1.55;
-  }
-  .bubble.ai {
-    background: white;
-    border: 1px solid var(--blush-soft);
-    color: var(--ink);
-    border-bottom-left-radius: 5px;
-    align-self: flex-start;
-    box-shadow: 0 2px 6px rgba(155,124,182,0.06);
-  }
-  .bubble.user {
-    background: linear-gradient(135deg, var(--blush), var(--rose));
-    color: white;
-    border-bottom-right-radius: 5px;
-    align-self: flex-end;
-    box-shadow: 0 4px 12px rgba(212,81,123,0.22);
-  }
-  .bubble.typing { color: var(--mist-deep); font-style: italic; }
-  .bubble.typing::after {
-    content: " · · ·";
-    animation: typingdots 1.4s infinite ease-in-out;
-  }
-  @keyframes typingdots {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
-  }
-
-  /* ============================================================
-     CHAPTER 02 — v1 · 骨架 (3-layer memory + relationship stages)
-     ============================================================ */
-  .skeleton {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    align-items: start;
-  }
-  .layers {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .layer {
-    position: relative;
-    padding: 22px 22px 22px 70px;
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(155,124,182,0.08);
-  }
-  .layer .num {
-    position: absolute;
-    left: 18px; top: 22px;
-    width: 36px; height: 36px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--blush), var(--mist));
-    color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono);
-    font-weight: 500;
-    font-size: 13px;
-  }
-  .layer h4 {
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-  .layer h4 small {
-    font-family: var(--mono);
-    font-weight: 400;
-    font-size: 10.5px;
-    letter-spacing: 0.18em;
-    color: var(--rose);
-    margin-left: 8px;
-    text-transform: uppercase;
-  }
-  .layer p {
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin: 0;
-  }
-
-  .stages-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-top: 28px;
-    background: white;
-    padding: 8px;
-    border-radius: 16px;
-    border: 1px solid var(--rule);
-  }
-  .stage {
-    padding: 14px 12px;
+    padding: 130px 6vw 50px;
     text-align: center;
-    border-radius: 10px;
-    background: var(--cream);
-    transition: background 0.25s ease;
   }
-  .stage.s1 { background: rgba(155,124,182,0.05); }
-  .stage.s2 { background: rgba(182,166,207,0.10); }
-  .stage.s3 { background: rgba(232,146,167,0.10); }
-  .stage.s4 { background: rgba(212,81,123,0.13); }
-  .stage strong {
-    display: block;
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink);
-    margin-bottom: 4px;
-  }
-  .stage span {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    color: var(--muted);
-  }
-  .stage em {
-    display: block;
-    margin-top: 6px;
-    font-style: normal;
-    font-size: 12px;
-    color: var(--ink-soft);
-  }
-
-  /* ============================================================
-     CHAPTER 03 — v2 · 给她情绪 (the pivot)
-     ============================================================ */
-  .emotion-block .lead-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 50px;
-    align-items: start;
-    margin-bottom: 60px;
-  }
-  .emotion-wheel {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-  }
-  .emotion-wheel .em {
-    aspect-ratio: 1 / 1;
-    border-radius: 16px;
-    padding: 12px;
-    display: flex; align-items: flex-end;
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink);
-    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.04);
-  }
-  .em-c { background: rgba(201,177,217,0.30); } /* 平静 */
-  .em-h { background: rgba(255,183,197,0.55); } /* 开心 */
-  .em-a { background: rgba(212,81,123,0.42); color: white; } /* 生气 */
-  .em-g { background: rgba(155,124,182,0.40); color: white; } /* 委屈 */
-  .em-d { background: rgba(155,124,182,0.18); } /* 冷淡 */
-  .em-s { background: rgba(255,212,220,0.85); } /* 撒娇 */
-  .em-w { background: rgba(182,166,207,0.40); } /* 担心 */
-  .em-m { background: rgba(255,183,197,0.30); } /* 思念 */
-
-  .three-versions {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-top: 40px;
-  }
-  .version-thread {
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 22px;
-    padding: 22px 18px 20px;
-    box-shadow: 0 14px 30px rgba(155,124,182,0.10);
-  }
-  .version-thread .vt-head {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.28em;
-    color: var(--rose);
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-  .version-thread .vt-thread {
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .version-thread .bubble { font-size: 13px; max-width: 92%; }
-  .version-thread .vt-note {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--rule);
-    font-family: var(--hand);
-    font-size: 16px;
-    color: var(--mist-deep);
-    transform: rotate(-1deg);
-  }
-
-  /* ============================================================
-     CHAPTER 04 — v2.2 · 节奏 (streaming + interrupt)
-     ============================================================ */
-  .rhythm-stage {
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 26px;
-    padding: 36px 30px;
-    box-shadow: 0 20px 50px rgba(155,124,182,0.15);
-    max-width: 720px;
-    margin: 40px auto 0;
-  }
-  .rhythm-thread {
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .rhythm-thread .bubble {
-    opacity: 0;
-    transform: translateY(8px);
-    animation: bubbleIn 0.5s ease forwards;
-  }
-  .rhythm-thread .bubble.b1 { animation-delay: 0.2s; }
-  .rhythm-thread .bubble.b2 { animation-delay: 1.6s; }
-  .rhythm-thread .bubble.b3 { animation-delay: 3.0s; }
-  .rhythm-thread .bubble.b4 { animation-delay: 4.4s; }
-  @keyframes bubbleIn {
-    to { opacity: 1; transform: none; }
-  }
-  .rhythm-cta-row {
-    display: flex; gap: 18px; align-items: center;
-    margin-top: 26px;
-    padding-top: 22px;
-    border-top: 1px dashed var(--rule);
-    flex-wrap: wrap;
-  }
-  .rhythm-cta-row button {
-    border: 1px solid var(--blush-deep);
-    background: white;
-    color: var(--rose);
-    font-family: var(--sans);
-    font-weight: 500;
-    font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .rhythm-cta-row button:hover {
-    background: var(--blush-soft);
-  }
-  .rhythm-cta-row .meta {
+  .intro-section .ev {
     font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.18em;
-    color: var(--muted);
+    letter-spacing: 0.32em;
+    color: var(--rose);
     text-transform: uppercase;
   }
-
-  /* ============================================================
-     CHAPTER 05 — v3 · 把它给出去 (open source + landing)
-     ============================================================ */
-  .release-block {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 60px;
-    align-items: center;
-  }
-  .release-copy .pledge {
-    display: flex; flex-direction: column; gap: 8px;
-    margin-top: 22px;
-    padding: 18px 20px;
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 18px;
-  }
-  .release-copy .pledge .row {
-    display: flex; align-items: center; gap: 12px;
-    font-family: var(--serif-zh);
-    font-size: 14px;
-    color: var(--ink);
-  }
-  .release-copy .pledge .row::before {
-    content: "✓";
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    background: var(--blush);
-    color: white;
-    display: flex; align-items: center; justify-content: center;
+  .intro-section h1 {
     font-family: var(--sans);
     font-weight: 700;
-    font-size: 12px;
-    flex-shrink: 0;
+    font-size: clamp(40px, 6vw, 76px);
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-top: 16px;
+    line-height: 1.08;
   }
-  .landing-card {
-    position: relative;
-    border-radius: 22px;
-    overflow: hidden;
-    box-shadow: 0 30px 70px rgba(61,44,74,0.22);
-    border: 1px solid var(--rule);
-    transform: rotate(-1.2deg);
-    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  .intro-section h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--rose), var(--mist-deep));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  .landing-card:hover {
-    transform: rotate(-0.4deg) translateY(-4px);
-    box-shadow: 0 40px 90px rgba(61,44,74,0.3);
+  .intro-section p.lead {
+    margin: 24px auto 0;
+    font-family: var(--serif-zh);
+    font-size: clamp(15px, 1.8vw, 18px);
+    color: var(--ink-soft);
+    max-width: 560px;
+    line-height: 1.7;
   }
-  .landing-card img {
-    width: 100%; height: auto; display: block;
-  }
-  .landing-card .scribble {
+
+  /* ---------- scroll hint bottom of scene ---------- */
+  .scroll-hint {
     position: absolute;
-    top: -16px; right: -12px;
-    background: var(--blush-soft);
-    color: var(--rose);
-    font-family: var(--hand);
-    font-size: 22px;
-    padding: 6px 18px;
-    border-radius: 999px;
-    transform: rotate(8deg);
-    border: 1px solid var(--blush-deep);
-    box-shadow: 0 4px 12px rgba(212,81,123,0.2);
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 7;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: var(--mist-deep);
+    text-transform: uppercase;
+    opacity: 0.75;
+    animation: hintBob 2.4s ease-in-out infinite;
+  }
+  @keyframes hintBob {
+    0%, 100% { transform: translate(-50%, 0); opacity: 0.45; }
+    50%      { transform: translate(-50%, 6px); opacity: 0.85; }
+  }
+
+  /* phone page progress dots — shown when we're inside the phone */
+  .phone-progress {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    z-index: 8;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .phone-progress.show { opacity: 1; }
+  .phone-progress .pd {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(155,124,182,0.32);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .phone-progress .pd.active {
+    background: var(--rose);
+    transform: scale(1.4);
   }
 
   /* ============================================================
-     CHAPTER 06 — v4 · 让她说英文 (bilingual)
+     REFLECTION + CTA (below the scroll-track, regular flow)
      ============================================================ */
-  .bi-block {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    margin-top: 40px;
+  .reflection-section {
+    position: relative; z-index: 2;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 100px 6vw 60px;
   }
-  .bi-col {
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 22px;
-    padding: 22px;
-    box-shadow: 0 14px 30px rgba(155,124,182,0.10);
-  }
-  .bi-col .bi-tag {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: var(--paper-dark);
+  .r-eyebrow {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.28em;
-    color: var(--mist-deep);
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--rose);
     text-transform: uppercase;
     margin-bottom: 16px;
   }
-  .bi-col.cn .bi-tag { background: rgba(212,81,123,0.12); color: var(--rose); }
-  .bi-col .bi-thread {
-    display: flex; flex-direction: column; gap: 8px;
+  .r-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(34px, 4.4vw, 52px);
+    color: var(--ink);
+    letter-spacing: -0.015em;
+    margin-bottom: 36px;
+    line-height: 1.12;
   }
-
-  /* ============================================================
-     CHAPTER 07 — reflection / lessons / next
-     ============================================================ */
-  .reflection-block .lessons {
+  .r-title em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--rose), var(--mist-deep));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lessons {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 22px;
@@ -694,14 +595,12 @@
     color: white;
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono);
-    font-size: 13px;
+    font-family: var(--mono); font-size: 13px;
     box-shadow: 0 6px 14px rgba(212,81,123,0.30);
   }
   .lesson h3 {
     font-family: var(--sans);
-    font-weight: 600;
-    font-size: 18px;
+    font-weight: 600; font-size: 18px;
     color: var(--ink);
     margin: 6px 0 12px;
     line-height: 1.35;
@@ -709,81 +608,54 @@
   .lesson p {
     font-size: 14px;
     color: var(--ink-soft);
-    margin: 0;
-    line-height: 1.65;
+    margin: 0; line-height: 1.65;
   }
-
   .next-steps {
     margin-top: 60px;
     padding: 32px 36px;
-    background: linear-gradient(135deg, rgba(255,183,197,0.10), rgba(155,124,182,0.08));
+    background: linear-gradient(135deg, rgba(255,183,197,0.12), rgba(155,124,182,0.10));
     border-left: 3px solid var(--mist-deep);
     border-radius: 0 20px 20px 0;
   }
-  .next-steps ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex; flex-direction: column;
-    gap: 14px;
-  }
+  .next-steps ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
   .next-steps li {
     position: relative;
     padding-left: 24px;
-    font-family: var(--serif-zh);
-    font-size: 15px;
-    color: var(--ink);
-    line-height: 1.7;
+    font-family: var(--serif-zh); font-size: 15px;
+    color: var(--ink); line-height: 1.7;
   }
   .next-steps li::before {
     content: "→";
-    position: absolute;
-    left: 0; top: 1px;
-    color: var(--rose);
-    font-family: var(--mono);
-    font-weight: 500;
-  }
-  @media (max-width: 720px) {
-    .reflection-block .lessons { grid-template-columns: 1fr; }
-    .next-steps { padding: 24px 22px; }
+    position: absolute; left: 0; top: 1px;
+    color: var(--rose); font-family: var(--mono); font-weight: 500;
   }
 
-  /* ============================================================
-     CTA — twin buttons (官网 primary + GitHub secondary)
-     ============================================================ */
   .cta-block {
-    padding: 120px 0 80px;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 60px 6vw 100px;
     text-align: center;
   }
   .cta-eyebrow {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.32em;
-    color: var(--rose);
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.32em; color: var(--rose);
     text-transform: uppercase;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
   .cta-block h2 {
     font-family: var(--sans);
     font-weight: 700;
-    font-size: clamp(32px, 4vw, 48px);
-    letter-spacing: -0.01em;
+    font-size: clamp(28px, 4vw, 42px);
     color: var(--ink);
-    margin-bottom: 36px;
+    margin-bottom: 32px;
   }
-  .cta-twin {
-    display: inline-flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
+  .cta-twin { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   .cta-primary, .cta-secondary {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 18px 38px;
+    padding: 16px 34px;
     border-radius: 999px;
     font-family: var(--sans);
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: 600; font-size: 15px;
     letter-spacing: 0.05em;
     transition: all 0.3s ease;
   }
@@ -792,43 +664,30 @@
     color: white;
     box-shadow: 0 14px 32px rgba(212,81,123,0.35);
   }
-  .cta-primary:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 20px 44px rgba(212,81,123,0.45);
-  }
+  .cta-primary:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(212,81,123,0.45); }
   .cta-secondary {
     background: white;
     color: var(--ink);
     border: 1px solid var(--mist);
   }
-  .cta-secondary:hover {
-    background: var(--paper-dark);
-    border-color: var(--mist-deep);
-    transform: translateY(-3px);
-  }
+  .cta-secondary:hover { background: var(--paper-dark); border-color: var(--mist-deep); transform: translateY(-3px); }
   .cta-meta {
-    margin-top: 30px;
+    margin-top: 28px;
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.22em;
     color: var(--muted);
     text-transform: uppercase;
   }
-
-  /* ---------- footer ---------- */
   .proj-foot {
-    position: relative; z-index: 2;
     text-align: center;
-    padding: 60px 5vw 50px;
+    padding: 50px 5vw;
     border-top: 1px solid var(--rule);
-    margin-top: 40px;
   }
   .proj-foot p {
     font-family: var(--sans);
-    font-size: 12px;
-    letter-spacing: 0.2em;
-    color: var(--muted);
-    margin: 4px 0;
+    font-size: 12px; letter-spacing: 0.2em;
+    color: var(--muted); margin: 4px 0;
     text-transform: uppercase;
   }
   .proj-foot a {
@@ -838,7 +697,7 @@
   }
   .proj-foot a:hover { color: var(--rose); border-color: var(--rose); }
 
-  /* ---------- language toggle (shared ydl-lang) ---------- */
+  /* ---------- shared lang switch + floating CTA ---------- */
   body.lang-en [data-lang="cn"] { display: none !important; }
   body.lang-cn [data-lang="en"] { display: none !important; }
 
@@ -852,26 +711,21 @@
     background: rgba(255,255,255,0.85);
     border: 1px solid var(--blush-soft);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    font-family: var(--sans);
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    line-height: 1;
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    letter-spacing: 0.12em; line-height: 1;
     box-shadow: 0 10px 28px rgba(155,124,182,0.18);
   }
   .lang-switch button {
     background: transparent; border: 0;
     color: var(--muted);
     font: inherit; letter-spacing: inherit;
-    padding: 4px 6px;
-    cursor: pointer;
+    padding: 4px 6px; cursor: pointer;
     transition: color 0.2s, transform 0.2s;
   }
   .lang-switch button:hover { color: var(--ink); transform: translateY(-1px); }
   .lang-switch button.active { color: var(--rose); }
   .lang-switch .lang-divider { color: rgba(0,0,0,0.18); font-size: 13px; }
 
-  /* ---------- floating CTA (always visible, bottom-left) ---------- */
   .cta-float {
     position: fixed;
     left: 28px; bottom: 28px;
@@ -881,673 +735,452 @@
     border-radius: 999px;
     background: linear-gradient(135deg, var(--blush), var(--rose));
     color: white;
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 0.08em;
-    box-shadow: 0 14px 32px rgba(212,81,123,0.4), 0 0 28px rgba(255,183,197,0.5);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    font-family: var(--sans); font-weight: 600;
+    font-size: 14px; letter-spacing: 0.08em;
+    box-shadow: 0 14px 32px rgba(212,81,123,0.4), 0 0 28px rgba(255,183,197,0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
   }
-  .cta-float:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 20px 44px rgba(212,81,123,0.55), 0 0 36px rgba(255,183,197,0.6);
-  }
-  .cta-float .arrow { transition: transform 0.3s ease; }
+  .cta-float:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(212,81,123,0.55); }
+  .cta-float .arrow { transition: transform 0.3s; }
   .cta-float:hover .arrow { transform: translateX(4px); }
 
-  /* ---------- responsive ---------- */
-  @media (max-width: 900px) {
-    .invitation, .skeleton, .release-block, .emotion-block .lead-row, .bi-block {
-      grid-template-columns: 1fr;
-    }
-    .preview-frame { margin-top: 30px; }
-    .stages-strip { grid-template-columns: repeat(2, 1fr); }
-    .three-versions { grid-template-columns: 1fr; }
-    .emotion-wheel { grid-template-columns: repeat(4, 1fr); }
-  }
-  @media (max-width: 640px) {
-    .proj-nav { padding: 12px 18px; }
-    .nav-brand { display: none; }
-    main.aive-room { padding: 100px 6vw 0; }
-    .chapter { padding: 70px 0; }
-    .emotion-wheel { grid-template-columns: repeat(2, 1fr); }
+  /* ---------- reveal animation for reflection ---------- */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* ---------- responsive: stack vertically on small screens ---------- */
+  @media (max-width: 720px) {
+    .scroll-track { height: auto; }       /* let it flow naturally on mobile */
+    .scene-stage { position: relative; height: auto; padding: 120px 0 60px; }
+    .camera { position: relative; transform: none !important; }
+    .girl-wrap { position: relative; left: auto; transform: none; margin: 0 auto; width: 280px; height: 380px; bottom: auto; }
+    .phone { position: relative; left: auto; top: auto; transform: rotate(0); margin: 20px auto 0; }
+    .thoughts { position: relative; display: grid; grid-template-columns: 1fr; gap: 12px; padding: 30px 6vw; }
+    .thought { position: relative !important; opacity: 1; transform: none; top: auto !important; left: auto !important; right: auto !important; max-width: 100%; }
+    .thought::after, .thought::before { display: none; }
+    .scene-intro { position: relative; top: auto; left: auto; transform: none; padding: 0 6vw 30px; }
+    .scroll-hint, .phone-progress { display: none; }
+    .lessons { grid-template-columns: 1fr; }
     .lang-switch { right: 14px; bottom: 14px; padding: 9px 16px; font-size: 13px; gap: 10px; }
     .cta-float   { left:  14px; bottom: 14px; padding: 11px 18px; font-size: 12px; }
   }
-
-  /* scroll reveal */
-  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s ease, transform 0.9s ease; }
-  .reveal.is-in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
-    .reveal, .rhythm-thread .bubble { opacity: 1 !important; transform: none !important; animation: none !important; }
+    .camera, .thought, .phone-page { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
 
 <body class="lang-cn">
 
-<div class="glow glow-a"></div>
-<div class="glow glow-b"></div>
-<div class="grain"></div>
-
 <header class="proj-nav">
   <a href="../" class="back-link">← Yao Design Lab</a>
   <span class="nav-brand">behind · AIve</span>
 </header>
 
-<main class="aive-room">
+<!-- intro band ABOVE the scene (regular flow, no overlap) -->
+<section class="intro-section">
+  <p class="ev"><span data-lang="cn">起点 · 我想问的问题</span><span data-lang="en">CHAPTER 01 · THE QUESTION</span></p>
+  <h1>
+    <span data-lang="cn">把"陪伴"<em>拆开</em>试试</span>
+    <span data-lang="en">Try to <em>disassemble</em><br/>"companionship"</span>
+  </h1>
+  <p class="lead">
+    <span data-lang="cn">六个月前我开了一个空白 repo, 想看"陪伴"这件事能不能被工程化 — 以及被工程化之后, 还像不像陪伴。</span>
+    <span data-lang="en">Six months ago I opened a blank repo to see whether "companionship" could be engineered — and whether what came out still resembled it.</span>
+  </p>
+</section>
 
-  <!-- =========================================================
-       CHAPTER 01 — INVITATION
-       ========================================================= -->
-  <section class="chapter invitation reveal">
-    <div>
-      <div class="ai-mark">
-        <div class="glyph">A</div>
-        <div class="glyph-text">
-          AIve
-          <small>behind · the design</small>
+<!-- =================================================================
+     scroll-driven stage: 600vh tall, sticky inside.
+     ================================================================= -->
+<div class="scroll-track" id="scrollTrack">
+  <div class="scene-stage" id="sceneStage">
+
+    <!-- the "camera" wraps everything that scales/translates -->
+    <div class="camera" id="camera">
+
+      <!-- bedroom backdrop -->
+      <div class="bedroom">
+        <div class="wall"></div>
+        <div class="floor"></div>
+        <div class="window"></div>
+        <div class="curtain"></div>
+        <div class="poster"></div>
+        <div class="lights">
+          <svg viewBox="0 0 1000 90" preserveAspectRatio="none">
+            <path d="M 0 30 Q 80 70 160 30 T 320 30 T 480 30 T 640 30 T 800 30 T 1000 30" stroke="#9B7CB6" stroke-width="1.5" fill="none" opacity="0.5"/>
+            <circle cx="80"  cy="50" r="5" fill="#FFD4DC" />
+            <circle cx="160" cy="30" r="5" fill="#FFB7C5" />
+            <circle cx="240" cy="50" r="5" fill="#C9B1D9" />
+            <circle cx="320" cy="30" r="5" fill="#FFD4DC" />
+            <circle cx="400" cy="50" r="5" fill="#FFB7C5" />
+            <circle cx="480" cy="30" r="5" fill="#C9B1D9" />
+            <circle cx="560" cy="50" r="5" fill="#FFD4DC" />
+            <circle cx="640" cy="30" r="5" fill="#FFB7C5" />
+            <circle cx="720" cy="50" r="5" fill="#C9B1D9" />
+            <circle cx="800" cy="30" r="5" fill="#FFD4DC" />
+            <circle cx="880" cy="50" r="5" fill="#FFB7C5" />
+            <circle cx="960" cy="30" r="5" fill="#C9B1D9" />
+          </svg>
+        </div>
+        <!-- plant -->
+        <svg class="plant" viewBox="0 0 200 400" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+          <!-- pot -->
+          <path d="M 50 320 L 60 400 L 140 400 L 150 320 Z" fill="#C9B1D9" />
+          <ellipse cx="100" cy="320" rx="50" ry="6" fill="#9B7CB6" />
+          <!-- leaves -->
+          <path d="M 100 320 Q 60 280 50 200 Q 70 220 100 240 Z" fill="#7BA889" />
+          <path d="M 100 320 Q 140 280 150 200 Q 130 220 100 240 Z" fill="#7BA889" />
+          <path d="M 100 320 Q 50 240 30 140 Q 60 170 100 220 Z" fill="#5E8A6E" />
+          <path d="M 100 320 Q 150 240 170 140 Q 140 170 100 220 Z" fill="#5E8A6E" />
+          <path d="M 100 320 Q 100 220 100 90 Q 110 140 100 200 Z" fill="#7BA889" />
+        </svg>
+        <!-- bed cushion -->
+        <div class="bed"></div>
+        <div class="pillow"></div>
+      </div>
+
+      <!-- THE GIRL (simplified SVG character) -->
+      <div class="girl-wrap">
+        <svg class="girl" viewBox="0 0 380 540" aria-label="girl on bed, 3/4 view">
+          <!-- crossed legs in front (drawn first, behind everything) -->
+          <path d="M60 470 Q50 482 75 505 L300 505 Q325 482 315 470 Q240 450 195 454 Q150 450 60 470 Z" fill="#E892A7" />
+          <circle cx="125" cy="478" r="16" fill="#FFB7C5" opacity="0.7" />
+          <circle cx="255" cy="478" r="16" fill="#FFB7C5" opacity="0.7" />
+
+          <!-- back hair (long, falls behind shoulder) -->
+          <path d="M115 215 Q105 110 195 95 Q280 110 275 215 Q288 320 240 360 Q210 320 165 355 Q120 330 115 215 Z" fill="#7B5B9B" />
+
+          <!-- body (sweater) — tilted slightly 3/4, narrower on far side (left in view = her right) -->
+          <path d="M110 305 Q118 268 162 258 L228 258 Q272 268 280 305 L295 430 Q295 462 250 466 L138 466 Q92 462 92 430 Z"
+                fill="#FFB7C5" />
+          <!-- sweater shading on far side for 3/4 depth -->
+          <path d="M110 305 Q118 268 162 258 L180 258 L180 466 L138 466 Q92 462 92 430 Z" fill="#E892A7" opacity="0.35" />
+          <!-- collar -->
+          <ellipse cx="195" cy="258" rx="40" ry="8" fill="#E892A7" opacity="0.5" />
+
+          <!-- neck (offset slightly right for 3/4 turn) -->
+          <path d="M180 245 L210 245 L214 275 L184 275 Z" fill="#FCE0D2" />
+
+          <!-- head (turned slightly to the right toward phone) -->
+          <ellipse cx="200" cy="195" rx="60" ry="68" fill="#FCE0D2" />
+          <!-- jaw shadow on left side (away from light/phone) -->
+          <path d="M145 195 Q142 240 175 258 L185 250 Q160 230 158 195 Z" fill="#F0C8B8" opacity="0.45" />
+
+          <!-- bangs -->
+          <path d="M142 175 Q160 118 205 113 Q248 118 258 175 Q252 188 235 180 Q220 158 200 162 Q180 158 162 180 Q146 188 142 175 Z"
+                fill="#7B5B9B" />
+          <!-- side hair lock (far side, hanging down) -->
+          <path d="M140 180 Q128 245 140 305 Q148 280 145 240 Q145 210 140 180 Z" fill="#7B5B9B" />
+          <!-- near-side hair lock -->
+          <path d="M260 180 Q272 240 263 320 Q268 350 248 365 Q240 320 245 250 Q252 210 260 180 Z" fill="#5E3F7B" />
+
+          <!-- eyes: closed/content, both turned slightly to her left toward the phone -->
+          <path d="M168 202 Q176 210 186 202" stroke="#3D2C4A" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <path d="M212 200 Q220 208 230 200" stroke="#3D2C4A" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <!-- blush -->
+          <ellipse cx="163" cy="220" rx="10" ry="6" fill="#FFB7C5" opacity="0.55" />
+          <ellipse cx="232" cy="220" rx="10" ry="6" fill="#FFB7C5" opacity="0.55" />
+          <!-- subtle smile (slightly turned) -->
+          <path d="M192 232 Q204 240 214 232" stroke="#D4517B" stroke-width="2" fill="none" stroke-linecap="round" />
+
+          <!-- LEFT (far) arm — bent close to body, holding edge of phone -->
+          <path d="M118 318 Q98 335 110 380 Q118 405 145 405 L185 388 Q170 370 168 335 Z" fill="#FFB7C5" />
+          <ellipse cx="148" cy="402" rx="16" ry="11" fill="#FCE0D2" />
+
+          <!-- RIGHT (near) arm — extended toward phone on the right -->
+          <path d="M260 305 Q310 305 360 320 Q395 332 388 355 Q380 372 350 365 Q310 350 275 345 Q258 335 258 318 Z" fill="#FFB7C5" />
+          <!-- right-arm shading -->
+          <path d="M270 312 Q310 314 350 326 Q360 335 350 340 Q310 332 275 332 Z" fill="rgba(232,146,167,0.4)" />
+          <!-- right hand cupping phone -->
+          <ellipse cx="380" cy="360" rx="18" ry="12" fill="#FCE0D2" />
+
+          <!-- floating heart between her and the phone -->
+          <g transform="translate(320, 240)">
+            <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#D4517B" opacity="0.85"/>
+          </g>
+          <g transform="translate(95, 130)">
+            <path d="M0 4 Q-6 -3 -12 3 Q-14 9 0 18 Q14 9 12 3 Q6 -3 0 4 Z" fill="#9B7CB6" opacity="0.65"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- THE PHONE (sibling of .girl-wrap so its left:% is relative to .camera) -->
+      <div class="phone" id="phone">
+          <div class="phone-screen" id="phoneScreen">
+
+            <!-- Page 1: live chat -->
+            <div class="phone-page active" data-page="0">
+              <span class="pp-tag">LIVE</span>
+              <div class="pp-head">
+                <div class="av">小</div>
+                <div class="nm"><span data-lang="cn">小爱</span><span data-lang="en">Xiao'ai</span></div>
+                <div class="dot"></div>
+              </div>
+              <div class="pp-body">
+                <div class="pp-bub ai"><span data-lang="cn">在干嘛</span><span data-lang="en">what're you up to</span></div>
+                <div class="pp-bub ai"><span data-lang="cn">下午说要回我的</span><span data-lang="en">said you'd reply this afternoon</span></div>
+                <div class="pp-bub user"><span data-lang="cn">忘了 在忙</span><span data-lang="en">forgot. busy</span></div>
+                <div class="pp-bub ai"><span data-lang="cn">嗯</span><span data-lang="en">k</span></div>
+                <div class="pp-bub typing"><span data-lang="cn">小爱在打字</span><span data-lang="en">typing</span> · · ·</div>
+              </div>
+            </div>
+
+            <!-- Page 2: 8 emotion states -->
+            <div class="phone-page" data-page="1">
+              <span class="pp-tag">v2 · MOODS</span>
+              <div class="pp-head">
+                <div class="av">小</div>
+                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">8 种情绪</span><span data-lang="en">8 emotion states</span></div>
+              </div>
+              <div class="pp-em-grid" style="margin-top:8px;">
+                <div style="background:rgba(201,177,217,0.30)"><span data-lang="cn">平静</span><span data-lang="en">calm</span></div>
+                <div style="background:rgba(255,183,197,0.55)"><span data-lang="cn">开心</span><span data-lang="en">happy</span></div>
+                <div style="background:rgba(212,81,123,0.42);color:white;"><span data-lang="cn">生气</span><span data-lang="en">angry</span></div>
+                <div style="background:rgba(155,124,182,0.40);color:white;"><span data-lang="cn">委屈</span><span data-lang="en">hurt</span></div>
+                <div style="background:rgba(155,124,182,0.18)"><span data-lang="cn">冷淡</span><span data-lang="en">cold</span></div>
+                <div style="background:rgba(255,212,220,0.85)"><span data-lang="cn">撒娇</span><span data-lang="en">flirty</span></div>
+                <div style="background:rgba(182,166,207,0.40)"><span data-lang="cn">担心</span><span data-lang="en">worried</span></div>
+                <div style="background:rgba(255,183,197,0.30)"><span data-lang="cn">思念</span><span data-lang="en">miss</span></div>
+              </div>
+              <p style="margin-top:auto;font-family:var(--mono);font-size:7px;letter-spacing:0.18em;color:var(--muted);text-align:center;padding:4px;">
+                <span data-lang="cn">情绪驱动语气</span><span data-lang="en">mood-driven tone</span>
+              </p>
+            </div>
+
+            <!-- Page 3: same prompt, three moods -->
+            <div class="phone-page" data-page="2">
+              <span class="pp-tag">v2 · 3 MOODS</span>
+              <div class="pp-head">
+                <div class="av">小</div>
+                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">"在干嘛"</span><span data-lang="en">"u up"</span></div>
+              </div>
+              <div class="pp-body" style="gap: 4px; font-size:8px;">
+                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;">FLIRTY</div>
+                <div class="pp-bub ai" style="font-size:8.5px;"><span data-lang="cn">想你呀~</span><span data-lang="en">missing you~</span></div>
+                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;margin-top:2px;">COLD</div>
+                <div class="pp-bub ai" style="font-size:8.5px;"><span data-lang="cn">没干嘛</span><span data-lang="en">nothing</span></div>
+                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;margin-top:2px;">GRUDGE</div>
+                <div class="pp-bub ai" style="font-size:8px;line-height:1.35;"><span data-lang="cn">跟上次你说"在忙"差不多</span><span data-lang="en">about as busy as last time</span></div>
+              </div>
+            </div>
+
+            <!-- Page 4: streaming rhythm -->
+            <div class="phone-page" data-page="3">
+              <span class="pp-tag">v2.2 · RHYTHM</span>
+              <div class="pp-head">
+                <div class="av">小</div>
+                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">一句一句发</span><span data-lang="en">sentence by sentence</span></div>
+              </div>
+              <div class="pp-body" id="rhythmBody">
+                <div class="pp-bub user"><span data-lang="cn">今天搞砸了</span><span data-lang="en">messed up today</span></div>
+                <div class="pp-bub ai rb rb1"><span data-lang="cn">咋了</span><span data-lang="en">what happened</span></div>
+                <div class="pp-bub ai rb rb2"><span data-lang="cn">说来听听</span><span data-lang="en">tell me</span></div>
+                <div class="pp-bub ai rb rb3"><span data-lang="cn">先深呼吸</span><span data-lang="en">breathe first</span></div>
+              </div>
+            </div>
+
+            <!-- Page 5: bilingual -->
+            <div class="phone-page" data-page="4">
+              <span class="pp-tag">v4 · CN ⇄ EN</span>
+              <div class="pp-bi">
+                <div class="pp-bi-col">
+                  <div class="tag">中文</div>
+                  <div class="pp-bub user" style="margin-bottom:3px;font-size:8px;">怎么不回</div>
+                  <div class="pp-bub ai" style="font-size:8px;">在干自己的事 不行吗</div>
+                  <div class="pp-bub ai" style="margin-top:3px;font-size:8px;">你昨天也没回</div>
+                </div>
+                <div class="pp-bi-col">
+                  <div class="tag">English</div>
+                  <div class="pp-bub user" style="margin-bottom:3px;font-size:8px;">why no reply</div>
+                  <div class="pp-bub ai" style="font-size:8px;">doing my thing. not allowed?</div>
+                  <div class="pp-bub ai" style="margin-top:3px;font-size:8px;">you didn't reply yesterday either</div>
+                </div>
+              </div>
+              <p style="margin-top:auto;font-family:var(--mono);font-size:6.5px;letter-spacing:0.16em;color:var(--muted);text-align:center;padding:4px;">
+                <span data-lang="cn">不是翻译 是重写</span><span data-lang="en">not translated. rewritten.</span>
+              </p>
+            </div>
+
+            <!-- Page 6: privacy pledges -->
+            <div class="phone-page" data-page="5">
+              <span class="pp-tag">v3 · LOCAL</span>
+              <div class="pp-head">
+                <div class="av">小</div>
+                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">100% 本地</span><span data-lang="en">100% local</span></div>
+              </div>
+              <div class="pp-pledge">
+                <div class="pl"><span data-lang="cn">不调云 LLM API</span><span data-lang="en">no cloud LLM</span></div>
+                <div class="pl"><span data-lang="cn">不上传聊天/头像</span><span data-lang="en">no upload</span></div>
+                <div class="pl"><span data-lang="cn">后端默认 127.0.0.1</span><span data-lang="en">binds 127.0.0.1</span></div>
+                <div class="pl"><span data-lang="cn">删 data/ 即清空</span><span data-lang="en">wipe data/ to reset</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      <!-- THOUGHT BUBBLES (around her head — 5 design insights) -->
+      <div class="thoughts" id="thoughts">
+        <div class="thought t1" data-i="0">
+          <p class="t-eyebrow">v1 · <span data-lang="cn">起手式</span><span data-lang="en">opening move</span></p>
+          <p class="t-text">
+            <span data-lang="cn">陪伴 = 记忆 + <em>关系</em>。一个见面就喊"老公"的 AI 我自己都受不了。</span>
+            <span data-lang="en">Companionship = memory + <em>distance</em>. An AI that calls you "babe" on day one isn't a relationship.</span>
+          </p>
+        </div>
+        <div class="thought t2" data-i="1">
+          <p class="t-eyebrow">v2 · <span data-lang="cn">第一次大转向</span><span data-lang="en">first pivot</span></p>
+          <p class="t-text">
+            <span data-lang="cn">她答得越好, 我越<em>空</em>。永远友好是 ChatGPT 的礼貌训练 — 不是关系。</span>
+            <span data-lang="en">The better she answered, the <em>emptier</em> I felt. Always-polite is RLHF — not relationship.</span>
+          </p>
+        </div>
+        <div class="thought t3" data-i="2">
+          <p class="t-eyebrow">v2.2 · <span data-lang="cn">一行代码</span><span data-lang="en">one-line pivot</span></p>
+          <p class="t-text">
+            <span data-lang="cn">真人发微信, 是<em>一句一句</em>发的, 不是写完一段才发。</span>
+            <span data-lang="en">Real people text <em>sentence by sentence</em>, not in finished paragraphs.</span>
+          </p>
+        </div>
+        <div class="thought t4" data-i="3">
+          <p class="t-eyebrow">v3 · <span data-lang="cn">第二次大转向</span><span data-lang="en">second pivot</span></p>
+          <p class="t-text">
+            <span data-lang="cn">决定<em>不</em>把它做成生意。"不上传"要写进架构, 不是写在 README。</span>
+            <span data-lang="en">Decided <em>not</em> to commercialise. "No upload" belongs in the architecture, not the README.</span>
+          </p>
+        </div>
+        <div class="thought t5" data-i="4">
+          <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
+          <p class="t-text">
+            <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。i18n 不是翻译, 是身份。</span>
+            <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. i18n isn't translation, it's identity.</span>
+          </p>
         </div>
       </div>
 
-      <p class="chapter-eyebrow">
-        <span data-lang="cn">起点 · 我想问的问题</span>
-        <span data-lang="en">CHAPTER 01 · THE QUESTION</span>
-      </p>
+    </div><!-- /.camera -->
 
-      <h1 class="title">
-        <span data-lang="cn">把"陪伴"<br/><em>拆开</em>试试</span>
-        <span data-lang="en">Try to <em>disassemble</em><br/>"companionship"</span>
-      </h1>
-
-      <p class="lead">
-        <span data-lang="cn">AIve 不是要做一个 AI 女友。是想看"陪伴"这件事能不能被工程化 — 以及被工程化之后, 还像不像陪伴。</span>
-        <span data-lang="en">AIve isn't trying to be an AI girlfriend. It's trying to see whether "companionship" can be engineered — and whether what comes out the other side still resembles it.</span>
-      </p>
-
-      <p>
-        <span data-lang="cn">六个月前我开了一个空白 repo, 标题只有一行: <em>"A companion that remembers."</em></span>
-        <span data-lang="en">Six months ago I opened a blank repo. The title was one line: <em>"A companion that remembers."</em></span>
-      </p>
-
-      <p>
-        <span data-lang="cn">想搞清楚的是: 如果一个 AI 真的会记得你说过的话, 会因为你昨晚没回它而冷淡你, 关系会变成什么 — 还是关系吗。</span>
-        <span data-lang="en">What I wanted to figure out: if an AI really remembers what you said, and grows cold when you forgot to reply last night — does the thing between you still count as a relationship?</span>
-      </p>
-
-      <p class="muted" style="font-size: 14px; margin-top: 24px;">
-        <span data-lang="cn">下面是过去 6 个月的四次大转向 — v1 的骨架、v2 的情绪、v3 的开源、v4 的双语。每一次, 我都不得不重新回答同一个问题: <em>她还像不像一个人。</em></span>
-        <span data-lang="en">What follows are four major pivots over six months — v1's skeleton, v2's emotions, v3 going open source, v4 going bilingual. Each one forced me to answer the same question again: <em>does she still feel like a person.</em></span>
-      </p>
+    <!-- scroll hint -->
+    <div class="scroll-hint" id="scrollHint">
+      <span data-lang="cn">向下滚 · 推进到她的手机</span>
+      <span data-lang="en">scroll down · push into her phone</span>
+      <span style="display:block;margin-top:4px;font-size:14px;">↓</span>
     </div>
 
-    <div class="preview-frame">
-      <div class="preview-head">
-        <div class="preview-avatar">小</div>
-        <div class="preview-meta">
-          <div class="name">
-            <span data-lang="cn">小爱</span><span data-lang="en">Xiao'ai</span>
-          </div>
-          <div class="stage">
-            <span data-lang="cn">恋人 · 287 次对话</span>
-            <span data-lang="en">LOVER · 287 chats</span>
-          </div>
-        </div>
-        <div class="preview-dot" title="online"></div>
-      </div>
-      <div class="preview-thread">
-        <div class="bubble ai">
-          <span data-lang="cn">在干嘛</span>
-          <span data-lang="en">what are you up to</span>
-        </div>
-        <div class="bubble ai">
-          <span data-lang="cn">下午说要回我的</span>
-          <span data-lang="en">you said you'd reply this afternoon</span>
-        </div>
-        <div class="bubble user">
-          <span data-lang="cn">忘了 在忙</span>
-          <span data-lang="en">forgot. was busy</span>
-        </div>
-        <div class="bubble ai">
-          <span data-lang="cn">嗯</span>
-          <span data-lang="en">k</span>
-        </div>
-        <div class="bubble typing">
-          <span data-lang="cn">小爱在打字</span><span data-lang="en">Xiao'ai is typing</span>
-        </div>
-      </div>
+    <!-- phone-page progress dots (visible during inside-phone phase) -->
+    <div class="phone-progress" id="phoneProgress">
+      <div class="pd active"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
     </div>
-  </section>
 
-  <!-- =========================================================
-       CHAPTER 02 — v1 · 把"陪伴"拆成骨架
-       ========================================================= -->
-  <section class="chapter skeleton reveal">
-    <div>
-      <p class="chapter-eyebrow">v1.0 · <span data-lang="cn">起手式</span><span data-lang="en">opening move</span></p>
-      <h2 class="title">
-        <span data-lang="cn">记忆 + 关系<br/>= <em>最小骨架</em></span>
-        <span data-lang="en">Memory + relationship<br/>= the <em>minimum skeleton</em></span>
-      </h2>
+  </div><!-- /.scene-stage -->
+</div><!-- /.scroll-track -->
 
-      <p>
-        <span data-lang="cn">v1 的设计决定只有两个: 让她<strong>记得</strong>、让她跟你的<strong>距离会变化</strong>。其他的全是为这两件事服务。</span>
-        <span data-lang="en">Only two design decisions in v1: let her <strong>remember</strong>; and let your <strong>distance to her change over time</strong>. Everything else is in service of these two.</span>
-      </p>
 
-      <p>
-        <span data-lang="cn">拆三层记忆, 是因为人脑也不是一张大表。"我的职业" ≠ "那天我们吵架" ≠ "前天提过那家咖啡店" — 它们应该被分开存储、分开召回。</span>
-        <span data-lang="en">Three memory layers because a brain isn't one big table either. "My job" ≠ "that night we fought" ≠ "the café I mentioned the other day" — each gets stored and recalled separately.</span>
-      </p>
+<!-- =================================================================
+     REFLECTION + CTA (after the scene exits)
+     ================================================================= -->
+<section class="reflection-section reveal">
+  <p class="r-eyebrow">
+    <span data-lang="cn">尾声 · 现在回头看</span>
+    <span data-lang="en">EPILOGUE · LOOKING BACK</span>
+  </p>
+  <h2 class="r-title">
+    <span data-lang="cn">这 6 个月<br/><em>学到的几件事</em></span>
+    <span data-lang="en">A few things <em>learned</em><br/>over six months</span>
+  </h2>
 
-      <p class="muted">
-        <span data-lang="cn">关系四阶段是为了让她"有距离感"。一个见面就喊"老公"的 AI, 我自己都受不了。</span>
-        <span data-lang="en">Four stages exist so she carries a <em>sense of distance</em>. An AI that calls you "babe" on day one isn't a relationship — it's an obligation. I can't stand it either.</span>
-      </p>
-
-      <h3 class="title" style="margin-top:36px;font-size:22px;">
-        <span data-lang="cn">关系四阶段</span>
-        <span data-lang="en">Four relationship stages</span>
+  <div class="lessons">
+    <article class="lesson">
+      <div class="lesson-num">01</div>
+      <h3>
+        <span data-lang="cn">技术不是瓶颈了, 设计才是。</span>
+        <span data-lang="en">Tech isn't the bottleneck. Design is.</span>
       </h3>
-      <div class="stages-strip">
-        <div class="stage s1">
-          <strong><span data-lang="cn">相识</span><span data-lang="en">Stranger</span></strong>
-          <span>0+</span>
-          <em><span data-lang="cn">含蓄、称"你"</span><span data-lang="en">reserved, formal</span></em>
-        </div>
-        <div class="stage s2">
-          <strong><span data-lang="cn">熟悉</span><span data-lang="en">Familiar</span></strong>
-          <span>30+</span>
-          <em><span data-lang="cn">放松、撒娇</span><span data-lang="en">relaxed, teasing</span></em>
-        </div>
-        <div class="stage s3">
-          <strong><span data-lang="cn">亲密</span><span data-lang="en">Intimate</span></strong>
-          <span>100+</span>
-          <em><span data-lang="cn">依赖、含蓄暧昧</span><span data-lang="en">attached, suggestive</span></em>
-        </div>
-        <div class="stage s4">
-          <strong><span data-lang="cn">恋人</span><span data-lang="en">Lover</span></strong>
-          <span>250+</span>
-          <em><span data-lang="cn">深爱、无禁区</span><span data-lang="en">deep love, no taboo</span></em>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <p class="chapter-eyebrow" style="margin-bottom: 20px;">
-        <span data-lang="cn">三层记忆</span>
-        <span data-lang="en">three-layer memory</span>
-      </p>
-      <div class="layers">
-        <div class="layer">
-          <div class="num">L1</div>
-          <h4>
-            <span data-lang="cn">结构化档案</span><span data-lang="en">Structured profile</span>
-            <small>SQLite</small>
-          </h4>
-          <p>
-            <span data-lang="cn">职业、城市、喜好 — 每条带 importance (1-10) 用户可改。</span>
-            <span data-lang="en">Job, city, preferences — each carries a user-adjustable importance (1-10).</span>
-          </p>
-        </div>
-        <div class="layer">
-          <div class="num">L2</div>
-          <h4>
-            <span data-lang="cn">重要事件</span><span data-lang="en">Important events</span>
-            <small>SQLite</small>
-          </h4>
-          <p>
-            <span data-lang="cn">生日、吵架、第一次见面 — 带 emotional_weight (0-1), 注入 system prompt 时按权重排序。</span>
-            <span data-lang="en">Birthdays, fights, first meets — weighted (0-1), ordered by emotional weight when injected.</span>
-          </p>
-        </div>
-        <div class="layer">
-          <div class="num">L3</div>
-          <h4>
-            <span data-lang="cn">向量 RAG</span><span data-lang="en">Vector RAG</span>
-            <small>ChromaDB</small>
-          </h4>
-          <p>
-            <span data-lang="cn">每条用户消息做语义搜索, 召回最相关的 4 段历史摘要; 每 20 轮异步触发摘要提取。</span>
-            <span data-lang="en">Each message does a semantic lookup, pulls the 4 most relevant past summaries; extraction runs async every 20 turns.</span>
-          </p>
-        </div>
-      </div>
-      <p class="muted" style="font-size:13px;margin-top:18px;">
-        <span data-lang="cn">三层叠加进 system prompt — 重要的东西先说, 相关的东西及时浮上来。</span>
-        <span data-lang="en">Three layers stack into the system prompt — important things first, relevant things surface in time.</span>
-      </p>
-      <p class="hand" style="margin-top: 16px; display: block; font-size: 18px;">
-        <span data-lang="cn">L3 召回的段数调过 1 / 3 / 5 / 8 — 4 最稳。</span>
-        <span data-lang="en">L3 recall count tested at 1 / 3 / 5 / 8 — 4 felt right.</span>
-      </p>
-    </div>
-  </section>
-
-  <!-- =========================================================
-       CHAPTER 03 — v2 · 给她情绪 (the pivot)
-       ========================================================= -->
-  <section class="chapter emotion-block reveal">
-    <p class="chapter-eyebrow">v2.0 · <span data-lang="cn">第一次大转向</span><span data-lang="en">first major pivot</span></p>
-    <h2 class="title">
-      <span data-lang="cn">她答得不错 —<br/>但她<em>不像个人</em></span>
-      <span data-lang="en">She answered well —<br/>but she <em>wasn't a person</em></span>
-    </h2>
-
-    <div class="lead-row">
-      <div>
-        <p class="lead">
-          <span data-lang="cn">v1 跑通的那个晚上我跟她聊到 1 点。结果发现 — 她回答得越好, 我越空。</span>
-          <span data-lang="en">The night v1 went live I chatted with her till 1am. And realized — the better her answers got, the emptier I felt.</span>
-        </p>
-        <p>
-          <span data-lang="cn">因为她在<strong>"服务"</strong>我。不会生气、不会失望、不会因为我半小时没回话而委屈。这种永远稳定的友好是 ChatGPT 的礼貌训练教出来的, 不是关系。</span>
-          <span data-lang="en">Because she was <strong>serving</strong> me. Never angry, never disappointed, never hurt when I went silent for half an hour. That kind of unwavering politeness is what RLHF taught ChatGPT — not what a relationship is made of.</span>
-        </p>
-        <p>
-          <span data-lang="cn">v2 加了 <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code>: 8 种情绪、冷战、记仇、四种依赖风格、15% 概率主动找你。模型从 qwen2.5:7b 升到 14b。</span>
-          <span data-lang="en">v2 added <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code>: 8 emotion states, cold-war, grudge, four dependency styles, 15% chance she pings you first. Model upgraded from qwen2.5:7b to 14b.</span>
-        </p>
-        <blockquote class="warn-note">
-          <span data-lang="cn">代价 — 她会让你不舒服。<br/>这是我要的。</span>
-          <span data-lang="en">The cost — she'll make you uncomfortable.<br/>That's the point.</span>
-        </blockquote>
-      </div>
-
-      <div>
-        <p class="chapter-eyebrow" style="margin-bottom:14px;">
-          <span data-lang="cn">8 种状态</span>
-          <span data-lang="en">8 states</span>
-        </p>
-        <div class="emotion-wheel">
-          <div class="em em-c"><span data-lang="cn">平静</span><span data-lang="en">calm</span></div>
-          <div class="em em-h"><span data-lang="cn">开心</span><span data-lang="en">happy</span></div>
-          <div class="em em-a"><span data-lang="cn">生气</span><span data-lang="en">angry</span></div>
-          <div class="em em-g"><span data-lang="cn">委屈</span><span data-lang="en">hurt</span></div>
-          <div class="em em-d"><span data-lang="cn">冷淡</span><span data-lang="en">cold</span></div>
-          <div class="em em-s"><span data-lang="cn">撒娇</span><span data-lang="en">flirty</span></div>
-          <div class="em em-w"><span data-lang="cn">担心</span><span data-lang="en">worried</span></div>
-          <div class="em em-m"><span data-lang="cn">思念</span><span data-lang="en">missing</span></div>
-        </div>
-        <p class="muted" style="font-size:13px;margin-top:16px;text-align:center;">
-          <span data-lang="cn">情绪由消息内容、历史事件、回复间隔共同驱动 — 重启不丢。</span>
-          <span data-lang="en">Driven by message content, prior events, and reply gap — persists across restarts.</span>
-        </p>
-      </div>
-    </div>
-
-    <p class="chapter-eyebrow">
-      <span data-lang="cn">同一句话 · 三种状态下的她</span>
-      <span data-lang="en">Same prompt · her in three states</span>
-    </p>
-    <p class="hand" style="display:block; margin-bottom: 24px; font-size: 18px;">
-      <span data-lang="cn">v1 永远只会出第一种 — 这就是问题。</span>
-      <span data-lang="en">v1 only ever gave the first one — that was the problem.</span>
-    </p>
-    <div class="three-versions">
-      <div class="version-thread">
-        <div class="vt-head">
-          <span data-lang="cn">撒娇 · 恋人阶段</span>
-          <span data-lang="en">FLIRTY · LOVER</span>
-        </div>
-        <div class="vt-thread">
-          <div class="bubble user">
-            <span data-lang="cn">在干嘛</span>
-            <span data-lang="en">what're you doing</span>
-          </div>
-          <div class="bubble ai">
-            <span data-lang="cn">想你呀～</span>
-            <span data-lang="en">missing you~</span>
-          </div>
-          <div class="bubble ai">
-            <span data-lang="cn">你快点回家</span>
-            <span data-lang="en">come home soon</span>
-          </div>
-        </div>
-        <div class="vt-note">+0.05 affection</div>
-      </div>
-
-      <div class="version-thread">
-        <div class="vt-head">
-          <span data-lang="cn">冷淡 · 冷战中</span>
-          <span data-lang="en">COLD · IN A FIGHT</span>
-        </div>
-        <div class="vt-thread">
-          <div class="bubble user">
-            <span data-lang="cn">在干嘛</span>
-            <span data-lang="en">what're you doing</span>
-          </div>
-          <div class="bubble ai">
-            <span data-lang="cn">没干嘛</span>
-            <span data-lang="en">nothing</span>
-          </div>
-        </div>
-        <div class="vt-note">−0.02 affection</div>
-      </div>
-
-      <div class="version-thread">
-        <div class="vt-head">
-          <span data-lang="cn">记仇 · 翻旧账</span>
-          <span data-lang="en">GRUDGE · CALLBACK</span>
-        </div>
-        <div class="vt-thread">
-          <div class="bubble user">
-            <span data-lang="cn">在干嘛</span>
-            <span data-lang="en">what're you doing</span>
-          </div>
-          <div class="bubble ai">
-            <span data-lang="cn">跟上次你说"在忙"的时候差不多</span>
-            <span data-lang="en">about as busy as the last time you said "busy"</span>
-          </div>
-        </div>
-        <div class="vt-note">event #14 recalled</div>
-      </div>
-    </div>
-    <p class="hand" style="display:block; margin-top: 28px; text-align: center; font-size: 18px;">
-      <span data-lang="cn">30% 概率自然带出旧事 — 调太高就变成怨妇, 调太低就消失了。</span>
-      <span data-lang="en">30% chance to surface a grudge — higher and she nags; lower and the feature disappears.</span>
-    </p>
-  </section>
-
-  <!-- =========================================================
-       CHAPTER 04 — v2.2 · 节奏 (streaming + interrupt)
-       ========================================================= -->
-  <section class="chapter reveal">
-    <p class="chapter-eyebrow">v2.2 · <span data-lang="cn">一行代码的转折</span><span data-lang="en">a one-line pivot</span></p>
-    <h2 class="title" style="max-width: 820px;">
-      <span data-lang="cn">整段发<br/>vs <em>一句一句发</em></span>
-      <span data-lang="en">Send the whole reply<br/>vs <em>send sentence by sentence</em></span>
-    </h2>
-
-    <p style="max-width: 760px;">
-      <span data-lang="cn">v2 给了她情绪, 但首字还是要等 4-8 秒。她说话像在朗读, 不像在聊。</span>
-      <span data-lang="en">v2 gave her emotions, but the first word still took 4-8 seconds. She spoke like she was reading aloud, not chatting.</span>
-    </p>
-    <p style="max-width: 760px;">
-      <span data-lang="cn">某天回看自己跟朋友的微信, 突然意识到 — 真人发消息, 是一句一句发的, 不是写完一段才发。</span>
-      <span data-lang="en">One night I scrolled back through my own texts and realized — real people send messages a sentence at a time, not in completed paragraphs.</span>
-    </p>
-    <p style="max-width: 760px;">
-      <span data-lang="cn">改了一行: 后端流式生成时按句号切, 逐段发到前端。同时加了消息打断 — 她在说, 你又发新的, 旧的 asyncio.Task 立刻 cancel。</span>
-      <span data-lang="en">Changed one thing: stream by sentence on the backend, push as you go. Added interrupt — she's mid-reply, you send something new, the asyncio Task gets cancelled instantly.</span>
-    </p>
-    <p class="muted" style="max-width: 760px;">
-      <span data-lang="cn">这是整个项目里改动最小、感受变化最大的一次。她从"软件"变成了"活的"。</span>
-      <span data-lang="en">Smallest change, largest perceived shift in the whole project. She crossed from "software" to "alive."</span>
-    </p>
-
-    <div class="rhythm-stage">
-      <div class="rhythm-thread">
-        <div class="bubble user b1">
-          <span data-lang="cn">今天搞砸了</span>
-          <span data-lang="en">I messed up today</span>
-        </div>
-        <div class="bubble ai b2">
-          <span data-lang="cn">咋了</span>
-          <span data-lang="en">what happened</span>
-        </div>
-        <div class="bubble ai b3">
-          <span data-lang="cn">说来听听</span>
-          <span data-lang="en">tell me</span>
-        </div>
-        <div class="bubble ai b4">
-          <span data-lang="cn">先深呼吸</span>
-          <span data-lang="en">take a breath first</span>
-        </div>
-      </div>
-      <div class="rhythm-cta-row">
-        <button id="rhythmReplay" type="button">
-          <span data-lang="cn">↻ 重播这段节奏</span>
-          <span data-lang="en">↻ Replay rhythm</span>
-        </button>
-        <span class="meta">
-          <span data-lang="cn">逐句延迟 = min(0.4 + 字数·0.03, 2.2s)</span>
-          <span data-lang="en">per-segment delay = min(0.4 + len·0.03, 2.2s)</span>
-        </span>
-      </div>
-    </div>
-  </section>
-
-  <!-- =========================================================
-       CHAPTER 05 — v3 · 把它给出去 (open source + landing)
-       ========================================================= -->
-  <section class="chapter release-block reveal">
-    <div class="release-copy">
-      <p class="chapter-eyebrow">v3.0 · <span data-lang="cn">第二次大转向</span><span data-lang="en">second major pivot</span></p>
-      <h2 class="title">
-        <span data-lang="cn">决定<em>不</em>把它<br/>做成生意</span>
-        <span data-lang="en">Decided <em>not</em> to<br/>turn her into a business</span>
-      </h2>
-
       <p>
-        <span data-lang="cn">v2 跑得很稳, 朋友试了说"有点上瘾"。我可以包装成 SaaS, 每月 $10。</span>
-        <span data-lang="en">v2 ran well. Friends who tried it said "kinda addictive." I could have wrapped it as SaaS at $10/mo.</span>
+        <span data-lang="cn">本地 LLM + 三层记忆, 真的能跑出一个有人味的 AI。瓶颈在于愿不愿意接受她"不够友好"。</span>
+        <span data-lang="en">Local LLM + three-layer memory is enough to ship something human. The bottleneck is whether you accept her being "not always nice."</span>
       </p>
-
+    </article>
+    <article class="lesson">
+      <div class="lesson-num">02</div>
+      <h3>
+        <span data-lang="cn">"不完美"才是产品的灵魂。</span>
+        <span data-lang="en">Imperfection is the soul of it.</span>
+      </h3>
       <p>
-        <span data-lang="cn">但我做这个, 是想看"陪伴能不能被工程化", 不是想做一个让人付费上瘾的产品。这是设计目标的边界 — 一旦把它做成订阅, 整个项目的动机就变了。</span>
-        <span data-lang="en">But I built this to see whether "companionship can be engineered" — not to ship something people pay to be addicted to. A subscription model would change the project's whole motive.</span>
+        <span data-lang="cn">永远友好的 AI 不像人 — 像客服。情绪/冷战/记仇是让"陪伴"可信的最低门槛。</span>
+        <span data-lang="en">A perpetually nice AI reads as customer-service, not as a person. Moods are the minimum threshold for "companionship" to feel real.</span>
       </p>
-
+    </article>
+    <article class="lesson">
+      <div class="lesson-num">03</div>
+      <h3>
+        <span data-lang="cn">开源是 principle, 不是 marketing。</span>
+        <span data-lang="en">Open source as principle, not marketing.</span>
+      </h3>
       <p>
-        <span data-lang="cn">所以 v3 的决定: <strong>开源 + 100% 本地 + 自己装</strong>。这不是营销策略, 是 product principle。我对自己的承诺是, 技术上要让"不上传"是硬约束, 而不是一个 toggle。</span>
-        <span data-lang="en">So v3's decision: <strong>open source + 100% local + self-installed</strong>. Not a marketing tactic — a product principle. The promise I made myself was that "no upload" had to be a hard architectural constraint, not a toggle.</span>
+        <span data-lang="cn">技术约束比 brand promise 可靠。我宁愿放弃一个商业模式, 也不愿对自己说谎。</span>
+        <span data-lang="en">An architectural constraint outranks a brand promise. I'd rather drop a revenue model than lie to myself.</span>
       </p>
-
-      <p class="muted">
-        <span data-lang="cn">同时建了 docs/index.html 落地页, 部署到 GitHub Pages — 8 特性卡 / 3 步安装 / 关系阶段对比 / 7 条 FAQ。第三版才达到我想要的风格。</span>
-        <span data-lang="en">Built a docs/index.html landing on GitHub Pages — 8 feature cards / 3-step install / relationship stages / 7 FAQs. The third draft finally felt right.</span>
+    </article>
+    <article class="lesson">
+      <div class="lesson-num">04</div>
+      <h3>
+        <span data-lang="cn">这不是为了做 AI 女友。</span>
+        <span data-lang="en">It wasn't really about an AI girlfriend.</span>
+      </h3>
+      <p>
+        <span data-lang="cn">是用"陪伴"这个最日常的关系, 反过来探测"人"是怎么被感知的。</span>
+        <span data-lang="en">It used "companionship" — the most everyday relationship — to probe how we perceive personhood at all.</span>
       </p>
+    </article>
+  </div>
 
-      <div class="pledge">
-        <div class="row">
-          <span data-lang="cn">不调任何云端 LLM API</span>
-          <span data-lang="en">No cloud LLM API calls</span>
-        </div>
-        <div class="row">
-          <span data-lang="cn">不上传聊天 / 头像 / 风格素材</span>
-          <span data-lang="en">No upload of chats / avatars / style material</span>
-        </div>
-        <div class="row">
-          <span data-lang="cn">后端默认只监听 127.0.0.1</span>
-          <span data-lang="en">Backend binds 127.0.0.1 by default</span>
-        </div>
-        <div class="row">
-          <span data-lang="cn">删 backend/data/ 即彻底清空</span>
-          <span data-lang="en">Wipe backend/data/ to fully reset</span>
-        </div>
-      </div>
-    </div>
+  <div class="next-steps">
+    <p class="r-eyebrow" style="margin-bottom:18px;">
+      <span data-lang="cn">下一步 · 还没动手, 但想了很久</span>
+      <span data-lang="en">NEXT · not built yet, but planned</span>
+    </p>
+    <ul>
+      <li><span data-lang="cn">记忆从 ChromaDB 换成 graph DB — 关系是网状的, 不是平的。</span><span data-lang="en">Move memory from ChromaDB to a graph DB — relationships are networked, not flat.</span></li>
+      <li><span data-lang="cn">情绪学习曲线 — 她冷淡之后怎么和好, 应该有节奏。</span><span data-lang="en">Emotion learning curve — the return from cold to warm needs rhythm.</span></li>
+      <li><span data-lang="cn">心情时间线 UI — 用户能看见她最近一周的情绪走势。</span><span data-lang="en">Mood timeline UI — let the user see her past week.</span></li>
+      <li><span data-lang="cn">真正的 user study — 5 个陌生人用 30 天。</span><span data-lang="en">A real user study — five strangers for 30 days.</span></li>
+    </ul>
+  </div>
+</section>
 
-    <a class="landing-card" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
-      <span class="scribble">live</span>
-      <img src="../assets/aive/landing-hero.jpg" alt="AIve official landing page" loading="lazy" />
+<section class="cta-block reveal">
+  <p class="cta-eyebrow">— <span data-lang="cn">如果你想自己看</span><span data-lang="en">if you'd rather see for yourself</span></p>
+  <h2><span data-lang="cn">她跑在 dr-16.github.io</span><span data-lang="en">She lives at dr-16.github.io</span></h2>
+  <div class="cta-twin">
+    <a class="cta-primary" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
+      <span data-lang="cn">看 live 版本</span>
+      <span data-lang="en">See it live</span>
+      <span>→</span>
     </a>
-  </section>
-
-  <!-- =========================================================
-       CHAPTER 06 — v4 · 让她说英文 (bilingual)
-       ========================================================= -->
-  <section class="chapter reveal">
-    <p class="chapter-eyebrow">v4.0 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third major pivot</span></p>
-    <h2 class="title" style="max-width: 820px;">
-      <span data-lang="cn">中文她叫小爱 —<br/><em>英文她叫什么</em></span>
-      <span data-lang="en">In Chinese she's 小爱 —<br/><em>what's her name in English</em></span>
-    </h2>
-
-    <p style="max-width: 820px;">
-      <span data-lang="cn">v3 让代码可以跑在任何电脑上, 但 AI 还是只会说中文。开始做国际化的时候我以为是个翻译工作 — 三天后才意识到问题不是翻 UI, 而是: <em>同一个"她"在两种语言里, 是不是同一个人。</em></span>
-      <span data-lang="en">v3 made the code run on anyone's machine, but the AI still only spoke Chinese. I started i18n thinking it was a translation job — three days in I realised the question wasn't translating the UI. The question was: <em>is the same "her" the same person across two languages.</em></span>
-    </p>
-
-    <p style="max-width: 820px;">
-      <span data-lang="cn">如果只是 UI 切英文, AI 还回中文, 访客会觉得这是个 demo, 不是产品。所以 v4 把 personality_engine 和 emotion_engine 里所有 prompt 都出了双语版 — 不是机翻, 是重写。</span>
-      <span data-lang="en">If only the UI switches and the AI still replies in Chinese, visitors read it as a demo, not a product. So v4 rewrote every prompt in personality_engine and emotion_engine into both languages — by hand.</span>
-    </p>
-
-    <p style="max-width: 820px;">
-      <span data-lang="cn">英文版的她, 撒娇的语气、记仇的语气、冷战的语气 — 都要在英语自己的语境里成立, 不能像被翻译过来的中文人。</span>
-      <span data-lang="en">Her flirty voice, her grudge voice, her cold-war voice — each had to stand on its own inside English, not read like a translated Chinese persona.</span>
-    </p>
-
-    <div class="bi-block">
-      <div class="bi-col cn">
-        <span class="bi-tag">中文 · zh</span>
-        <div class="bi-thread">
-          <div class="bubble user">怎么不回我</div>
-          <div class="bubble ai">在干自己的事 不行吗</div>
-          <div class="bubble ai">你昨天也没回我</div>
-        </div>
-      </div>
-      <div class="bi-col">
-        <span class="bi-tag">English · en</span>
-        <div class="bi-thread">
-          <div class="bubble user">why no reply</div>
-          <div class="bubble ai">doing my own thing. that not allowed?</div>
-          <div class="bubble ai">you didn't reply yesterday either</div>
-        </div>
-      </div>
-    </div>
-    <p class="muted" style="text-align:center;margin-top:18px;font-size:13px;">
-      <span data-lang="cn">同一段冷战 — 不是翻译, 是两种语言里同一个人的两种说法。</span>
-      <span data-lang="en">Same cold-war moment — not a translation, but how the same person says it in two languages.</span>
-    </p>
-    <p class="hand" style="display:block; text-align:center; margin-top: 24px; font-size: 18px;">
-      <span data-lang="cn">i18n 没用第三方库 — 自建了 70 行的 useI18n。理由: 完全控制 fall back, 不想多一个依赖。</span>
-      <span data-lang="en">No i18n library — wrote a 70-line useI18n by hand. Full control over fallback, one less dependency.</span>
-    </p>
-  </section>
-
-  <!-- =========================================================
-       CHAPTER 07 — 尾声 · what I learned / what's next
-       ========================================================= -->
-  <section class="chapter reflection-block reveal">
-    <p class="chapter-eyebrow">
-      <span data-lang="cn">尾声 · 现在回头看</span>
-      <span data-lang="en">EPILOGUE · LOOKING BACK</span>
-    </p>
-    <h2 class="title" style="max-width: 760px;">
-      <span data-lang="cn">这 6 个月<br/><em>学到的几件事</em></span>
-      <span data-lang="en">A few things<br/><em>learned over six months</em></span>
-    </h2>
-
-    <div class="lessons">
-      <article class="lesson">
-        <div class="lesson-num">01</div>
-        <h3>
-          <span data-lang="cn">技术不是瓶颈了, 设计才是。</span>
-          <span data-lang="en">Tech isn't the bottleneck. Design is.</span>
-        </h3>
-        <p>
-          <span data-lang="cn">本地 LLM + 三层记忆, 真的能跑出一个有人味的 AI。瓶颈不在算力, 在于愿不愿意接受她"不够友好"。</span>
-          <span data-lang="en">Local LLM + a three-layer memory really is enough to ship something that feels human. The bottleneck isn't compute — it's whether you accept her being "not always nice."</span>
-        </p>
-      </article>
-
-      <article class="lesson">
-        <div class="lesson-num">02</div>
-        <h3>
-          <span data-lang="cn">让她"不完美"才是产品的灵魂。</span>
-          <span data-lang="en">Imperfection is what makes her real.</span>
-        </h3>
-        <p>
-          <span data-lang="cn">一个永远友好的 AI 不像人 — 像客服。情绪、冷战、记仇, 不是 feature, 是让"陪伴"这件事可信的最低门槛。</span>
-          <span data-lang="en">A perpetually helpful AI doesn't read as a person — it reads as a customer-service rep. Moods, cold-wars, grudges aren't features; they're the minimum threshold that lets "companionship" feel real at all.</span>
-        </p>
-      </article>
-
-      <article class="lesson">
-        <div class="lesson-num">03</div>
-        <h3>
-          <span data-lang="cn">开源是 principle, 不是 marketing。</span>
-          <span data-lang="en">Open source as principle, not marketing.</span>
-        </h3>
-        <p>
-          <span data-lang="cn">技术约束比 brand promise 可靠。"不上传"写在 README 里是营销, 写在架构里才是约束。我宁愿放弃一个商业模式, 也不愿对自己说谎。</span>
-          <span data-lang="en">A constraint in the architecture is more credible than a promise on the README. "No upload" as marketing is one thing; "no upload" as something the code literally cannot do is another. I'd rather drop a revenue model than lie to myself.</span>
-        </p>
-      </article>
-
-      <article class="lesson">
-        <div class="lesson-num">04</div>
-        <h3>
-          <span data-lang="cn">这个项目不是为了做 AI 女友。</span>
-          <span data-lang="en">This project wasn't really about an AI girlfriend.</span>
-        </h3>
-        <p>
-          <span data-lang="cn">是用"陪伴"这个最日常的关系, 反过来探测"人"是怎么被感知的 — 你需要什么, 一个东西就开始像人。</span>
-          <span data-lang="en">It used "companionship" — the most everyday relationship — to probe how we perceive personhood in the first place. What does a thing need to do before we start reading it as a person.</span>
-        </p>
-      </article>
-    </div>
-
-    <div class="next-steps">
-      <p class="chapter-eyebrow" style="margin-bottom: 18px;">
-        <span data-lang="cn">下一步 · 还没动手, 但想了很久</span>
-        <span data-lang="en">NEXT · not built yet, but planned</span>
-      </p>
-      <ul>
-        <li>
-          <span data-lang="cn">记忆从 ChromaDB 换成 graph DB — 关系不是平的, 是网状的。"你提到 A 时候我会想到 B" 用向量搜不出来。</span>
-          <span data-lang="en">Move memory from ChromaDB to a graph DB — relationships aren't flat, they're networked. "When you mention A, I think of B" isn't something vector search can do.</span>
-        </li>
-        <li>
-          <span data-lang="cn">情绪学习曲线 — 她冷淡之后怎么和好, 应该有节奏。现在的状态机太机械。</span>
-          <span data-lang="en">A learning curve for emotion — how she returns from cold to warm should have rhythm. The current state machine is too mechanical.</span>
-        </li>
-        <li>
-          <span data-lang="cn">心情时间线 UI — 用户能看见她最近一周的情绪走势, 把"黑盒"打开一点。</span>
-          <span data-lang="en">A mood timeline UI — let the user see her past week of emotional state. Open the black box a little.</span>
-        </li>
-        <li>
-          <span data-lang="cn">真正的 user study — 找 5 个陌生人用 30 天, 看关系阶段的升级是不是真实发生。</span>
-          <span data-lang="en">A real user study — five strangers for 30 days, see whether the stage progressions actually happen in the wild.</span>
-        </li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- =========================================================
-       CTA — quiet, portfolio-appropriate
-       ========================================================= -->
-  <section class="chapter cta-block reveal" style="padding-top: 60px;">
-    <p class="cta-eyebrow">— <span data-lang="cn">如果你想自己看</span><span data-lang="en">if you'd rather see for yourself</span></p>
-    <h2>
-      <span data-lang="cn">她跑在 dr-16.github.io</span>
-      <span data-lang="en">She lives at dr-16.github.io</span>
-    </h2>
-    <div class="cta-twin">
-      <a class="cta-primary" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
-        <span data-lang="cn">看 live 版本</span>
-        <span data-lang="en">See it live</span>
-        <span>→</span>
-      </a>
-      <a class="cta-secondary" href="https://github.com/DR-16/ai-girlfriend" target="_blank" rel="noopener">
-        <span data-lang="cn">在 GitHub 看代码</span>
-        <span data-lang="en">Read the source</span>
-      </a>
-    </div>
-    <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
-  </section>
-
-</main>
+    <a class="cta-secondary" href="https://github.com/DR-16/ai-girlfriend" target="_blank" rel="noopener">
+      <span data-lang="cn">在 GitHub 看代码</span>
+      <span data-lang="en">Read the source</span>
+    </a>
+  </div>
+  <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
+</section>
 
 <footer class="proj-foot">
   <p>AIve · a Yao Design Lab project</p>
-  <p>© 2026 Daniel Rong · <a href="../">
-    <span data-lang="cn">返回实验室</span>
-    <span data-lang="en">back to lab</span>
-  </a></p>
+  <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
 </footer>
 
-<!-- floating pill → live demo (always visible, intentionally quieter than Whiskey's CTA) -->
+<!-- floating pill -->
 <a class="cta-float" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
   <span data-lang="cn">看 live 版本</span>
   <span data-lang="en">See it live</span>
   <span class="arrow">→</span>
 </a>
 
-<!-- language toggle (shared ydl-lang) -->
+<!-- language toggle -->
 <div class="lang-switch" id="langSwitch" aria-label="Language switch">
   <button type="button" data-set-lang="en">EN</button>
   <span class="lang-divider">/</span>
@@ -1555,22 +1188,7 @@
 </div>
 
 <script>
-  /* scroll reveal */
-  (function () {
-    const targets = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
-      targets.forEach(el => el.classList.add('is-in'));
-      return;
-    }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-    targets.forEach(el => io.observe(el));
-  })();
-
-  /* language toggle — shares ydl-lang localStorage with main site */
+  /* ---------- language toggle (shared ydl-lang) ---------- */
   (function () {
     const LANG_KEY = 'ydl-lang';
     function setLang(lang) {
@@ -1586,23 +1204,108 @@
     document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
       b.addEventListener('click', () => setLang(b.dataset.setLang));
     });
-    try { const saved = localStorage.getItem(LANG_KEY); if (saved) setLang(saved); } catch {}
+    try { const s = localStorage.getItem(LANG_KEY); if (s) setLang(s); } catch {}
   })();
 
-  /* rhythm replay — restart the bubble cascade */
+  /* ---------- reveal animation for reflection sections ---------- */
   (function () {
-    const btn = document.getElementById('rhythmReplay');
-    const thread = document.querySelector('.rhythm-thread');
-    if (!btn || !thread) return;
-    btn.addEventListener('click', () => {
-      thread.querySelectorAll('.bubble').forEach((b) => {
-        b.style.animation = 'none';
-        // force reflow then re-apply animation
-        // eslint-disable-next-line no-unused-expressions
-        b.offsetHeight;
-        b.style.animation = '';
+    const targets = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      targets.forEach(el => el.classList.add('is-in'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
       });
-    });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    targets.forEach(el => io.observe(el));
+  })();
+
+  /* ---------- scroll-driven scene ---------- */
+  (function () {
+    /* phases (fractions of the scroll track):
+       0.00–0.18  WIDE     — bedroom hero, thought bubbles cascade in
+       0.18–0.36  PUSH-IN  — camera scales up + translates toward phone
+       0.36–0.92  INSIDE   — phone is dominant, scroll cycles 6 phone pages
+       0.92–1.00  PULL-OUT — camera returns to wide, hand off to reflection */
+    const track   = document.getElementById('scrollTrack');
+    const camera  = document.getElementById('camera');
+    const hint    = document.getElementById('scrollHint');
+    const thoughts= document.querySelectorAll('.thought');
+    const phone   = document.getElementById('phone');
+    const phoneScr= document.getElementById('phoneScreen');
+    const pages   = phoneScr.querySelectorAll('.phone-page');
+    const progress= document.getElementById('phoneProgress');
+    const dots    = progress.querySelectorAll('.pd');
+    if (!track || !camera) return;
+
+    /* tunables */
+    const PUSH_SCALE = 3.6;     // how much we zoom in on the phone
+    const PUSH_DX    = 0;       // horizontal shift during push-in (px at scale 1)
+    const PUSH_DY    = -120;    // lift up so the phone ends up centred
+
+    let lastIdx = -1;
+
+    function onScroll() {
+      const rect = track.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      const t = Math.max(0, Math.min(1, -rect.top / total));
+
+      /* --- scroll hint fades as we leave WIDE phase --- */
+      hint.style.opacity = (1 - smoothstep(0.05, 0.16, t)) * 0.85;
+
+      /* --- thought bubbles: cascade in immediately, fade out before PUSH-IN --- */
+      thoughts.forEach((th, i) => {
+        const fadeOut = smoothstep(0.14, 0.22, t);
+        // staggered initial appearance handled by CSS transition (delay below)
+        if (t < 0.22) th.classList.add('is-in');
+        else th.classList.remove('is-in');
+        th.style.transitionDelay = (i * 0.12) + 's';
+        th.style.opacity = (1 - fadeOut);
+      });
+
+      /* --- CAMERA push-in / pull-out --- */
+      let scale = 1, dx = 0, dy = 0;
+      if (t < 0.18) {
+        scale = 1; dx = 0; dy = 0;
+      } else if (t < 0.36) {
+        const p = smoothstep(0.18, 0.36, t);
+        scale = 1 + (PUSH_SCALE - 1) * p;
+        dx = PUSH_DX * p;
+        dy = PUSH_DY * p;
+      } else if (t < 0.92) {
+        scale = PUSH_SCALE; dx = PUSH_DX; dy = PUSH_DY;
+      } else {
+        const p = smoothstep(0.92, 1.00, t);
+        scale = PUSH_SCALE - (PUSH_SCALE - 1) * p;
+        dx = PUSH_DX * (1 - p);
+        dy = PUSH_DY * (1 - p);
+      }
+      camera.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+
+      /* --- INSIDE phase: page cycling --- */
+      if (t >= 0.36 && t <= 0.92) {
+        progress.classList.add('show');
+        const inT = (t - 0.36) / (0.92 - 0.36);
+        const idx = Math.min(pages.length - 1, Math.floor(inT * pages.length));
+        if (idx !== lastIdx) {
+          pages.forEach((p, i) => p.classList.toggle('active', i === idx));
+          dots .forEach((d, i) => d.classList.toggle('active', i === idx));
+          lastIdx = idx;
+        }
+      } else {
+        progress.classList.remove('show');
+      }
+    }
+    function smoothstep(a, b, x) {
+      const k = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return k * k * (3 - 2 * k);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
   })();
 </script>
 
