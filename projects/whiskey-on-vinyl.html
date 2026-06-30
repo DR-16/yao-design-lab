@@ -310,27 +310,54 @@
   }
   .turntable-base {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, #1F1230 0%, #15092A 100%);
+    background:
+      /* top bevel highlight */
+      linear-gradient(180deg, rgba(200,155,108,0.18) 0%, transparent 4%, transparent 96%, rgba(0,0,0,0.5) 100%),
+      /* side wood */
+      linear-gradient(180deg, #2A1840 0%, #1F1230 50%, #15092A 100%);
     border-radius: 16px;
     box-shadow:
-      0 12px 24px rgba(0,0,0,0.55),
-      0 0 0 1px rgba(200,155,108,0.22),
-      inset 0 1px 0 rgba(200,155,108,0.22);
+      /* deep ground shadow — turntable has weight */
+      0 28px 40px rgba(0,0,0,0.7),
+      0 8px 16px rgba(0,0,0,0.5),
+      /* metal trim */
+      0 0 0 1px rgba(200,155,108,0.35),
+      /* bevel on top */
+      inset 0 2px 0 rgba(200,155,108,0.35),
+      /* bevel on bottom (side panel visible) */
+      inset 0 -8px 16px rgba(0,0,0,0.4);
+  }
+  /* a raised platter ring around the vinyl — gives the vinyl visible
+     "lift" above the base so it doesn't read as flat */
+  .turntable-base::after {
+    content: ""; position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) translateZ(2px);
+    width: 76%; height: 86%;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 65%, rgba(0,0,0,0.5) 100%);
+    pointer-events: none;
   }
   /* the vinyl on the turntable — same plane as counter, spins continuously */
   .vinyl-3d {
     position: absolute;
     left: 50%; top: 50%;
-    transform: translate(-50%, -50%) translateZ(4px);
+    transform: translate(-50%, -50%) translateZ(10px);
     width: 200px; height: 200px;
     border-radius: 50%;
     background:
+      /* subtle radial highlight on the vinyl surface */
       radial-gradient(circle at 36% 36%, rgba(200,155,108,0.16), transparent 35%),
+      /* concentric grooves */
       repeating-radial-gradient(circle, rgba(255,255,255,0.030) 0 1.5px, transparent 1.5px 4px),
+      /* base vinyl color */
       radial-gradient(circle, #1A0E2C 0%, #0A0414 100%);
     box-shadow:
-      0 0 0 4px rgba(14,7,22,0.6),
-      0 8px 16px rgba(0,0,0,0.55);
+      /* edge of the record */
+      0 0 0 2px rgba(0,0,0,0.6),
+      /* lift shadow — vinyl is RAISED above the platter */
+      0 14px 22px rgba(0,0,0,0.7),
+      0 4px 8px rgba(0,0,0,0.5);
     will-change: transform;
     transform-origin: center center;
   }
@@ -360,25 +387,60 @@
     background: var(--wov-ink-1);
     box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
   }
-  /* tonearm sits on the turntable base, slightly raised */
+  /* tonearm — clearly raised above the platter, with shadow cast below */
   .tonearm-3d {
     position: absolute;
     right: 22px; top: 30px;
-    transform: translateZ(4px);
-    width: 110px; height: 4px;
-    background: linear-gradient(90deg, var(--wov-copper-deep), var(--wov-copper));
-    border-radius: 2px;
+    transform: translateZ(18px);                 /* lifted noticeably above vinyl */
+    width: 130px; height: 6px;                   /* thicker arm */
+    background: linear-gradient(180deg, var(--wov-copper) 0%, var(--wov-copper-deep) 60%, #6B4A26 100%);
+    border-radius: 3px;
     transform-origin: 92% 50%;
+    box-shadow:
+      0 14px 14px rgba(0,0,0,0.6),               /* drops a shadow onto the record */
+      inset 0 1px 0 rgba(255,220,180,0.4);
+  }
+  /* needle tip at the end of the arm */
+  .tonearm-3d::before {
+    content: ""; position: absolute;
+    left: -4px; top: -3px;
+    width: 12px; height: 12px;
+    background: radial-gradient(circle, #FFE9B5 0%, var(--wov-copper) 50%, #6B4A26 100%);
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
   }
   .tonearm-pivot {
     position: absolute;
-    right: 8px; top: 22px;
-    transform: translateZ(6px);
-    width: 18px; height: 18px;
-    background: var(--wov-copper-deep);
+    right: 4px; top: 18px;
+    transform: translateZ(18px);
+    width: 26px; height: 26px;
+    background: radial-gradient(circle at 35% 30%, #FFE9B5 0%, var(--wov-copper) 40%, var(--wov-copper-deep) 80%);
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow:
+      0 6px 12px rgba(0,0,0,0.6),
+      inset 0 -3px 6px rgba(0,0,0,0.35);
   }
+  .tonearm-pivot::after {
+    content: ""; position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--wov-ink-1);
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.8);
+  }
+  /* power LED — shows it's "playing" */
+  .turntable-3d::before {
+    content: ""; position: absolute;
+    left: 18px; bottom: 14px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #6FE89B 0%, #2A8A4A 70%);
+    box-shadow: 0 0 8px rgba(111, 232, 155, 0.7);
+    transform: translateZ(4px);
+    animation: ledpulse 2.5s ease-in-out infinite;
+  }
+  @keyframes ledpulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
 
   /* whiskey glass next to turntable, also on the counter plane */
   .glass-3d {
@@ -1516,6 +1578,66 @@
     ts.forEach(el => io.observe(el));
   })();
 
+  /* ---------- make interactive elements actually interactive ---------- */
+  /* (1) scenes-strip: mouse-drag horizontal scroll + wheel→horizontal */
+  document.querySelectorAll('.scenes-strip').forEach((strip) => {
+    let down = false, startX = 0, startScroll = 0, moved = false;
+    strip.addEventListener('mousedown', (e) => {
+      down = true; moved = false;
+      startX = e.pageX;
+      startScroll = strip.scrollLeft;
+      strip.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+    strip.addEventListener('mousemove', (e) => {
+      if (!down) return;
+      const dx = e.pageX - startX;
+      if (Math.abs(dx) > 4) moved = true;
+      strip.scrollLeft = startScroll - dx * 1.4;
+    });
+    const release = () => { down = false; strip.style.cursor = ''; };
+    strip.addEventListener('mouseup', release);
+    strip.addEventListener('mouseleave', release);
+    // prevent navigation when drag-clicking
+    strip.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', (e) => { if (moved) e.preventDefault(); });
+    });
+    // vertical wheel → horizontal scroll on this strip; DON'T bubble to page
+    strip.addEventListener('wheel', (e) => {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const max = strip.scrollWidth - strip.clientWidth;
+      const next = Math.max(0, Math.min(max, strip.scrollLeft + delta));
+      if ((delta < 0 && strip.scrollLeft > 0) || (delta > 0 && strip.scrollLeft < max)) {
+        e.preventDefault();
+        e.stopPropagation();
+        strip.scrollLeft = next;
+      }
+    }, { passive: false });
+  });
+
+  /* (2) model-viewer: wheel + pointer events must NOT bubble to page scroll
+         (otherwise dragging on the model just scrolls the page) */
+  document.querySelectorAll('.model-frame').forEach((frame) => {
+    const stop = (e) => e.stopPropagation();
+    ['wheel', 'pointerdown', 'pointermove', 'mousedown', 'touchstart', 'touchmove'].forEach(evt => {
+      frame.addEventListener(evt, stop, { passive: false });
+    });
+  });
+
+  /* (3) cards themselves: vertical wheel scrolls their inner content when
+         the cursor is over them, doesn't drive the camera */
+  document.querySelectorAll('.card').forEach((card) => {
+    card.addEventListener('wheel', (e) => {
+      const canScroll = card.scrollHeight > card.clientHeight;
+      if (!canScroll) return;  // nothing to do; let page scroll
+      const atTop = card.scrollTop <= 0 && e.deltaY < 0;
+      const atBot = card.scrollTop + card.clientHeight >= card.scrollHeight - 1 && e.deltaY > 0;
+      if (!atTop && !atBot) {
+        e.stopPropagation();
+      }
+    }, { passive: true });
+  });
+
   /* ---------- one continuous 3D camera moving from bar view to top-of-vinyl ---------- */
   (function () {
     const track   = document.getElementById('scrollTrack');
@@ -1575,6 +1697,9 @@
 
       world.style.transform = `scale(${barScale})`;
       world.style.opacity = String(barOp);
+      /* Once the bar is mostly gone, kill its pointer events so cards +
+         model-viewer + scenes strip behind/below it stay interactive. */
+      world.style.pointerEvents = barOp > 0.2 ? 'auto' : 'none';
       overheadVinyl.style.transform = `translate(-50%, -50%) scale(${vScale})`;
       overheadVinyl.style.opacity = String(vOp);
 
