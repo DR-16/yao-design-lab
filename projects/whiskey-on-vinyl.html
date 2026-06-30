@@ -266,6 +266,12 @@
     transform-origin: 50% 0%;
     transform: rotateX(-72deg) translateZ(-100px);
     transform-style: preserve-3d;
+    background: transparent;
+  }
+  /* Wood surface as a SEPARATE child so it can fade out independently of
+     the turntable + vinyl that live on top of it. */
+  .counter-wood {
+    position: absolute; inset: 0;
     background:
       repeating-linear-gradient(0deg,
         rgba(0,0,0,0) 0px,
@@ -275,6 +281,7 @@
     box-shadow:
       0 -2px 0 rgba(212,146,58,0.18),
       inset 0 0 60px rgba(212,146,58,0.12);
+    pointer-events: none;
   }
   /* warm pool of lamp light on the counter (a child of counter-top so it
      inherits the horizontal rotation and looks like an actual reflection) */
@@ -1044,6 +1051,7 @@
 
       <!-- COUNTER TOP (rotated horizontal · everything on top inherits) -->
       <div class="counter-top-plane">
+        <div class="counter-wood"></div>
         <div class="counter-pool"></div>
 
         <!-- glass on the counter -->
@@ -1436,7 +1444,8 @@
       '.wall-plane', '.wall-rail',
       '.shelves-plane', '.shelf-light.l1', '.shelf-light.l2',
       '.lamp-wire', '.lamp-shade', '.lamp-bulb', '.lamp-cone',
-      '.counter-front-plane', '.glass-3d', '.music-eq'
+      '.counter-front-plane', '.counter-wood', '.counter-pool',
+      '.glass-3d', '.music-eq'
     ].map(s => document.querySelector(s)).filter(Boolean);
 
     /* MEASURE the natural final position of the vinyl, then compute the
