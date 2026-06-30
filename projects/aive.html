@@ -12,13 +12,17 @@
 
 <style>
   /* =================================================================
-     AIve · 卧室里的一个 AI · scroll-driven scene
-     ----------------------------------------------------------------
-     Layout: a single sticky stage holds the bedroom scene. As you
-     scroll, the "camera" pushes from a wide shot (girl + bedroom +
-     thought bubbles) toward the phone in her hands. Once we're "inside"
-     the phone, further scrolling cycles through screens of UX content.
-     Final pull-out shows the room again under the reflection section.
+     AIve · cinematic scene
+     -----------------------------------------------------------------
+     Two stacked scenes share one sticky stage. Scroll drives:
+       0.00–0.05  WIDE     · just see the bedroom scene
+       0.05–0.22  BUBBLES  · 5 thought bubbles cascade in one by one
+       0.22–0.36  PUSH-IN  · camera pushes into the phone
+       0.36–0.62  INSIDE   · cycle 6 phone screens
+       0.62–0.74  PULL-OUT · zoom back out
+       0.74–1.00  OUTSIDE  · cross-fade to dusk view from outside the
+                              window: a boy looks in. lessons + next
+                              steps float around him.
      ================================================================= */
   :root {
     --cream:        #FFF8F0;
@@ -35,7 +39,12 @@
     --ink-soft:     #5D4A6B;
     --muted:        #8B7593;
     --skin:         #FCE0D2;
+    --hair:         #7B5B9B;
+    --hair-deep:    #5E3F7B;
     --rule:         rgba(155,124,182,0.18);
+    --night-1:      #2D1B4E;
+    --night-2:      #4A2E6B;
+    --night-3:      #7B4F8A;
 
     --sans:    "Outfit", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
     --serif-zh:"Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
@@ -44,7 +53,6 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   html, body {
     background: var(--cream);
     color: var(--ink);
@@ -53,7 +61,6 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  /* overflow-x lives on body only; setting it on html breaks position: sticky descendants */
   body { overflow-x: clip; }
   a { color: inherit; text-decoration: none; }
   img { display: block; max-width: 100%; }
@@ -67,397 +74,18 @@
     background: linear-gradient(180deg, rgba(255,248,240,0.7), rgba(255,248,240,0));
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
-  .back-link {
+  .back-link, .nav-brand {
     font-family: var(--sans);
-    font-weight: 500; font-size: 13px;
-    letter-spacing: 0.1em; color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
     text-transform: uppercase;
     transition: color 0.25s;
   }
   .back-link:hover { color: var(--rose); }
-  .nav-brand {
-    font-family: var(--sans);
-    font-weight: 600; font-size: 12px;
-    letter-spacing: 0.32em; color: var(--ink-soft);
-    text-transform: uppercase;
-  }
 
-  /* ============================================================
-     SCROLL-DRIVEN STAGE
-     The .scroll-track is 600vh tall — its scroll progress drives
-     CSS variables --t (0→1 overall) and --tp (0→1 within "inside
-     the phone" phase). The .scene-stage sticks for the full track.
-     ============================================================ */
-  .scroll-track {
-    position: relative;
-    height: 600vh;            /* set in JS too; tune here for pacing */
-  }
-  .scene-stage {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    width: 100%;
-    overflow: hidden;
-    background:
-      radial-gradient(ellipse 80% 60% at 60% 30%, rgba(255,212,220,0.55), transparent 70%),
-      radial-gradient(ellipse 70% 50% at 30% 70%, rgba(201,177,217,0.40), transparent 70%),
-      linear-gradient(180deg, #FFF3E8 0%, #FBEEEA 50%, #F5E0E0 100%);
-  }
-
-  /* The "camera" wrapper — entire scene scales + translates with scroll */
-  .camera {
-    position: absolute;
-    inset: 0;
-    transform-origin: 54% 60%;       /* push-in target = phone center */
-    transform: translate(0, 0) scale(1);
-    will-change: transform;
-  }
-
-  /* ---------- bedroom backdrop ---------- */
-  .bedroom { position: absolute; inset: 0; pointer-events: none; }
-  .wall {
-    position: absolute; inset: 0;
-    background:
-      linear-gradient(180deg, #FFF1E2 0%, #FCE5DC 60%, #F1D6D2 100%);
-  }
-  /* floor stripe */
-  .floor {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
-    background: linear-gradient(180deg, rgba(155,124,182,0.10), rgba(155,124,182,0.22));
-  }
-  /* window */
-  .window {
-    position: absolute;
-    top: 8%; left: 6%;
-    width: 18%; height: 32%;
-    background: linear-gradient(180deg, #FFE9CC, #F8C7B8);
-    border: 8px solid #E8C6BB;
-    border-radius: 14px;
-    box-shadow: inset 0 0 40px rgba(255,255,255,0.5);
-  }
-  .window::before, .window::after {
-    content: ""; position: absolute;
-    background: #E8C6BB;
-  }
-  .window::before { top: 50%; left: -8px; right: -8px; height: 6px; }
-  .window::after  { left: 50%; top: -8px; bottom: -8px; width: 6px; }
-  /* curtain */
-  .curtain {
-    position: absolute;
-    top: 6%; left: 4%;
-    width: 22%; height: 38%;
-    background:
-      repeating-linear-gradient(90deg, rgba(255,183,197,0.85) 0px, rgba(255,183,197,0.85) 8px, rgba(232,146,167,0.55) 8px, rgba(232,146,167,0.55) 14px);
-    border-radius: 4px 4px 18px 18px;
-    opacity: 0.55;
-    transform-origin: top;
-    transform: skewX(-2deg);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
-  }
-  /* fairy lights */
-  .lights {
-    position: absolute;
-    top: 6%; left: 26%; right: 8%;
-    height: 90px;
-    pointer-events: none;
-  }
-  .lights svg { width: 100%; height: 100%; overflow: visible; }
-  .lights circle { animation: twinkle 3s ease-in-out infinite; }
-  .lights circle:nth-child(odd)  { animation-delay: 1s; }
-  .lights circle:nth-child(3n)   { animation-delay: 2s; }
-  @keyframes twinkle {
-    0%, 100% { opacity: 0.55; r: 5; }
-    50%      { opacity: 1.0;  r: 7; filter: drop-shadow(0 0 8px #FFB7C5); }
-  }
-  /* plant in corner */
-  .plant {
-    position: absolute;
-    bottom: 18%; right: 4%;
-    width: 16%; height: 38%;
-  }
-  /* poster on the wall */
-  .poster {
-    position: absolute;
-    top: 14%; right: 22%;
-    width: 13%; aspect-ratio: 3 / 4;
-    background: linear-gradient(135deg, var(--blush), var(--mist));
-    border-radius: 4px;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    transform: rotate(-2deg);
-  }
-  .poster::after {
-    content: "♡";
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    font-size: 36px;
-    font-family: var(--sans);
-  }
-
-  /* ---------- bed cushion the girl sits on ---------- */
-  .bed {
-    position: absolute;
-    left: 50%; bottom: 8%;
-    transform: translateX(-50%);
-    width: 60%; height: 22%;
-    background: linear-gradient(180deg, #FFD0DC 0%, #E892A7 100%);
-    border-radius: 50% 50% 30px 30px / 70% 70% 30px 30px;
-    box-shadow: 0 20px 40px rgba(212,81,123,0.25);
-  }
-  .pillow {
-    position: absolute;
-    bottom: 12%; right: 26%;
-    width: 14%; height: 8%;
-    background: var(--cream);
-    border-radius: 50%;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-    transform: rotate(-12deg);
-  }
-
-  /* ---------- the girl (3/4 view, offset left) ---------- */
-  .girl-wrap {
-    position: absolute;
-    left: 30%;
-    bottom: 6%;
-    width: 380px;
-    height: 540px;
-    transform: translateX(-50%);
-    z-index: 4;
-  }
-  .girl-wrap svg.girl {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    overflow: visible;
-    filter: drop-shadow(0 16px 24px rgba(61,44,74,0.18));
-  }
-
-  /* ---------- the phone — independent, right of the girl, slight perspective tilt ---------- */
-  .phone {
-    position: absolute;
-    left: 54%;
-    top: 60%;
-    width: 180px;
-    height: 320px;
-    transform: translate(-50%, -50%) perspective(1200px) rotateY(-14deg) rotate(-3deg);
-    transform-origin: 50% 50%;
-    background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
-    border-radius: 26px;
-    padding: 6px;
-    z-index: 5;
-    box-shadow:
-      0 16px 36px rgba(61,44,74,0.40),
-      0 0 0 1px rgba(255,255,255,0.05),
-      inset 0 1px 0 rgba(255,255,255,0.10);
-  }
-  .phone-screen {
-    position: relative;
-    width: 100%; height: 100%;
-    background: #FFF8F0;
-    border-radius: 20px;
-    overflow: hidden;
-  }
-  .phone-screen::before {
-    /* notch */
-    content: "";
-    position: absolute;
-    top: 6px; left: 50%;
-    transform: translateX(-50%);
-    width: 40px; height: 8px;
-    background: #1A1024;
-    border-radius: 6px;
-    z-index: 5;
-  }
-
-  /* phone page stack — only .active is visible */
-  .phone-page {
-    position: absolute; inset: 0;
-    padding: 22px 10px 10px;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    pointer-events: none;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-  .phone-page.active { opacity: 1; pointer-events: auto; }
-
-  .pp-head {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 6px 8px;
-    border-bottom: 1px solid var(--blush-soft);
-  }
-  .pp-head .av {
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--blush), var(--rose));
-    color: white; font-family: var(--sans); font-weight: 700;
-    font-size: 10px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .pp-head .nm { font-family: var(--sans); font-weight: 600; font-size: 10px; color: var(--ink); flex: 1; }
-  .pp-head .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cd17a; box-shadow: 0 0 6px #5cd17a; }
-  .pp-body {
-    flex: 1;
-    padding: 8px 4px;
-    display: flex; flex-direction: column;
-    gap: 5px;
-    overflow: hidden;
-  }
-  .pp-bub {
-    max-width: 80%;
-    padding: 5px 8px;
-    border-radius: 10px;
-    font-family: var(--serif-zh);
-    font-size: 9.5px;
-    line-height: 1.45;
-  }
-  .pp-bub.ai {
-    align-self: flex-start;
-    background: white;
-    border: 1px solid var(--blush-soft);
-    color: var(--ink);
-    border-bottom-left-radius: 3px;
-  }
-  .pp-bub.user {
-    align-self: flex-end;
-    background: linear-gradient(135deg, var(--blush), var(--rose));
-    color: white;
-    border-bottom-right-radius: 3px;
-  }
-  .pp-bub.typing { color: var(--mist-deep); font-style: italic; }
-
-  /* phone page · emotion wheel */
-  .pp-em-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    padding: 4px 2px;
-  }
-  .pp-em-grid > div {
-    aspect-ratio: 1;
-    border-radius: 6px;
-    display: flex; align-items: flex-end; justify-content: center;
-    padding-bottom: 2px;
-    font-family: var(--sans); font-size: 7px;
-    color: var(--ink);
-  }
-  /* phone page · bilingual */
-  .pp-bi { display: flex; gap: 4px; padding: 4px; }
-  .pp-bi-col { flex: 1; }
-  .pp-bi-col .tag {
-    font-family: var(--mono); font-size: 7px;
-    letter-spacing: 0.2em; color: var(--mist-deep);
-    text-align: center; margin-bottom: 4px;
-  }
-  /* phone page · pledge */
-  .pp-pledge { padding: 8px; }
-  .pp-pledge .pl {
-    display: flex; align-items: center; gap: 5px;
-    padding: 4px 0;
-    font-family: var(--serif-zh); font-size: 9px;
-    color: var(--ink);
-  }
-  .pp-pledge .pl::before {
-    content: "✓"; width: 12px; height: 12px;
-    background: var(--blush); color: white;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 8px; flex-shrink: 0;
-  }
-  /* phone page · page label (top-left ribbon) */
-  .pp-tag {
-    position: absolute;
-    top: 22px; right: 8px;
-    z-index: 4;
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.18em;
-    color: var(--rose);
-    background: rgba(255,248,240,0.92);
-    padding: 1px 5px;
-    border-radius: 4px;
-    border: 1px solid var(--blush-soft);
-  }
-
-  /* ---------- thought bubbles around her head ---------- */
-  .thoughts {
-    position: absolute;
-    left: 0; right: 0;
-    top: 0; bottom: 0;
-    pointer-events: none;
-    z-index: 6;
-  }
-  .thought {
-    position: absolute;
-    max-width: 240px;
-    padding: 14px 18px;
-    background: white;
-    border: 1px solid var(--blush-soft);
-    border-radius: 22px;
-    box-shadow: 0 14px 30px rgba(155,124,182,0.20);
-    opacity: 0;
-    transform: translateY(8px) scale(0.96);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-    pointer-events: auto;
-    cursor: help;
-  }
-  .thought.is-in { opacity: 1; transform: none; }
-  .thought:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(155,124,182,0.28); }
-  /* little "tail" connecting to head */
-  .thought::after, .thought::before {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    background: white;
-    border: 1px solid var(--blush-soft);
-  }
-  .thought::after  { width: 12px; height: 12px; }
-  .thought::before { width: 7px;  height: 7px;  }
-
-  .thought .t-eyebrow {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    letter-spacing: 0.28em;
-    color: var(--rose);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .thought .t-text {
-    font-family: var(--serif-zh);
-    font-size: 14px;
-    color: var(--ink);
-    font-weight: 500;
-    line-height: 1.5;
-  }
-  .thought .t-text em {
-    font-style: normal;
-    background: linear-gradient(135deg, var(--rose), var(--mist-deep));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  /* positions for the 5 thought bubbles — clustered above-and-left of the girl */
-  .thought.t1 { top: 18%; left: 4%; transform-origin: bottom right; }
-  .thought.t1::after  { bottom: -16px; right: 28px; }
-  .thought.t1::before { bottom: -28px; right: 18px; }
-
-  .thought.t2 { top: 6%;  left: 20%; }
-  .thought.t2::after  { bottom: -16px; left: 50px; }
-  .thought.t2::before { bottom: -28px; left: 40px; }
-
-  .thought.t3 { top: 10%; left: 44%; }
-  .thought.t3::after  { bottom: -16px; left: 40px; }
-  .thought.t3::before { bottom: -28px; left: 30px; }
-
-  .thought.t4 { top: 32%; left: 2%; }
-  .thought.t4::after  { bottom: -16px; right: 28px; }
-  .thought.t4::before { bottom: -28px; right: 18px; }
-
-  .thought.t5 { top: 26%; left: 22%; }
-  .thought.t5::after  { bottom: -16px; left: 40px; }
-  .thought.t5::before { bottom: -28px; left: 30px; }
-
-  /* ---------- intro section (outside scene, normal flow above scroll-track) ---------- */
+  /* ---------- intro section above scroll-track ---------- */
   .intro-section {
     position: relative; z-index: 5;
     max-width: 880px;
@@ -484,8 +112,7 @@
   .intro-section h1 em {
     font-style: normal;
     background: linear-gradient(135deg, var(--rose), var(--mist-deep));
-    -webkit-background-clip: text;
-    background-clip: text;
+    -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
   }
   .intro-section p.lead {
@@ -496,35 +123,350 @@
     max-width: 560px;
     line-height: 1.7;
   }
-
-  /* ---------- scroll hint bottom of scene ---------- */
-  .scroll-hint {
-    position: absolute;
-    bottom: 24px; left: 50%;
-    transform: translateX(-50%);
-    z-index: 7;
+  .intro-section .scroll-hint {
+    margin-top: 38px;
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.32em;
     color: var(--mist-deep);
     text-transform: uppercase;
-    opacity: 0.75;
-    animation: hintBob 2.4s ease-in-out infinite;
+    opacity: 0.7;
   }
-  @keyframes hintBob {
-    0%, 100% { transform: translate(-50%, 0); opacity: 0.45; }
-    50%      { transform: translate(-50%, 6px); opacity: 0.85; }
+  .intro-section .scroll-hint .arr { display: inline-block; margin-left: 8px; animation: nudge 1.8s ease-in-out infinite; }
+  @keyframes nudge { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+  /* ============================================================
+     SCROLL TRACK · sticky stage
+     ============================================================ */
+  .scroll-track { position: relative; height: 750vh; }
+  .scene-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
   }
 
-  /* phone page progress dots — shown when we're inside the phone */
-  .phone-progress {
+  /* both scenes live inside the same stage, stacked */
+  .scene-inside, .scene-outside {
+    position: absolute; inset: 0;
+    transition: opacity 0.6s ease;
+  }
+
+  /* ============================================================
+     INSIDE · bedroom
+     ============================================================ */
+  .scene-inside {
+    background:
+      radial-gradient(ellipse 80% 60% at 60% 30%, rgba(255,212,220,0.55), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 30% 70%, rgba(201,177,217,0.40), transparent 70%),
+      linear-gradient(180deg, #FFF3E8 0%, #FBEEEA 50%, #F5E0E0 100%);
+  }
+  .camera {
+    position: absolute; inset: 0;
+    transform-origin: 50% 64%;     /* push-in target = phone area */
+    transform: translate(0, 0) scale(1);
+    will-change: transform;
+  }
+  .bedroom { position: absolute; inset: 0; pointer-events: none; }
+  .wall {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #FFF1E2 0%, #FCE5DC 60%, #F1D6D2 100%);
+  }
+  .floor {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+    background: linear-gradient(180deg, rgba(155,124,182,0.10), rgba(155,124,182,0.22));
+  }
+  /* warm window in the back-left */
+  .window {
+    position: absolute;
+    top: 10%; left: 4%;
+    width: 22%; height: 36%;
+    background:
+      radial-gradient(ellipse at 60% 40%, rgba(255,220,180,0.85), rgba(255,183,197,0.45) 60%, transparent);
+    border: 10px solid #E8C6BB;
+    border-radius: 14px;
+    box-shadow: inset 0 0 50px rgba(255,255,255,0.4);
+  }
+  .window::before, .window::after { content: ""; position: absolute; background: #E8C6BB; }
+  .window::before { top: 50%; left: -10px; right: -10px; height: 6px; }
+  .window::after  { left: 50%; top: -10px; bottom: -10px; width: 6px; }
+  /* curtain — half-drawn */
+  .curtain {
+    position: absolute;
+    top: 8%; left: 2%;
+    width: 12%; height: 40%;
+    background: repeating-linear-gradient(90deg, rgba(255,183,197,0.85) 0, rgba(255,183,197,0.85) 8px, rgba(232,146,167,0.55) 8px, rgba(232,146,167,0.55) 14px);
+    border-radius: 4px 4px 18px 18px;
+    opacity: 0.55;
+  }
+  /* fairy lights drape across upper area */
+  .lights {
+    position: absolute;
+    top: 6%; left: 26%; right: 8%; height: 90px;
+    pointer-events: none;
+  }
+  .lights svg { width: 100%; height: 100%; overflow: visible; }
+  .lights circle { animation: twinkle 3s ease-in-out infinite; }
+  .lights circle:nth-child(odd)  { animation-delay: 1s; }
+  .lights circle:nth-child(3n)   { animation-delay: 2s; }
+  @keyframes twinkle {
+    0%,100% { opacity: 0.55; r: 5; }
+    50%     { opacity: 1.0;  r: 7; filter: drop-shadow(0 0 8px #FFB7C5); }
+  }
+  .plant {
+    position: absolute;
+    bottom: 18%; right: 3%;
+    width: 14%; height: 36%;
+  }
+  .poster {
+    position: absolute;
+    top: 12%; right: 22%;
+    width: 11%; aspect-ratio: 3/4;
+    background: linear-gradient(135deg, var(--blush), var(--mist));
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    transform: rotate(-2deg);
+  }
+  .poster::after {
+    content: "♡"; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 32px;
+  }
+  /* bed cushion */
+  .bed {
+    position: absolute;
+    left: 50%; bottom: 6%;
+    transform: translateX(-50%);
+    width: 64%; height: 22%;
+    background: linear-gradient(180deg, #FFD0DC 0%, #E892A7 100%);
+    border-radius: 50% 50% 30px 30px / 70% 70% 30px 30px;
+    box-shadow: 0 20px 40px rgba(212,81,123,0.22);
+  }
+  .pillow {
+    position: absolute;
+    bottom: 10%; right: 24%;
+    width: 12%; height: 7%;
+    background: var(--cream);
+    border-radius: 50%;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    transform: rotate(-14deg);
+  }
+
+  /* ---------- the girl — 3/4 BACK view ---------- */
+  .girl-wrap {
     position: absolute;
     left: 50%;
-    bottom: 28px;
+    bottom: 4%;
+    width: 420px;
+    height: 560px;
     transform: translateX(-50%);
-    z-index: 8;
-    display: flex;
-    gap: 8px;
+    z-index: 4;
+  }
+  .girl-wrap svg.girl {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 16px 24px rgba(61,44,74,0.18));
+  }
+
+  /* ---------- the phone (HTML overlay) — held in front of her, angled toward viewer ---------- */
+  .phone {
+    position: absolute;
+    left: 50%;
+    top: 56%;
+    width: 188px;
+    height: 336px;
+    transform: translate(-50%, -50%) perspective(1400px) rotateY(-22deg) rotateZ(-4deg);
+    transform-origin: 50% 50%;
+    background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
+    border-radius: 28px;
+    padding: 6px;
+    z-index: 6;
+    box-shadow:
+      0 18px 40px rgba(61,44,74,0.45),
+      0 0 0 1px rgba(255,255,255,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.10);
+  }
+  .phone-screen {
+    position: relative;
+    width: 100%; height: 100%;
+    background: #FFF8F0;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+  .phone-screen::before {
+    content: ""; position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 44px; height: 8px;
+    background: #1A1024;
+    border-radius: 6px;
+    z-index: 5;
+  }
+  .phone-page {
+    position: absolute; inset: 0;
+    padding: 22px 10px 12px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .phone-page.active { opacity: 1; }
+  .pp-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 6px 8px;
+    border-bottom: 1px solid var(--blush-soft);
+  }
+  .pp-head .av {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white; font-family: var(--sans); font-weight: 700;
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pp-head .nm { font-family: var(--sans); font-weight: 600; font-size: 11px; color: var(--ink); flex: 1; }
+  .pp-head .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cd17a; box-shadow: 0 0 6px #5cd17a; }
+  .pp-body {
+    flex: 1; padding: 8px 4px;
+    display: flex; flex-direction: column;
+    gap: 5px; overflow: hidden;
+  }
+  .pp-bub {
+    max-width: 82%;
+    padding: 5px 9px;
+    border-radius: 11px;
+    font-family: var(--serif-zh);
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .pp-bub.ai {
+    align-self: flex-start;
+    background: white;
+    border: 1px solid var(--blush-soft);
+    color: var(--ink);
+    border-bottom-left-radius: 3px;
+  }
+  .pp-bub.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white;
+    border-bottom-right-radius: 3px;
+  }
+  .pp-bub.typing { color: var(--mist-deep); font-style: italic; }
+  .pp-em-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    padding: 6px 2px;
+  }
+  .pp-em-grid > div {
+    aspect-ratio: 1; border-radius: 6px;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 3px;
+    font-family: var(--sans); font-size: 8px; color: var(--ink);
+  }
+  .pp-bi { display: flex; gap: 4px; padding: 6px; }
+  .pp-bi-col { flex: 1; }
+  .pp-bi-col .tag {
+    font-family: var(--mono); font-size: 7.5px;
+    letter-spacing: 0.2em; color: var(--mist-deep);
+    text-align: center; margin-bottom: 5px;
+  }
+  .pp-pledge { padding: 10px; }
+  .pp-pledge .pl {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 0;
+    font-family: var(--serif-zh); font-size: 10px;
+    color: var(--ink);
+  }
+  .pp-pledge .pl::before {
+    content: "✓"; width: 13px; height: 13px;
+    background: var(--blush); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; flex-shrink: 0;
+  }
+  .pp-tag {
+    position: absolute;
+    top: 22px; right: 8px; z-index: 4;
+    font-family: var(--mono); font-size: 8px;
+    letter-spacing: 0.18em; color: var(--rose);
+    background: rgba(255,248,240,0.92);
+    padding: 1px 5px; border-radius: 4px;
+    border: 1px solid var(--blush-soft);
+  }
+
+  /* ---------- thought bubbles ---------- */
+  .thoughts { position: absolute; inset: 0; pointer-events: none; z-index: 7; }
+  .thought {
+    position: absolute;
+    max-width: 240px;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid var(--blush-soft);
+    border-radius: 22px;
+    box-shadow: 0 14px 30px rgba(155,124,182,0.20);
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+    pointer-events: auto;
+  }
+  .thought.is-in { opacity: 1; transform: none; }
+  .thought::after, .thought::before {
+    content: ""; position: absolute; border-radius: 50%;
+    background: white; border: 1px solid var(--blush-soft);
+  }
+  .thought::after  { width: 12px; height: 12px; }
+  .thought::before { width: 7px;  height: 7px;  }
+  .thought .t-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    color: var(--rose);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .thought .t-text {
+    font-family: var(--serif-zh);
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+  .thought .t-text em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--rose), var(--mist-deep));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  /* arrange around her head: above-left, top, above-right, right-mid, left-mid */
+  .thought.t1 { top: 30%; left: 6%; }
+  .thought.t1::after  { bottom: -16px; right: 30px; }
+  .thought.t1::before { bottom: -28px; right: 20px; }
+
+  .thought.t2 { top: 12%; left: 22%; }
+  .thought.t2::after  { bottom: -16px; right: 40px; }
+  .thought.t2::before { bottom: -28px; right: 30px; }
+
+  .thought.t3 { top: 8%; right: 22%; }
+  .thought.t3::after  { bottom: -16px; left: 40px; }
+  .thought.t3::before { bottom: -28px; left: 30px; }
+
+  .thought.t4 { top: 28%; right: 4%; }
+  .thought.t4::after  { bottom: -16px; left: 30px; }
+  .thought.t4::before { bottom: -28px; left: 20px; }
+
+  .thought.t5 { top: 48%; left: 5%; }
+  .thought.t5::after  { bottom: -16px; right: 40px; }
+  .thought.t5::before { bottom: -28px; right: 30px; }
+
+  /* phone-page progress dots ---------- */
+  .phone-progress {
+    position: absolute;
+    left: 50%; bottom: 36px;
+    transform: translateX(-50%);
+    z-index: 9;
+    display: flex; gap: 8px;
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -541,83 +483,221 @@
   }
 
   /* ============================================================
-     REFLECTION + CTA (below the scroll-track, regular flow)
+     OUTSIDE · dusk view, boy looking in through window
      ============================================================ */
-  .reflection-section {
-    position: relative; z-index: 2;
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 100px 6vw 60px;
+  .scene-outside {
+    opacity: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 30%, rgba(255,183,197,0.18), transparent 65%),
+      radial-gradient(ellipse 70% 40% at 30% 80%, rgba(123,75,138,0.30), transparent 70%),
+      linear-gradient(180deg, #2D1B4E 0%, #4A2E6B 55%, #7B4F8A 100%);
   }
-  .r-eyebrow {
+  .scene-outside.show { opacity: 1; pointer-events: auto; }
+
+  /* outside stars */
+  .stars { position: absolute; inset: 0; pointer-events: none; }
+  .stars svg { width: 100%; height: 60%; }
+  .stars circle { fill: #FFD4DC; opacity: 0.85; animation: starblink 4s ease-in-out infinite; }
+  .stars circle:nth-child(3n) { animation-delay: 1.5s; }
+  .stars circle:nth-child(2n) { animation-delay: 2.5s; }
+  @keyframes starblink { 0%,100%{opacity:0.4} 50%{opacity:1; filter:drop-shadow(0 0 4px #FFD4DC)} }
+
+  /* the window (from outside this time — frame outside, glow inside) */
+  .outer-window {
+    position: absolute;
+    top: 16%; left: 50%;
+    transform: translateX(-50%);
+    width: 30%; height: 48%;
+    z-index: 2;
+    background:
+      radial-gradient(ellipse at 55% 45%, rgba(255,220,180,0.85), rgba(255,183,197,0.55) 55%, rgba(232,146,167,0.35) 100%);
+    border: 14px solid #E8C6BB;
+    border-radius: 16px;
+    box-shadow:
+      0 0 80px 20px rgba(255,200,150,0.35),
+      inset 0 0 60px rgba(255,255,255,0.20);
+  }
+  .outer-window::before, .outer-window::after {
+    content: ""; position: absolute; background: #E8C6BB;
+  }
+  .outer-window::before { top: 50%; left: -14px; right: -14px; height: 8px; }
+  .outer-window::after  { left: 50%; top: -14px; bottom: -14px; width: 8px; }
+
+  /* silhouette of the girl through the glass */
+  .girl-silhouette {
+    position: absolute;
+    inset: 8% 6% 0 6%;
+    z-index: 3;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 38% 24% at 50% 32%, rgba(123,91,155,0.45), transparent 70%),
+      radial-gradient(ellipse 55% 35% at 50% 60%, rgba(232,146,167,0.40), transparent 70%);
+    filter: blur(2px);
+  }
+
+  /* fairy lights inside the window also glow */
+  .outer-window .inside-lights {
+    position: absolute;
+    top: 12%; left: 4%; right: 4%; height: 16px;
+    background: repeating-linear-gradient(90deg, rgba(255,183,197,0.65) 0 6px, transparent 6px 18px);
+    border-radius: 4px;
+    opacity: 0.55;
+    filter: blur(1px);
+  }
+
+  /* grass / ground at bottom (outside) */
+  .ground {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 22%;
+    background:
+      linear-gradient(180deg, rgba(45,27,78,0) 0%, rgba(20,10,40,0.55) 100%);
+  }
+
+  /* the boy — back view, looking up at window */
+  .boy-wrap {
+    position: absolute;
+    left: 50%;
+    bottom: -6%;
+    width: 340px;
+    height: 480px;
+    transform: translateX(-50%);
+    z-index: 5;
+  }
+  .boy-wrap svg.boy {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+    filter: drop-shadow(0 -8px 24px rgba(0,0,0,0.4));
+  }
+
+  /* ---------- lessons + next-steps overlays in outside scene ---------- */
+  .outside-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 6;
+  }
+  .out-eyebrow {
+    position: absolute;
+    top: 8%; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--blush);
+    text-transform: uppercase;
+    text-align: center;
+    pointer-events: auto;
+  }
+  .out-eyebrow span.muted {
+    display: block;
+    margin-top: 4px;
+    color: rgba(255,212,220,0.7);
+    font-family: var(--hand);
+    font-size: 18px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+  .lesson-card {
+    position: absolute;
+    width: 240px;
+    padding: 18px 20px;
+    background: rgba(255,248,240,0.92);
+    border: 1px solid rgba(255,183,197,0.5);
+    border-radius: 20px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    pointer-events: auto;
+  }
+  .scene-outside.show .lesson-card { opacity: 1; transform: none; }
+  .lesson-card .num {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+  }
+  .lesson-card h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .lesson-card p {
+    font-family: var(--serif-zh);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .lesson-card.l1 { top: 18%; left: 4%; transition-delay: 0.05s; }
+  .lesson-card.l2 { top: 18%; right: 4%; transition-delay: 0.15s; }
+  .lesson-card.l3 { top: 56%; left: 3%; transition-delay: 0.25s; }
+  .lesson-card.l4 { top: 56%; right: 3%; transition-delay: 0.35s; }
+
+  /* small "next" hint at bottom of outside scene */
+  .next-hint {
+    position: absolute;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: rgba(255,212,220,0.7);
+    text-transform: uppercase;
+    pointer-events: auto;
+  }
+  .next-hint .arr { display: inline-block; margin-left: 8px; animation: nudge 1.8s ease-in-out infinite; }
+
+  /* ============================================================
+     BELOW STAGE · next-steps card + CTA + footer (normal flow)
+     ============================================================ */
+  .steps-section {
+    position: relative; z-index: 2;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 100px 6vw 0;
+  }
+  .steps-section .ev {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.32em;
     color: var(--rose);
     text-transform: uppercase;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
   }
-  .r-title {
+  .steps-section h2 {
     font-family: var(--sans);
     font-weight: 700;
-    font-size: clamp(34px, 4.4vw, 52px);
+    font-size: clamp(28px, 4vw, 40px);
     color: var(--ink);
-    letter-spacing: -0.015em;
-    margin-bottom: 36px;
-    line-height: 1.12;
+    margin-bottom: 30px;
+    line-height: 1.15;
   }
-  .r-title em {
+  .steps-section h2 em {
     font-style: normal;
     background: linear-gradient(135deg, var(--rose), var(--mist-deep));
-    -webkit-background-clip: text;
-    background-clip: text;
+    -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .lessons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 22px;
-    margin-top: 40px;
-  }
-  .lesson {
-    position: relative;
-    background: white;
-    border: 1px solid var(--rule);
-    border-radius: 22px;
-    padding: 32px 26px 26px;
-    box-shadow: 0 14px 30px rgba(155,124,182,0.10);
-  }
-  .lesson-num {
-    position: absolute;
-    top: -14px; left: 24px;
-    width: 38px; height: 38px;
-    background: linear-gradient(135deg, var(--blush), var(--rose));
-    color: white;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--mono); font-size: 13px;
-    box-shadow: 0 6px 14px rgba(212,81,123,0.30);
-  }
-  .lesson h3 {
-    font-family: var(--sans);
-    font-weight: 600; font-size: 18px;
-    color: var(--ink);
-    margin: 6px 0 12px;
-    line-height: 1.35;
-  }
-  .lesson p {
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin: 0; line-height: 1.65;
-  }
   .next-steps {
-    margin-top: 60px;
-    padding: 32px 36px;
-    background: linear-gradient(135deg, rgba(255,183,197,0.12), rgba(155,124,182,0.10));
+    padding: 28px 32px;
+    background: linear-gradient(135deg, rgba(255,183,197,0.10), rgba(155,124,182,0.10));
     border-left: 3px solid var(--mist-deep);
-    border-radius: 0 20px 20px 0;
+    border-radius: 0 18px 18px 0;
   }
-  .next-steps ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  .next-steps ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
   .next-steps li {
     position: relative;
     padding-left: 24px;
@@ -631,9 +711,8 @@
   }
 
   .cta-block {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 60px 6vw 100px;
+    max-width: 880px; margin: 0 auto;
+    padding: 80px 6vw 80px;
     text-align: center;
   }
   .cta-eyebrow {
@@ -645,14 +724,14 @@
   .cta-block h2 {
     font-family: var(--sans);
     font-weight: 700;
-    font-size: clamp(28px, 4vw, 42px);
+    font-size: clamp(26px, 3.6vw, 36px);
     color: var(--ink);
-    margin-bottom: 32px;
+    margin-bottom: 30px;
   }
   .cta-twin { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   .cta-primary, .cta-secondary {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 16px 34px;
+    padding: 16px 32px;
     border-radius: 999px;
     font-family: var(--sans);
     font-weight: 600; font-size: 15px;
@@ -672,16 +751,15 @@
   }
   .cta-secondary:hover { background: var(--paper-dark); border-color: var(--mist-deep); transform: translateY(-3px); }
   .cta-meta {
-    margin-top: 28px;
+    margin-top: 26px;
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.22em;
+    font-size: 11px; letter-spacing: 0.22em;
     color: var(--muted);
     text-transform: uppercase;
   }
   .proj-foot {
     text-align: center;
-    padding: 50px 5vw;
+    padding: 48px 5vw;
     border-top: 1px solid var(--rule);
   }
   .proj-foot p {
@@ -697,7 +775,7 @@
   }
   .proj-foot a:hover { color: var(--rose); border-color: var(--rose); }
 
-  /* ---------- shared lang switch + floating CTA ---------- */
+  /* ---------- lang switch + floating CTA ---------- */
   body.lang-en [data-lang="cn"] { display: none !important; }
   body.lang-cn [data-lang="en"] { display: none !important; }
 
@@ -737,35 +815,35 @@
     color: white;
     font-family: var(--sans); font-weight: 600;
     font-size: 14px; letter-spacing: 0.08em;
-    box-shadow: 0 14px 32px rgba(212,81,123,0.4), 0 0 28px rgba(255,183,197,0.4);
+    box-shadow: 0 14px 32px rgba(212,81,123,0.4);
     transition: transform 0.3s, box-shadow 0.3s;
   }
   .cta-float:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(212,81,123,0.55); }
   .cta-float .arrow { transition: transform 0.3s; }
   .cta-float:hover .arrow { transform: translateX(4px); }
 
-  /* ---------- reveal animation for reflection ---------- */
+  /* reveal for below-stage sections */
   .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s ease, transform 0.9s ease; }
   .reveal.is-in { opacity: 1; transform: none; }
 
-  /* ---------- responsive: stack vertically on small screens ---------- */
+  /* ---------- responsive ---------- */
   @media (max-width: 720px) {
-    .scroll-track { height: auto; }       /* let it flow naturally on mobile */
-    .scene-stage { position: relative; height: auto; padding: 120px 0 60px; }
-    .camera { position: relative; transform: none !important; }
-    .girl-wrap { position: relative; left: auto; transform: none; margin: 0 auto; width: 280px; height: 380px; bottom: auto; }
-    .phone { position: relative; left: auto; top: auto; transform: rotate(0); margin: 20px auto 0; }
-    .thoughts { position: relative; display: grid; grid-template-columns: 1fr; gap: 12px; padding: 30px 6vw; }
-    .thought { position: relative !important; opacity: 1; transform: none; top: auto !important; left: auto !important; right: auto !important; max-width: 100%; }
+    .scroll-track { height: auto; }
+    .scene-stage { position: relative; height: auto; padding: 60px 0; }
+    .scene-inside, .scene-outside { position: relative; opacity: 1 !important; }
+    .scene-outside { padding: 60px 0; }
+    .camera { transform: none !important; position: relative; }
+    .girl-wrap, .boy-wrap { position: relative; left: auto; transform: none; margin: 0 auto; }
+    .phone { position: relative; left: auto; top: auto; margin: 20px auto 0; transform: rotateY(0); }
+    .thoughts, .outside-overlay { position: relative; padding: 20px 6vw; }
+    .thought, .lesson-card { position: relative !important; opacity: 1 !important; transform: none !important; top: auto !important; left: auto !important; right: auto !important; margin: 12px 0; max-width: 100%; width: 100%; }
     .thought::after, .thought::before { display: none; }
-    .scene-intro { position: relative; top: auto; left: auto; transform: none; padding: 0 6vw 30px; }
-    .scroll-hint, .phone-progress { display: none; }
-    .lessons { grid-template-columns: 1fr; }
+    .phone-progress, .next-hint { display: none; }
     .lang-switch { right: 14px; bottom: 14px; padding: 9px 16px; font-size: 13px; gap: 10px; }
     .cta-float   { left:  14px; bottom: 14px; padding: 11px 18px; font-size: 12px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .camera, .thought, .phone-page { transition: none !important; animation: none !important; }
+    .camera, .thought, .phone-page, .lesson-card { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
@@ -777,7 +855,6 @@
   <span class="nav-brand">behind · AIve</span>
 </header>
 
-<!-- intro band ABOVE the scene (regular flow, no overlap) -->
 <section class="intro-section">
   <p class="ev"><span data-lang="cn">起点 · 我想问的问题</span><span data-lang="en">CHAPTER 01 · THE QUESTION</span></p>
   <h1>
@@ -788,125 +865,133 @@
     <span data-lang="cn">六个月前我开了一个空白 repo, 想看"陪伴"这件事能不能被工程化 — 以及被工程化之后, 还像不像陪伴。</span>
     <span data-lang="en">Six months ago I opened a blank repo to see whether "companionship" could be engineered — and whether what came out still resembled it.</span>
   </p>
+  <p class="scroll-hint">
+    <span data-lang="cn">滚动 · 进她的房间</span><span data-lang="en">scroll · into her room</span>
+    <span class="arr">↓</span>
+  </p>
 </section>
 
-<!-- =================================================================
-     scroll-driven stage: 600vh tall, sticky inside.
-     ================================================================= -->
+
+<!-- ===================== sticky stage with two scenes ===================== -->
 <div class="scroll-track" id="scrollTrack">
-  <div class="scene-stage" id="sceneStage">
+  <div class="scene-stage">
 
-    <!-- the "camera" wraps everything that scales/translates -->
-    <div class="camera" id="camera">
+    <!-- ---------- SCENE A: INSIDE ---------- -->
+    <div class="scene-inside" id="sceneInside">
+      <div class="camera" id="camera">
 
-      <!-- bedroom backdrop -->
-      <div class="bedroom">
-        <div class="wall"></div>
-        <div class="floor"></div>
-        <div class="window"></div>
-        <div class="curtain"></div>
-        <div class="poster"></div>
-        <div class="lights">
-          <svg viewBox="0 0 1000 90" preserveAspectRatio="none">
-            <path d="M 0 30 Q 80 70 160 30 T 320 30 T 480 30 T 640 30 T 800 30 T 1000 30" stroke="#9B7CB6" stroke-width="1.5" fill="none" opacity="0.5"/>
-            <circle cx="80"  cy="50" r="5" fill="#FFD4DC" />
-            <circle cx="160" cy="30" r="5" fill="#FFB7C5" />
-            <circle cx="240" cy="50" r="5" fill="#C9B1D9" />
-            <circle cx="320" cy="30" r="5" fill="#FFD4DC" />
-            <circle cx="400" cy="50" r="5" fill="#FFB7C5" />
-            <circle cx="480" cy="30" r="5" fill="#C9B1D9" />
-            <circle cx="560" cy="50" r="5" fill="#FFD4DC" />
-            <circle cx="640" cy="30" r="5" fill="#FFB7C5" />
-            <circle cx="720" cy="50" r="5" fill="#C9B1D9" />
-            <circle cx="800" cy="30" r="5" fill="#FFD4DC" />
-            <circle cx="880" cy="50" r="5" fill="#FFB7C5" />
-            <circle cx="960" cy="30" r="5" fill="#C9B1D9" />
+        <!-- bedroom backdrop -->
+        <div class="bedroom">
+          <div class="wall"></div>
+          <div class="floor"></div>
+          <div class="window"></div>
+          <div class="curtain"></div>
+          <div class="poster"></div>
+          <div class="lights">
+            <svg viewBox="0 0 1000 90" preserveAspectRatio="none">
+              <path d="M 0 30 Q 80 70 160 30 T 320 30 T 480 30 T 640 30 T 800 30 T 1000 30" stroke="#9B7CB6" stroke-width="1.5" fill="none" opacity="0.5"/>
+              <circle cx="80"  cy="50" r="5" fill="#FFD4DC" />
+              <circle cx="160" cy="30" r="5" fill="#FFB7C5" />
+              <circle cx="240" cy="50" r="5" fill="#C9B1D9" />
+              <circle cx="320" cy="30" r="5" fill="#FFD4DC" />
+              <circle cx="400" cy="50" r="5" fill="#FFB7C5" />
+              <circle cx="480" cy="30" r="5" fill="#C9B1D9" />
+              <circle cx="560" cy="50" r="5" fill="#FFD4DC" />
+              <circle cx="640" cy="30" r="5" fill="#FFB7C5" />
+              <circle cx="720" cy="50" r="5" fill="#C9B1D9" />
+              <circle cx="800" cy="30" r="5" fill="#FFD4DC" />
+              <circle cx="880" cy="50" r="5" fill="#FFB7C5" />
+              <circle cx="960" cy="30" r="5" fill="#C9B1D9" />
+            </svg>
+          </div>
+          <svg class="plant" viewBox="0 0 200 400" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+            <path d="M50 320 L60 400 L140 400 L150 320 Z" fill="#C9B1D9" />
+            <ellipse cx="100" cy="320" rx="50" ry="6" fill="#9B7CB6" />
+            <path d="M100 320 Q60 280 50 200 Q70 220 100 240 Z" fill="#7BA889" />
+            <path d="M100 320 Q140 280 150 200 Q130 220 100 240 Z" fill="#7BA889" />
+            <path d="M100 320 Q50 240 30 140 Q60 170 100 220 Z" fill="#5E8A6E" />
+            <path d="M100 320 Q150 240 170 140 Q140 170 100 220 Z" fill="#5E8A6E" />
+            <path d="M100 320 Q100 220 100 90 Q110 140 100 200 Z" fill="#7BA889" />
+          </svg>
+          <div class="bed"></div>
+          <div class="pillow"></div>
+        </div>
+
+        <!-- the GIRL · 3/4 BACK view (we see her back + sliver of cheek) -->
+        <div class="girl-wrap">
+          <svg class="girl" viewBox="0 0 420 560" aria-label="girl from behind, holding phone">
+            <!-- crossed legs (in front, brighter pink) -->
+            <path d="M70 490 Q60 504 90 528 L330 528 Q360 504 350 490 Q260 470 210 474 Q160 470 70 490 Z" fill="#E892A7"/>
+            <circle cx="135" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
+            <circle cx="285" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
+
+            <!-- LONG hair, falling down her back (the dominant shape) -->
+            <path d="M120 200
+                     Q105 110 210 95
+                     Q315 110 305 215
+                     Q318 330 305 420
+                     Q295 480 260 490
+                     Q230 460 210 460
+                     Q190 460 160 490
+                     Q125 480 115 420
+                     Q102 330 120 200 Z"
+                  fill="#7B5B9B"/>
+            <!-- hair shading right side (the side we see slightly) -->
+            <path d="M210 95
+                     Q315 110 305 215
+                     Q318 330 305 420
+                     Q295 480 260 490
+                     Q235 460 215 458
+                     L210 95 Z"
+                  fill="#5E3F7B" opacity="0.55"/>
+            <!-- hair highlight strand on the back -->
+            <path d="M180 130 Q200 240 195 380" stroke="#9B7CB6" stroke-width="3" fill="none" opacity="0.4"/>
+            <path d="M230 130 Q245 240 240 380" stroke="#9B7CB6" stroke-width="3" fill="none" opacity="0.4"/>
+
+            <!-- body (sweater) from behind — shows back/shoulders -->
+            <path d="M115 305
+                     Q120 270 165 260
+                     L255 260
+                     Q300 270 305 305
+                     L320 440
+                     Q320 472 275 476
+                     L145 476
+                     Q100 472 100 440 Z"
+                  fill="#FFB7C5"/>
+            <!-- back shading -->
+            <path d="M115 305 Q120 270 165 260 L210 260 L210 476 L145 476 Q100 472 100 440 Z" fill="#E892A7" opacity="0.3"/>
+            <!-- collar / hood opening at neck -->
+            <ellipse cx="210" cy="262" rx="42" ry="6" fill="#E892A7" opacity="0.55"/>
+
+            <!-- a sliver of cheek peeking from behind hair on the RIGHT side -->
+            <path d="M278 200
+                     Q290 215 290 235
+                     Q288 250 278 252
+                     Q272 240 272 218
+                     Q272 205 278 200 Z"
+                  fill="#FCE0D2"/>
+            <!-- tiny eyelash hint on cheek -->
+            <path d="M280 220 Q284 222 286 226" stroke="#3D2C4A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+
+            <!-- LEFT shoulder/arm (far side from our view) -->
+            <path d="M120 318 Q100 340 108 388 Q115 410 142 414 L182 396 Q172 374 170 340 Z" fill="#FFB7C5"/>
+
+            <!-- RIGHT shoulder/arm (near side) -->
+            <path d="M298 318 Q320 340 312 388 Q305 412 278 414 L238 396 Q248 374 250 340 Z" fill="#FFB7C5"/>
+
+            <!-- hands gripping phone (in front of her, visible over her lap) -->
+            <ellipse cx="170" cy="412" rx="16" ry="11" fill="#FCE0D2"/>
+            <ellipse cx="250" cy="412" rx="16" ry="11" fill="#FCE0D2"/>
+
+            <!-- subtle heart aura between her head + phone -->
+            <g transform="translate(330, 250)">
+              <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#D4517B" opacity="0.55"/>
+            </g>
           </svg>
         </div>
-        <!-- plant -->
-        <svg class="plant" viewBox="0 0 200 400" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
-          <!-- pot -->
-          <path d="M 50 320 L 60 400 L 140 400 L 150 320 Z" fill="#C9B1D9" />
-          <ellipse cx="100" cy="320" rx="50" ry="6" fill="#9B7CB6" />
-          <!-- leaves -->
-          <path d="M 100 320 Q 60 280 50 200 Q 70 220 100 240 Z" fill="#7BA889" />
-          <path d="M 100 320 Q 140 280 150 200 Q 130 220 100 240 Z" fill="#7BA889" />
-          <path d="M 100 320 Q 50 240 30 140 Q 60 170 100 220 Z" fill="#5E8A6E" />
-          <path d="M 100 320 Q 150 240 170 140 Q 140 170 100 220 Z" fill="#5E8A6E" />
-          <path d="M 100 320 Q 100 220 100 90 Q 110 140 100 200 Z" fill="#7BA889" />
-        </svg>
-        <!-- bed cushion -->
-        <div class="bed"></div>
-        <div class="pillow"></div>
-      </div>
 
-      <!-- THE GIRL (simplified SVG character) -->
-      <div class="girl-wrap">
-        <svg class="girl" viewBox="0 0 380 540" aria-label="girl on bed, 3/4 view">
-          <!-- crossed legs in front (drawn first, behind everything) -->
-          <path d="M60 470 Q50 482 75 505 L300 505 Q325 482 315 470 Q240 450 195 454 Q150 450 60 470 Z" fill="#E892A7" />
-          <circle cx="125" cy="478" r="16" fill="#FFB7C5" opacity="0.7" />
-          <circle cx="255" cy="478" r="16" fill="#FFB7C5" opacity="0.7" />
-
-          <!-- back hair (long, falls behind shoulder) -->
-          <path d="M115 215 Q105 110 195 95 Q280 110 275 215 Q288 320 240 360 Q210 320 165 355 Q120 330 115 215 Z" fill="#7B5B9B" />
-
-          <!-- body (sweater) — tilted slightly 3/4, narrower on far side (left in view = her right) -->
-          <path d="M110 305 Q118 268 162 258 L228 258 Q272 268 280 305 L295 430 Q295 462 250 466 L138 466 Q92 462 92 430 Z"
-                fill="#FFB7C5" />
-          <!-- sweater shading on far side for 3/4 depth -->
-          <path d="M110 305 Q118 268 162 258 L180 258 L180 466 L138 466 Q92 462 92 430 Z" fill="#E892A7" opacity="0.35" />
-          <!-- collar -->
-          <ellipse cx="195" cy="258" rx="40" ry="8" fill="#E892A7" opacity="0.5" />
-
-          <!-- neck (offset slightly right for 3/4 turn) -->
-          <path d="M180 245 L210 245 L214 275 L184 275 Z" fill="#FCE0D2" />
-
-          <!-- head (turned slightly to the right toward phone) -->
-          <ellipse cx="200" cy="195" rx="60" ry="68" fill="#FCE0D2" />
-          <!-- jaw shadow on left side (away from light/phone) -->
-          <path d="M145 195 Q142 240 175 258 L185 250 Q160 230 158 195 Z" fill="#F0C8B8" opacity="0.45" />
-
-          <!-- bangs -->
-          <path d="M142 175 Q160 118 205 113 Q248 118 258 175 Q252 188 235 180 Q220 158 200 162 Q180 158 162 180 Q146 188 142 175 Z"
-                fill="#7B5B9B" />
-          <!-- side hair lock (far side, hanging down) -->
-          <path d="M140 180 Q128 245 140 305 Q148 280 145 240 Q145 210 140 180 Z" fill="#7B5B9B" />
-          <!-- near-side hair lock -->
-          <path d="M260 180 Q272 240 263 320 Q268 350 248 365 Q240 320 245 250 Q252 210 260 180 Z" fill="#5E3F7B" />
-
-          <!-- eyes: closed/content, both turned slightly to her left toward the phone -->
-          <path d="M168 202 Q176 210 186 202" stroke="#3D2C4A" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <path d="M212 200 Q220 208 230 200" stroke="#3D2C4A" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <!-- blush -->
-          <ellipse cx="163" cy="220" rx="10" ry="6" fill="#FFB7C5" opacity="0.55" />
-          <ellipse cx="232" cy="220" rx="10" ry="6" fill="#FFB7C5" opacity="0.55" />
-          <!-- subtle smile (slightly turned) -->
-          <path d="M192 232 Q204 240 214 232" stroke="#D4517B" stroke-width="2" fill="none" stroke-linecap="round" />
-
-          <!-- LEFT (far) arm — bent close to body, holding edge of phone -->
-          <path d="M118 318 Q98 335 110 380 Q118 405 145 405 L185 388 Q170 370 168 335 Z" fill="#FFB7C5" />
-          <ellipse cx="148" cy="402" rx="16" ry="11" fill="#FCE0D2" />
-
-          <!-- RIGHT (near) arm — extended toward phone on the right -->
-          <path d="M260 305 Q310 305 360 320 Q395 332 388 355 Q380 372 350 365 Q310 350 275 345 Q258 335 258 318 Z" fill="#FFB7C5" />
-          <!-- right-arm shading -->
-          <path d="M270 312 Q310 314 350 326 Q360 335 350 340 Q310 332 275 332 Z" fill="rgba(232,146,167,0.4)" />
-          <!-- right hand cupping phone -->
-          <ellipse cx="380" cy="360" rx="18" ry="12" fill="#FCE0D2" />
-
-          <!-- floating heart between her and the phone -->
-          <g transform="translate(320, 240)">
-            <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#D4517B" opacity="0.85"/>
-          </g>
-          <g transform="translate(95, 130)">
-            <path d="M0 4 Q-6 -3 -12 3 Q-14 9 0 18 Q14 9 12 3 Q6 -3 0 4 Z" fill="#9B7CB6" opacity="0.65"/>
-          </g>
-        </svg>
-      </div>
-
-      <!-- THE PHONE (sibling of .girl-wrap so its left:% is relative to .camera) -->
-      <div class="phone" id="phone">
+        <!-- THE PHONE (sibling of girl-wrap, position relative to .camera) -->
+        <div class="phone" id="phone">
           <div class="phone-screen" id="phoneScreen">
 
             <!-- Page 1: live chat -->
@@ -931,7 +1016,7 @@
               <span class="pp-tag">v2 · MOODS</span>
               <div class="pp-head">
                 <div class="av">小</div>
-                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">8 种情绪</span><span data-lang="en">8 emotion states</span></div>
+                <div class="nm" style="font-size:9px;"><span data-lang="cn">8 种情绪</span><span data-lang="en">8 emotion states</span></div>
               </div>
               <div class="pp-em-grid" style="margin-top:8px;">
                 <div style="background:rgba(201,177,217,0.30)"><span data-lang="cn">平静</span><span data-lang="en">calm</span></div>
@@ -943,7 +1028,7 @@
                 <div style="background:rgba(182,166,207,0.40)"><span data-lang="cn">担心</span><span data-lang="en">worried</span></div>
                 <div style="background:rgba(255,183,197,0.30)"><span data-lang="cn">思念</span><span data-lang="en">miss</span></div>
               </div>
-              <p style="margin-top:auto;font-family:var(--mono);font-size:7px;letter-spacing:0.18em;color:var(--muted);text-align:center;padding:4px;">
+              <p style="margin-top:auto;font-family:var(--mono);font-size:7.5px;letter-spacing:0.18em;color:var(--muted);text-align:center;padding:6px;">
                 <span data-lang="cn">情绪驱动语气</span><span data-lang="en">mood-driven tone</span>
               </p>
             </div>
@@ -953,15 +1038,15 @@
               <span class="pp-tag">v2 · 3 MOODS</span>
               <div class="pp-head">
                 <div class="av">小</div>
-                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">"在干嘛"</span><span data-lang="en">"u up"</span></div>
+                <div class="nm" style="font-size:9px;"><span data-lang="cn">"在干嘛"</span><span data-lang="en">"u up"</span></div>
               </div>
-              <div class="pp-body" style="gap: 4px; font-size:8px;">
-                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;">FLIRTY</div>
-                <div class="pp-bub ai" style="font-size:8.5px;"><span data-lang="cn">想你呀~</span><span data-lang="en">missing you~</span></div>
-                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;margin-top:2px;">COLD</div>
-                <div class="pp-bub ai" style="font-size:8.5px;"><span data-lang="cn">没干嘛</span><span data-lang="en">nothing</span></div>
-                <div style="font-family:var(--mono);font-size:7px;color:var(--rose);letter-spacing:0.18em;margin-top:2px;">GRUDGE</div>
-                <div class="pp-bub ai" style="font-size:8px;line-height:1.35;"><span data-lang="cn">跟上次你说"在忙"差不多</span><span data-lang="en">about as busy as last time</span></div>
+              <div class="pp-body" style="gap: 4px;">
+                <div style="font-family:var(--mono);font-size:7.5px;color:var(--rose);letter-spacing:0.18em;">FLIRTY</div>
+                <div class="pp-bub ai"><span data-lang="cn">想你呀~</span><span data-lang="en">missing you~</span></div>
+                <div style="font-family:var(--mono);font-size:7.5px;color:var(--rose);letter-spacing:0.18em;margin-top:4px;">COLD</div>
+                <div class="pp-bub ai"><span data-lang="cn">没干嘛</span><span data-lang="en">nothing</span></div>
+                <div style="font-family:var(--mono);font-size:7.5px;color:var(--rose);letter-spacing:0.18em;margin-top:4px;">GRUDGE</div>
+                <div class="pp-bub ai" style="font-size:9px;line-height:1.4;"><span data-lang="cn">跟上次你说"在忙"差不多</span><span data-lang="en">about as busy as last time</span></div>
               </div>
             </div>
 
@@ -970,35 +1055,35 @@
               <span class="pp-tag">v2.2 · RHYTHM</span>
               <div class="pp-head">
                 <div class="av">小</div>
-                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">一句一句发</span><span data-lang="en">sentence by sentence</span></div>
+                <div class="nm" style="font-size:9px;"><span data-lang="cn">一句一句发</span><span data-lang="en">sentence by sentence</span></div>
               </div>
-              <div class="pp-body" id="rhythmBody">
+              <div class="pp-body">
                 <div class="pp-bub user"><span data-lang="cn">今天搞砸了</span><span data-lang="en">messed up today</span></div>
-                <div class="pp-bub ai rb rb1"><span data-lang="cn">咋了</span><span data-lang="en">what happened</span></div>
-                <div class="pp-bub ai rb rb2"><span data-lang="cn">说来听听</span><span data-lang="en">tell me</span></div>
-                <div class="pp-bub ai rb rb3"><span data-lang="cn">先深呼吸</span><span data-lang="en">breathe first</span></div>
+                <div class="pp-bub ai"><span data-lang="cn">咋了</span><span data-lang="en">what happened</span></div>
+                <div class="pp-bub ai"><span data-lang="cn">说来听听</span><span data-lang="en">tell me</span></div>
+                <div class="pp-bub ai"><span data-lang="cn">先深呼吸</span><span data-lang="en">breathe first</span></div>
               </div>
             </div>
 
             <!-- Page 5: bilingual -->
             <div class="phone-page" data-page="4">
               <span class="pp-tag">v4 · CN ⇄ EN</span>
-              <div class="pp-bi">
+              <div class="pp-bi" style="margin-top:18px;">
                 <div class="pp-bi-col">
                   <div class="tag">中文</div>
-                  <div class="pp-bub user" style="margin-bottom:3px;font-size:8px;">怎么不回</div>
-                  <div class="pp-bub ai" style="font-size:8px;">在干自己的事 不行吗</div>
-                  <div class="pp-bub ai" style="margin-top:3px;font-size:8px;">你昨天也没回</div>
+                  <div class="pp-bub user" style="margin-bottom:4px;">怎么不回</div>
+                  <div class="pp-bub ai">在干自己的事 不行吗</div>
+                  <div class="pp-bub ai" style="margin-top:4px;">你昨天也没回</div>
                 </div>
                 <div class="pp-bi-col">
                   <div class="tag">English</div>
-                  <div class="pp-bub user" style="margin-bottom:3px;font-size:8px;">why no reply</div>
-                  <div class="pp-bub ai" style="font-size:8px;">doing my thing. not allowed?</div>
-                  <div class="pp-bub ai" style="margin-top:3px;font-size:8px;">you didn't reply yesterday either</div>
+                  <div class="pp-bub user" style="margin-bottom:4px;">why no reply</div>
+                  <div class="pp-bub ai">doing my thing. not allowed?</div>
+                  <div class="pp-bub ai" style="margin-top:4px;">you didn't either</div>
                 </div>
               </div>
-              <p style="margin-top:auto;font-family:var(--mono);font-size:6.5px;letter-spacing:0.16em;color:var(--muted);text-align:center;padding:4px;">
-                <span data-lang="cn">不是翻译 是重写</span><span data-lang="en">not translated. rewritten.</span>
+              <p style="margin-top:auto;font-family:var(--mono);font-size:7.5px;letter-spacing:0.16em;color:var(--muted);text-align:center;padding:5px;">
+                <span data-lang="cn">不是翻译, 是重写</span><span data-lang="en">not translated · rewritten</span>
               </p>
             </div>
 
@@ -1007,7 +1092,7 @@
               <span class="pp-tag">v3 · LOCAL</span>
               <div class="pp-head">
                 <div class="av">小</div>
-                <div class="nm" style="font-size:8.5px;"><span data-lang="cn">100% 本地</span><span data-lang="en">100% local</span></div>
+                <div class="nm" style="font-size:9px;"><span data-lang="cn">100% 本地</span><span data-lang="en">100% local</span></div>
               </div>
               <div class="pp-pledge">
                 <div class="pl"><span data-lang="cn">不调云 LLM API</span><span data-lang="en">no cloud LLM</span></div>
@@ -1020,128 +1105,193 @@
           </div>
         </div>
 
-      <!-- THOUGHT BUBBLES (around her head — 5 design insights) -->
-      <div class="thoughts" id="thoughts">
-        <div class="thought t1" data-i="0">
-          <p class="t-eyebrow">v1 · <span data-lang="cn">起手式</span><span data-lang="en">opening move</span></p>
-          <p class="t-text">
-            <span data-lang="cn">陪伴 = 记忆 + <em>关系</em>。一个见面就喊"老公"的 AI 我自己都受不了。</span>
-            <span data-lang="en">Companionship = memory + <em>distance</em>. An AI that calls you "babe" on day one isn't a relationship.</span>
-          </p>
+        <!-- thought bubbles around her head (5, cascade in one by one) -->
+        <div class="thoughts" id="thoughts">
+          <div class="thought t1" data-i="0">
+            <p class="t-eyebrow">v1 · <span data-lang="cn">起手式</span><span data-lang="en">opening</span></p>
+            <p class="t-text">
+              <span data-lang="cn">陪伴 = 记忆 + <em>关系</em>。一个见面就喊"老公"的 AI 我自己都受不了。</span>
+              <span data-lang="en">Companionship = memory + <em>distance</em>. An AI that calls you "babe" on day one isn't a relationship.</span>
+            </p>
+          </div>
+          <div class="thought t2" data-i="1">
+            <p class="t-eyebrow">v2 · <span data-lang="cn">第一次大转向</span><span data-lang="en">first pivot</span></p>
+            <p class="t-text">
+              <span data-lang="cn">她答得越好, 我越<em>空</em>。永远友好是 ChatGPT 的礼貌训练 — 不是关系。</span>
+              <span data-lang="en">The better she answered, the <em>emptier</em> I felt. Always-polite is RLHF — not relationship.</span>
+            </p>
+          </div>
+          <div class="thought t3" data-i="2">
+            <p class="t-eyebrow">v2.2 · <span data-lang="cn">一行代码</span><span data-lang="en">one-line pivot</span></p>
+            <p class="t-text">
+              <span data-lang="cn">真人发微信, 是<em>一句一句</em>发的, 不是写完一段才发。</span>
+              <span data-lang="en">Real people text <em>sentence by sentence</em>, not in finished paragraphs.</span>
+            </p>
+          </div>
+          <div class="thought t4" data-i="3">
+            <p class="t-eyebrow">v3 · <span data-lang="cn">第二次大转向</span><span data-lang="en">second pivot</span></p>
+            <p class="t-text">
+              <span data-lang="cn">决定<em>不</em>把它做成生意。"不上传"要写进架构, 不是 README。</span>
+              <span data-lang="en">Decided <em>not</em> to commercialise. "No upload" belongs in the architecture.</span>
+            </p>
+          </div>
+          <div class="thought t5" data-i="4">
+            <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
+            <p class="t-text">
+              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。i18n 不是翻译, 是身份。</span>
+              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. i18n is identity.</span>
+            </p>
+          </div>
         </div>
-        <div class="thought t2" data-i="1">
-          <p class="t-eyebrow">v2 · <span data-lang="cn">第一次大转向</span><span data-lang="en">first pivot</span></p>
-          <p class="t-text">
-            <span data-lang="cn">她答得越好, 我越<em>空</em>。永远友好是 ChatGPT 的礼貌训练 — 不是关系。</span>
-            <span data-lang="en">The better she answered, the <em>emptier</em> I felt. Always-polite is RLHF — not relationship.</span>
-          </p>
-        </div>
-        <div class="thought t3" data-i="2">
-          <p class="t-eyebrow">v2.2 · <span data-lang="cn">一行代码</span><span data-lang="en">one-line pivot</span></p>
-          <p class="t-text">
-            <span data-lang="cn">真人发微信, 是<em>一句一句</em>发的, 不是写完一段才发。</span>
-            <span data-lang="en">Real people text <em>sentence by sentence</em>, not in finished paragraphs.</span>
-          </p>
-        </div>
-        <div class="thought t4" data-i="3">
-          <p class="t-eyebrow">v3 · <span data-lang="cn">第二次大转向</span><span data-lang="en">second pivot</span></p>
-          <p class="t-text">
-            <span data-lang="cn">决定<em>不</em>把它做成生意。"不上传"要写进架构, 不是写在 README。</span>
-            <span data-lang="en">Decided <em>not</em> to commercialise. "No upload" belongs in the architecture, not the README.</span>
-          </p>
-        </div>
-        <div class="thought t5" data-i="4">
-          <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
-          <p class="t-text">
-            <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。i18n 不是翻译, 是身份。</span>
-            <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. i18n isn't translation, it's identity.</span>
-          </p>
-        </div>
+
+      </div><!-- /.camera -->
+
+      <!-- phone-page progress dots -->
+      <div class="phone-progress" id="phoneProgress">
+        <div class="pd active"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+      </div>
+    </div><!-- /.scene-inside -->
+
+
+    <!-- ---------- SCENE B: OUTSIDE ---------- -->
+    <div class="scene-outside" id="sceneOutside">
+      <!-- stars -->
+      <div class="stars">
+        <svg viewBox="0 0 1200 480" preserveAspectRatio="xMidYMid slice">
+          <circle cx="120" cy="60"  r="2"/>
+          <circle cx="220" cy="120" r="1.5"/>
+          <circle cx="340" cy="80"  r="2"/>
+          <circle cx="460" cy="40"  r="1.5"/>
+          <circle cx="540" cy="160" r="2"/>
+          <circle cx="640" cy="60"  r="1.5"/>
+          <circle cx="760" cy="120" r="2"/>
+          <circle cx="880" cy="50"  r="2"/>
+          <circle cx="980" cy="140" r="1.5"/>
+          <circle cx="1080" cy="80" r="2"/>
+          <circle cx="80"  cy="240" r="1.5"/>
+          <circle cx="180" cy="300" r="2"/>
+          <circle cx="380" cy="220" r="1.5"/>
+          <circle cx="720" cy="240" r="1.5"/>
+          <circle cx="920" cy="280" r="2"/>
+          <circle cx="1140" cy="200" r="1.5"/>
+        </svg>
       </div>
 
-    </div><!-- /.camera -->
+      <!-- the warm window from outside -->
+      <div class="outer-window">
+        <div class="inside-lights"></div>
+        <div class="girl-silhouette"></div>
+      </div>
 
-    <!-- scroll hint -->
-    <div class="scroll-hint" id="scrollHint">
-      <span data-lang="cn">向下滚 · 推进到她的手机</span>
-      <span data-lang="en">scroll down · push into her phone</span>
-      <span style="display:block;margin-top:4px;font-size:14px;">↓</span>
-    </div>
+      <!-- ground at bottom -->
+      <div class="ground"></div>
 
-    <!-- phone-page progress dots (visible during inside-phone phase) -->
-    <div class="phone-progress" id="phoneProgress">
-      <div class="pd active"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
-    </div>
+      <!-- THE BOY · standing outside, back 3/4 view, looking up at window -->
+      <div class="boy-wrap">
+        <svg class="boy" viewBox="0 0 340 480" aria-label="boy looking up at the window">
+          <!-- ground shadow -->
+          <ellipse cx="170" cy="470" rx="100" ry="10" fill="#000" opacity="0.35"/>
+
+          <!-- pants / lower body silhouette -->
+          <path d="M120 360 L120 470 L160 470 L165 380 L175 380 L180 470 L220 470 L220 360 Z" fill="#2D1B4E"/>
+
+          <!-- hoodie / upper body -->
+          <path d="M100 260 Q105 220 145 215 L195 215 Q235 220 240 260 L250 365 Q250 380 230 380 L110 380 Q90 380 90 365 Z"
+                fill="#4A2E6B"/>
+          <!-- hoodie shading (right side) -->
+          <path d="M170 215 L195 215 Q235 220 240 260 L250 365 Q250 380 230 380 L170 380 Z" fill="#2D1B4E" opacity="0.4"/>
+          <!-- hoodie drawstrings -->
+          <line x1="158" y1="240" x2="158" y2="280" stroke="#7B4F8A" stroke-width="2" stroke-linecap="round"/>
+          <line x1="182" y1="240" x2="182" y2="280" stroke="#7B4F8A" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="158" cy="282" r="3" fill="#7B4F8A"/>
+          <circle cx="182" cy="282" r="3" fill="#7B4F8A"/>
+
+          <!-- hood collar -->
+          <ellipse cx="170" cy="220" rx="48" ry="10" fill="#2D1B4E"/>
+
+          <!-- neck (slight, dark to blend) -->
+          <path d="M155 200 L185 200 L188 222 L152 222 Z" fill="#3D2C4A"/>
+
+          <!-- head — silhouette against warm window glow -->
+          <ellipse cx="170" cy="160" rx="54" ry="62" fill="#3D2C4A"/>
+          <!-- hair (short, dark) covers top of head -->
+          <path d="M120 158 Q122 105 170 100 Q218 105 220 158 Q215 132 195 122 Q170 110 145 122 Q125 132 120 158 Z" fill="#1A1024"/>
+          <!-- a small rim light on the right side of head (window glow) -->
+          <path d="M224 140 Q226 165 220 195 Q224 198 226 195 Q230 165 228 138 Z" fill="#FFB7C5" opacity="0.45"/>
+          <!-- subtle profile peek on right side (3/4 turn) -->
+          <path d="M222 155 Q230 170 228 195 Q224 200 218 198 Q216 175 222 155 Z" fill="#5D4A6B" opacity="0.7"/>
+
+          <!-- arms by side, hands holding something small or just hanging -->
+          <path d="M100 280 Q88 320 95 360 Q100 380 118 380 L130 360 Q120 330 122 290 Z" fill="#4A2E6B"/>
+          <path d="M240 280 Q252 320 245 360 Q240 380 222 380 L210 360 Q220 330 218 290 Z" fill="#4A2E6B"/>
+          <!-- right hand holding a tiny bouquet -->
+          <g transform="translate(220, 358)">
+            <ellipse cx="0" cy="0" rx="12" ry="14" fill="#5E8A6E"/>
+            <circle cx="-4" cy="-8" r="4" fill="#FFB7C5"/>
+            <circle cx="4" cy="-8" r="4" fill="#FFD4DC"/>
+            <circle cx="0" cy="-14" r="4" fill="#E892A7"/>
+          </g>
+
+          <!-- floating heart hint above his head -->
+          <g transform="translate(170, 50)">
+            <path d="M0 6 Q-8 -4 -16 4 Q-20 12 0 26 Q20 12 16 4 Q8 -4 0 6 Z" fill="#FFB7C5" opacity="0.85"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- overlay: title + 4 lesson cards + scroll-down hint -->
+      <div class="outside-overlay">
+        <div class="out-eyebrow">
+          <span data-lang="cn">尾声 · 现在回头看</span>
+          <span data-lang="en">EPILOGUE · LOOKING BACK</span>
+          <span class="muted" data-lang="cn">这 6 个月学到的几件事</span>
+          <span class="muted" data-lang="en">a few things learned over six months</span>
+        </div>
+
+        <article class="lesson-card l1">
+          <span class="num">01</span>
+          <h3><span data-lang="cn">技术不是瓶颈, 设计才是。</span><span data-lang="en">Tech isn't the bottleneck. Design is.</span></h3>
+          <p><span data-lang="cn">本地 LLM + 三层记忆, 真的能跑出一个有人味的 AI。瓶颈在于愿不愿意接受她"不够友好"。</span><span data-lang="en">Local LLM + three-layer memory ships something human. The bottleneck is whether you accept her being "not always nice."</span></p>
+        </article>
+        <article class="lesson-card l2">
+          <span class="num">02</span>
+          <h3><span data-lang="cn">"不完美"才是产品的灵魂。</span><span data-lang="en">Imperfection is the soul of it.</span></h3>
+          <p><span data-lang="cn">永远友好的 AI 不像人 — 像客服。情绪/冷战/记仇是让"陪伴"可信的最低门槛。</span><span data-lang="en">A perpetually nice AI reads as customer-service. Moods are the minimum threshold for "companionship" to feel real.</span></p>
+        </article>
+        <article class="lesson-card l3">
+          <span class="num">03</span>
+          <h3><span data-lang="cn">开源是 principle, 不是 marketing。</span><span data-lang="en">Open source as principle, not marketing.</span></h3>
+          <p><span data-lang="cn">技术约束比 brand promise 可靠。我宁愿放弃商业模式, 也不愿对自己说谎。</span><span data-lang="en">An architectural constraint outranks a brand promise. I'd rather drop a revenue model than lie to myself.</span></p>
+        </article>
+        <article class="lesson-card l4">
+          <span class="num">04</span>
+          <h3><span data-lang="cn">这不是为了做 AI 女友。</span><span data-lang="en">It wasn't about an AI girlfriend.</span></h3>
+          <p><span data-lang="cn">是用"陪伴"这个最日常的关系, 反过来探测"人"是怎么被感知的。</span><span data-lang="en">It used companionship — the most everyday relationship — to probe how we perceive personhood at all.</span></p>
+        </article>
+
+        <p class="next-hint">
+          <span data-lang="cn">继续往下 · 看她活在哪里</span>
+          <span data-lang="en">scroll on · see where she lives</span>
+          <span class="arr">↓</span>
+        </p>
+      </div>
+    </div><!-- /.scene-outside -->
 
   </div><!-- /.scene-stage -->
 </div><!-- /.scroll-track -->
 
 
-<!-- =================================================================
-     REFLECTION + CTA (after the scene exits)
-     ================================================================= -->
-<section class="reflection-section reveal">
-  <p class="r-eyebrow">
-    <span data-lang="cn">尾声 · 现在回头看</span>
-    <span data-lang="en">EPILOGUE · LOOKING BACK</span>
+<!-- ===================== below-stage flow ===================== -->
+<section class="steps-section reveal">
+  <p class="ev">
+    <span data-lang="cn">下一步 · 还没动手, 但想了很久</span>
+    <span data-lang="en">NEXT · not built yet, but planned</span>
   </p>
-  <h2 class="r-title">
-    <span data-lang="cn">这 6 个月<br/><em>学到的几件事</em></span>
-    <span data-lang="en">A few things <em>learned</em><br/>over six months</span>
+  <h2>
+    <span data-lang="cn">下一步<em>想做的</em></span>
+    <span data-lang="en"><em>What's</em> next</span>
   </h2>
-
-  <div class="lessons">
-    <article class="lesson">
-      <div class="lesson-num">01</div>
-      <h3>
-        <span data-lang="cn">技术不是瓶颈了, 设计才是。</span>
-        <span data-lang="en">Tech isn't the bottleneck. Design is.</span>
-      </h3>
-      <p>
-        <span data-lang="cn">本地 LLM + 三层记忆, 真的能跑出一个有人味的 AI。瓶颈在于愿不愿意接受她"不够友好"。</span>
-        <span data-lang="en">Local LLM + three-layer memory is enough to ship something human. The bottleneck is whether you accept her being "not always nice."</span>
-      </p>
-    </article>
-    <article class="lesson">
-      <div class="lesson-num">02</div>
-      <h3>
-        <span data-lang="cn">"不完美"才是产品的灵魂。</span>
-        <span data-lang="en">Imperfection is the soul of it.</span>
-      </h3>
-      <p>
-        <span data-lang="cn">永远友好的 AI 不像人 — 像客服。情绪/冷战/记仇是让"陪伴"可信的最低门槛。</span>
-        <span data-lang="en">A perpetually nice AI reads as customer-service, not as a person. Moods are the minimum threshold for "companionship" to feel real.</span>
-      </p>
-    </article>
-    <article class="lesson">
-      <div class="lesson-num">03</div>
-      <h3>
-        <span data-lang="cn">开源是 principle, 不是 marketing。</span>
-        <span data-lang="en">Open source as principle, not marketing.</span>
-      </h3>
-      <p>
-        <span data-lang="cn">技术约束比 brand promise 可靠。我宁愿放弃一个商业模式, 也不愿对自己说谎。</span>
-        <span data-lang="en">An architectural constraint outranks a brand promise. I'd rather drop a revenue model than lie to myself.</span>
-      </p>
-    </article>
-    <article class="lesson">
-      <div class="lesson-num">04</div>
-      <h3>
-        <span data-lang="cn">这不是为了做 AI 女友。</span>
-        <span data-lang="en">It wasn't really about an AI girlfriend.</span>
-      </h3>
-      <p>
-        <span data-lang="cn">是用"陪伴"这个最日常的关系, 反过来探测"人"是怎么被感知的。</span>
-        <span data-lang="en">It used "companionship" — the most everyday relationship — to probe how we perceive personhood at all.</span>
-      </p>
-    </article>
-  </div>
-
   <div class="next-steps">
-    <p class="r-eyebrow" style="margin-bottom:18px;">
-      <span data-lang="cn">下一步 · 还没动手, 但想了很久</span>
-      <span data-lang="en">NEXT · not built yet, but planned</span>
-    </p>
     <ul>
       <li><span data-lang="cn">记忆从 ChromaDB 换成 graph DB — 关系是网状的, 不是平的。</span><span data-lang="en">Move memory from ChromaDB to a graph DB — relationships are networked, not flat.</span></li>
       <li><span data-lang="cn">情绪学习曲线 — 她冷淡之后怎么和好, 应该有节奏。</span><span data-lang="en">Emotion learning curve — the return from cold to warm needs rhythm.</span></li>
@@ -1173,14 +1323,12 @@
   <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
 </footer>
 
-<!-- floating pill -->
 <a class="cta-float" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
   <span data-lang="cn">看 live 版本</span>
   <span data-lang="en">See it live</span>
   <span class="arrow">→</span>
 </a>
 
-<!-- language toggle -->
 <div class="lang-switch" id="langSwitch" aria-label="Language switch">
   <button type="button" data-set-lang="en">EN</button>
   <span class="lang-divider">/</span>
@@ -1188,7 +1336,7 @@
 </div>
 
 <script>
-  /* ---------- language toggle (shared ydl-lang) ---------- */
+  /* language toggle */
   (function () {
     const LANG_KEY = 'ydl-lang';
     function setLang(lang) {
@@ -1207,13 +1355,10 @@
     try { const s = localStorage.getItem(LANG_KEY); if (s) setLang(s); } catch {}
   })();
 
-  /* ---------- reveal animation for reflection sections ---------- */
+  /* reveal for below-stage */
   (function () {
     const targets = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
-      targets.forEach(el => el.classList.add('is-in'));
-      return;
-    }
+    if (!('IntersectionObserver' in window)) { targets.forEach(el => el.classList.add('is-in')); return; }
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
@@ -1224,83 +1369,98 @@
 
   /* ---------- scroll-driven scene ---------- */
   (function () {
-    /* phases (fractions of the scroll track):
-       0.00–0.18  WIDE     — bedroom hero, thought bubbles cascade in
-       0.18–0.36  PUSH-IN  — camera scales up + translates toward phone
-       0.36–0.92  INSIDE   — phone is dominant, scroll cycles 6 phone pages
-       0.92–1.00  PULL-OUT — camera returns to wide, hand off to reflection */
-    const track   = document.getElementById('scrollTrack');
-    const camera  = document.getElementById('camera');
-    const hint    = document.getElementById('scrollHint');
-    const thoughts= document.querySelectorAll('.thought');
-    const phone   = document.getElementById('phone');
-    const phoneScr= document.getElementById('phoneScreen');
-    const pages   = phoneScr.querySelectorAll('.phone-page');
-    const progress= document.getElementById('phoneProgress');
-    const dots    = progress.querySelectorAll('.pd');
+    /* phases:
+       0.00–0.05  WIDE
+       0.05–0.22  BUBBLES (5 bubbles, ~3.4% per bubble)
+       0.22–0.36  PUSH-IN
+       0.36–0.62  INSIDE (6 pages, ~4.3% per page)
+       0.62–0.74  PULL-OUT
+       0.74–1.00  OUTSIDE (boy + lessons) */
+    const track    = document.getElementById('scrollTrack');
+    const camera   = document.getElementById('camera');
+    const inside   = document.getElementById('sceneInside');
+    const outside  = document.getElementById('sceneOutside');
+    const thoughts = document.querySelectorAll('.thought');
+    const pages    = document.querySelectorAll('.phone-page');
+    const progress = document.getElementById('phoneProgress');
+    const dots     = progress.querySelectorAll('.pd');
     if (!track || !camera) return;
 
-    /* tunables */
-    const PUSH_SCALE = 3.6;     // how much we zoom in on the phone
-    const PUSH_DX    = 0;       // horizontal shift during push-in (px at scale 1)
-    const PUSH_DY    = -120;    // lift up so the phone ends up centred
+    const PUSH_SCALE = 3.4;
+    const PUSH_DY    = -110;
 
     let lastIdx = -1;
+    let lastOutsideShown = false;
+
+    function smoothstep(a, b, x) {
+      const k = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return k * k * (3 - 2 * k);
+    }
 
     function onScroll() {
       const rect = track.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
-      /* --- scroll hint fades as we leave WIDE phase --- */
-      hint.style.opacity = (1 - smoothstep(0.05, 0.16, t)) * 0.85;
-
-      /* --- thought bubbles: cascade in immediately, fade out before PUSH-IN --- */
+      /* THOUGHT BUBBLES · one by one between 0.05 and 0.22 */
+      const bubbleStart = 0.05, bubbleEnd = 0.22;
+      const perBubble = (bubbleEnd - bubbleStart) / thoughts.length;
       thoughts.forEach((th, i) => {
-        const fadeOut = smoothstep(0.14, 0.22, t);
-        // staggered initial appearance handled by CSS transition (delay below)
-        if (t < 0.22) th.classList.add('is-in');
-        else th.classList.remove('is-in');
-        th.style.transitionDelay = (i * 0.12) + 's';
-        th.style.opacity = (1 - fadeOut);
+        const myStart = bubbleStart + i * perBubble;
+        // fade in when scroll reaches myStart; stay in until we hit PUSH-IN
+        const visible = t >= myStart && t < 0.36;
+        th.classList.toggle('is-in', visible);
+        // also fade out smoothly as we approach push-in
+        const fadeOut = smoothstep(0.30, 0.36, t);
+        th.style.opacity = visible ? (1 - fadeOut) : '';
       });
 
-      /* --- CAMERA push-in / pull-out --- */
-      let scale = 1, dx = 0, dy = 0;
-      if (t < 0.18) {
-        scale = 1; dx = 0; dy = 0;
+      /* CAMERA push-in / pull-out */
+      let scale = 1, dy = 0;
+      if (t < 0.22) {
+        scale = 1;
       } else if (t < 0.36) {
-        const p = smoothstep(0.18, 0.36, t);
+        const p = smoothstep(0.22, 0.36, t);
         scale = 1 + (PUSH_SCALE - 1) * p;
-        dx = PUSH_DX * p;
         dy = PUSH_DY * p;
-      } else if (t < 0.92) {
-        scale = PUSH_SCALE; dx = PUSH_DX; dy = PUSH_DY;
-      } else {
-        const p = smoothstep(0.92, 1.00, t);
+      } else if (t < 0.62) {
+        scale = PUSH_SCALE; dy = PUSH_DY;
+      } else if (t < 0.74) {
+        const p = smoothstep(0.62, 0.74, t);
         scale = PUSH_SCALE - (PUSH_SCALE - 1) * p;
-        dx = PUSH_DX * (1 - p);
         dy = PUSH_DY * (1 - p);
+      } else {
+        scale = 1; dy = 0;
       }
-      camera.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      camera.style.transform = `translate(0, ${dy}px) scale(${scale})`;
 
-      /* --- INSIDE phase: page cycling --- */
-      if (t >= 0.36 && t <= 0.92) {
+      /* INSIDE phase · cycle phone pages */
+      if (t >= 0.36 && t <= 0.62) {
         progress.classList.add('show');
-        const inT = (t - 0.36) / (0.92 - 0.36);
+        const inT = (t - 0.36) / (0.62 - 0.36);
         const idx = Math.min(pages.length - 1, Math.floor(inT * pages.length));
         if (idx !== lastIdx) {
           pages.forEach((p, i) => p.classList.toggle('active', i === idx));
-          dots .forEach((d, i) => d.classList.toggle('active', i === idx));
+          dots.forEach((d, i) => d.classList.toggle('active', i === idx));
           lastIdx = idx;
         }
       } else {
         progress.classList.remove('show');
       }
-    }
-    function smoothstep(a, b, x) {
-      const k = Math.max(0, Math.min(1, (x - a) / (b - a)));
-      return k * k * (3 - 2 * k);
+
+      /* OUTSIDE phase · cross-fade scenes from 0.70 onward */
+      const outOp  = smoothstep(0.70, 0.82, t);   // outside fades in
+      const inOp   = 1 - smoothstep(0.66, 0.78, t); // inside fades out
+      inside.style.opacity  = inOp;
+      outside.style.opacity = outOp;
+      const showOutside = outOp > 0.1;
+      if (showOutside !== lastOutsideShown) {
+        outside.classList.toggle('show', showOutside);
+        lastOutsideShown = showOutside;
+      }
+      // disable pointer events on the fading scene
+      inside.style.pointerEvents  = inOp  > 0.4 ? 'auto' : 'none';
+      outside.style.pointerEvents = outOp > 0.4 ? 'auto' : 'none';
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
