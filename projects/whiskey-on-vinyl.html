@@ -1426,6 +1426,12 @@
 
     const TILT_END  = 72;
     const SCALE_END = 1.45;
+    /* After the tilt+scale, the vinyl naturally lands ~36% of viewport
+       below center because the counter geometry pushes it downward. Lift
+       the world up by that amount so the vinyl ends EXACTLY at viewport
+       center — that's what makes the final view read as "directly above
+       the turntable" instead of "below the bar looking up." */
+    function liftEnd() { return -Math.round(window.innerHeight * 0.362); }
 
     let lastIdx = -1;
 
@@ -1440,13 +1446,14 @@
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
       /* camera pivots AROUND the turntable (transform-origin set in CSS).
-         scale = "fly forward" feel · rotateX = tilt down to look at the
-         counter top. Pivot stays at the turntable so the vinyl never moves
-         off-screen. */
+         translateY = camera flies UP above the bar · scale = pushes forward ·
+         rotateX = tilts down to face the counter top. Combined: by the end
+         we're hovering directly above the spinning vinyl. */
       const camT = smoothstep(0.05, 0.30, t);
       const tilt = TILT_END * camT;
       const sc   = 1 + (SCALE_END - 1) * camT;
-      world.style.transform = `scale(${sc}) rotateX(${tilt}deg)`;
+      const lift = liftEnd() * camT;
+      world.style.transform = `translateY(${lift}px) scale(${sc}) rotateX(${tilt}deg)`;
 
       /* vinyl spin (continuous, faster while inside-above phase) */
       if (vinyl) {
