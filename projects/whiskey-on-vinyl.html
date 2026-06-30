@@ -3,24 +3,33 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Whiskey on Vinyl · Behind the room — Yao Design Lab</title>
+<title>Whiskey on Vinyl · 一张 22 分钟的房间 — Yao Design Lab</title>
 <meta name="theme-color" content="#0E0716" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
 
-<!-- <model-viewer> for the GLB centrepiece -->
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-
 <style>
   /* =================================================================
-     Whiskey on Vinyl · Behind the Room
-     Editorial / exhibition layout. Each section is one "exhibit" — an
-     artefact (logo, plan, render, 3D model, screenshot) with a museum
-     label and a paragraph or two of context. WoV palette + brush type.
+     Whiskey on Vinyl · cinematic vinyl-as-scroll case study
+     -----------------------------------------------------------------
+     Two stacked scenes share one sticky stage:
+       SCENE A · BAR (front)  — turntable + glass + warm wall, the
+                                opening shot
+       SCENE B · VINYL (top)  — overhead view of a spinning record;
+                                each scroll turn rotates it further;
+                                chapter cards reveal one by one.
+
+     Scroll phases:
+       0.00–0.10  WIDE     · bar shot, intro hint
+       0.10–0.22  PUSH-IN  · zoom toward the turntable
+       0.22–0.30  TILT     · cross-fade bar → top-down vinyl
+       0.30–0.94  SPIN     · vinyl rotates; cards 01–06 appear in turn
+       0.94–1.00  HANDOFF  · vinyl tilts back; outro flow follows
      ================================================================= */
   :root {
+    /* WoV identity colors (kept) */
     --wov-ink-1: #0E0716;
     --wov-ink-2: #15092A;
     --wov-plum:  #2D1B4E;
@@ -29,6 +38,8 @@
     --wov-paper: #E8DDF0;
     --wov-paper-dim: #C4B5D4;
     --wov-copper:#C89B6C;
+    --wov-copper-deep: #A07845;
+    --wov-amber: #D4923A;
     --wov-rule:  rgba(184,160,216,0.18);
 
     --brush:    "Ma Shan Zheng", "STKaiti", "KaiTi", "楷体", cursive;
@@ -44,487 +55,670 @@
     color: var(--wov-paper);
     font-family: var(--serif-zh);
     font-weight: 300;
+    line-height: 1.8;
     letter-spacing: 0.02em;
-    line-height: 1.85;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
   }
+  body { overflow-x: clip; }
   a { color: inherit; text-decoration: none; }
   img { display: block; max-width: 100%; }
   ::selection { background: var(--wov-smoke); color: var(--wov-paper); }
 
-  /* ---------- ambient layers ---------- */
-  .ambient { position: fixed; pointer-events: none; }
-  .grain {
-    inset: 0;
-    z-index: 1;
-    opacity: 0.045;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  }
+  /* ---------- ambient glow on body (subtle warm pools, always present) ---------- */
+  .ambient { position: fixed; pointer-events: none; z-index: 0; }
   .glow {
-    z-index: 0;
-    width: 60vw; height: 60vw;
     border-radius: 50%;
-    filter: blur(120px);
+    filter: blur(130px);
     opacity: 0.55;
   }
-  .glow-a { top: -20vw; left: -15vw; background: radial-gradient(circle, rgba(75,40,120,0.7), transparent 60%); }
-  .glow-b { bottom: -25vw; right: -20vw; background: radial-gradient(circle, rgba(130,80,170,0.45), transparent 65%); }
+  .glow-a { top: -20vw; left: -15vw; width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(75,40,120,0.7), transparent 60%); }
+  .glow-b { bottom: -25vw; right: -20vw; width: 65vw; height: 65vw;
+            background: radial-gradient(circle, rgba(130,80,170,0.4), transparent 65%); }
+  .grain {
+    inset: 0; z-index: 1; opacity: 0.045; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
 
-  /* ---------- top nav ---------- */
+  /* ---------- nav ---------- */
   .proj-nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
     padding: 18px 32px;
-    background: linear-gradient(180deg, rgba(14,7,22,0.72), rgba(14,7,22,0));
+    background: linear-gradient(180deg, rgba(14,7,22,0.78), rgba(14,7,22,0));
     backdrop-filter: blur(12px) saturate(140%);
     -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
-  .back-link {
+  .back-link, .nav-brand {
     font-family: var(--serif-en);
     font-style: italic;
     font-size: 14px;
     letter-spacing: 0.25em;
     color: var(--wov-paper-dim);
-    transition: color 0.25s ease;
+    transition: color 0.25s;
   }
   .back-link:hover { color: var(--wov-mist); }
-  .nav-brand {
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: 13px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--wov-paper-dim);
-  }
+  .nav-brand { text-transform: uppercase; letter-spacing: 0.3em; font-size: 13px; }
 
-  /* ---------- exhibition canvas ---------- */
-  main.exhibit-hall {
-    position: relative;
-    z-index: 2;
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 120px 6vw 0;
+  /* ---------- intro section above scroll-track ---------- */
+  .intro-section {
+    position: relative; z-index: 5;
+    max-width: 880px; margin: 0 auto;
+    padding: 130px 6vw 60px;
+    text-align: center;
   }
-
-  /* museum-label common style */
-  .ex-label {
+  .intro-section .eyebrow {
     font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.45em;
+    letter-spacing: 0.4em;
     color: var(--wov-copper);
     text-transform: uppercase;
-    margin-bottom: 16px;
-    opacity: 0.92;
   }
-  .ex-caption {
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: 12px;
-    letter-spacing: 0.18em;
-    color: var(--wov-paper-dim);
-    margin-top: 14px;
-  }
-
-  .ex-section {
-    padding: 90px 0;
-  }
-
-  /* ---------- typography ---------- */
-  h1.brush, h2.brush, h3.brush {
+  .intro-section h1 {
     font-family: var(--brush);
     font-weight: 400;
-    letter-spacing: 0.05em;
+    font-size: clamp(46px, 6.4vw, 80px);
     color: var(--wov-paper);
     line-height: 1.1;
+    letter-spacing: 0.05em;
+    margin-top: 18px;
   }
-  h1.brush { font-size: clamp(48px, 6vw, 76px); margin-bottom: 24px; }
-  h2.brush { font-size: clamp(34px, 4.4vw, 52px); margin-bottom: 28px; }
-  h3.brush { font-size: clamp(28px, 3.4vw, 38px); margin-bottom: 22px; }
-  h1.brush em, h2.brush em {
+  .intro-section h1 em {
     font-style: normal;
     color: var(--wov-mist);
     text-shadow: 0 0 28px rgba(184,160,216,0.32);
   }
-  p { font-family: var(--serif-zh); font-size: 17px; margin-bottom: 18px; color: var(--wov-paper); letter-spacing: 0.04em; }
-  p.muted { color: var(--wov-paper-dim); }
-  p.lead {
-    font-family: var(--serif-zh);
-    font-size: clamp(20px, 2.4vw, 26px);
-    line-height: 1.65;
-    color: var(--wov-mist);
-    margin-bottom: 32px;
-    letter-spacing: 0.06em;
-  }
-  blockquote {
+  .intro-section .tagline {
+    margin-top: 18px;
     font-family: var(--serif-en);
     font-style: italic;
-    font-size: 18px;
-    line-height: 1.7;
-    color: var(--wov-mist);
-    border-left: 1px solid var(--wov-smoke);
-    padding: 4px 0 4px 22px;
-    margin: 28px 0;
-    letter-spacing: 0.05em;
-  }
-  .tagline-en {
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: clamp(18px, 2vw, 22px);
-    letter-spacing: 0.06em;
-    color: var(--wov-paper-dim);
-    margin-bottom: 36px;
-  }
-
-  /* ============================================================
-     EXHIBIT 01 — opening spread (logo + opener + bizplan + notes)
-     ============================================================ */
-  .opening {
-    display: grid;
-    grid-template-columns: 1.05fr 1fr;
-    column-gap: 6vw;
-    row-gap: 60px;
-    padding: 60px 0 100px;
-  }
-  .opening .col-left  { display: flex; flex-direction: column; gap: 56px; }
-  .opening .col-right { display: flex; flex-direction: column; gap: 28px; padding-top: 80px; }
-
-  .logo-tag {
-    width: clamp(180px, 22vw, 280px);
-    transform: rotate(-3deg);
-    filter: drop-shadow(0 18px 40px rgba(0,0,0,0.55)) drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-    transition: transform 0.6s ease;
-  }
-  .logo-tag:hover { transform: rotate(-1deg) translateY(-4px); }
-
-  /* business plan stack — two pages tilted on a desk */
-  .biz-stack {
-    position: relative;
-    align-self: flex-start;
-    margin-top: 12px;
-    width: 100%;
-    max-width: 460px;
-  }
-  .biz-stack img {
-    width: 100%;
-    height: auto;
-    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 10px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.25);
-    background: #fff;
-    transition: transform 0.5s ease;
-  }
-  .biz-stack .biz-back {
-    position: absolute;
-    top: 24px; left: 28px;
-    width: 100%;
-    transform: rotate(4deg);
-    z-index: 1;
-    opacity: 0.88;
-  }
-  .biz-stack .biz-front {
-    position: relative;
-    transform: rotate(-2.5deg);
-    z-index: 2;
-  }
-  .biz-stack:hover .biz-front { transform: rotate(-1deg) translateY(-6px); }
-
-  /* ============================================================
-     EXHIBIT 02 — V2 · clock evolution (text-only, three notes)
-     ============================================================ */
-  .clock-evolution {
-    max-width: 760px;
-    margin: 0 auto;
-  }
-  .clock-versions {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 28px;
-    margin-top: 44px;
-  }
-  .clock-versions article {
-    border-top: 1px solid var(--wov-rule);
-    padding-top: 20px;
-  }
-  .clock-versions h4 {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    color: var(--wov-copper);
-    margin-bottom: 14px;
-  }
-  .clock-versions .glyph {
-    font-family: var(--brush);
-    font-size: 28px;
-    color: var(--wov-mist);
-    margin-bottom: 10px;
+    font-size: clamp(16px, 1.8vw, 20px);
     letter-spacing: 0.08em;
-  }
-  .clock-versions p {
-    font-size: 14px;
-    line-height: 1.7;
     color: var(--wov-paper-dim);
-    margin: 0;
   }
-
-  /* ============================================================
-     EXHIBIT 03 — V3 · floorplan (large hero image)
-     ============================================================ */
-  .floorplan-block {
-    max-width: 1160px;
-    margin: 0 auto;
-    text-align: center;
+  .intro-section p.lead {
+    margin: 30px auto 0;
+    font-family: var(--serif-zh);
+    font-size: clamp(15px, 1.7vw, 18px);
+    color: var(--wov-paper);
+    max-width: 580px;
+    line-height: 1.8;
   }
-  .floorplan-block h2.brush { text-align: left; }
-  .floorplan-block .copy {
-    text-align: left;
-    max-width: 680px;
-    margin: 0 0 60px;
-  }
-  .floorplan-wrap {
-    position: relative;
-    border: 1px solid var(--wov-rule);
-    box-shadow: 0 40px 100px rgba(0,0,0,0.55);
-    overflow: hidden;
-  }
-  .floorplan-wrap img {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-  .floorplan-meta {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 28px;
-    max-width: 680px;
-    margin: 36px auto 0;
-    text-align: left;
-  }
-  .floorplan-meta dt {
+  .intro-section .hint {
+    margin-top: 40px;
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: 0.35em;
-    color: var(--wov-copper);
+    letter-spacing: 0.32em;
+    color: var(--wov-smoke);
     text-transform: uppercase;
-    margin-bottom: 8px;
   }
-  .floorplan-meta dd {
-    font-family: var(--serif-zh);
-    font-size: 15px;
-    color: var(--wov-paper);
-    line-height: 1.6;
+  .intro-section .hint .arr { display: inline-block; margin-left: 10px; animation: nudge 1.8s ease-in-out infinite; }
+  @keyframes nudge { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+  /* ============================================================
+     SCROLL TRACK
+     ============================================================ */
+  .scroll-track { position: relative; height: 750vh; }
+  .scene-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    background: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(45,27,78,0.6), transparent 70%), var(--wov-ink-1);
+  }
+
+  .scene-bar, .scene-vinyl {
+    position: absolute; inset: 0;
+    transition: opacity 0.6s ease;
   }
 
   /* ============================================================
-     EXHIBIT 04 — Three menus (drinks / snacks / shisha)
+     SCENE A · BAR (wide opening shot)
      ============================================================ */
-  .menus-block {
-    max-width: 1160px;
-    margin: 0 auto;
+  .scene-bar { z-index: 2; }
+  .camera-bar {
+    position: absolute; inset: 0;
+    transform-origin: 50% 56%;          /* push-in target = turntable area */
+    transform: scale(1) translate(0,0);
+    will-change: transform;
   }
-  .menus-head {
-    max-width: 760px;
-    margin: 0 auto 56px;
+
+  /* back wall + bar surface */
+  .bar-wall {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 35% at 50% 28%, rgba(200,155,108,0.30), transparent 70%),
+      linear-gradient(180deg, #1A0E2C 0%, #14082A 60%, #0E0716 100%);
   }
-  .menus-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 32px;
+  .bar-counter {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 32%;
+    background:
+      linear-gradient(180deg, rgba(75,45,28,0.6), rgba(45,27,78,0.45) 40%, rgba(14,7,22,0.85) 100%);
+    border-top: 1px solid rgba(200,155,108,0.18);
+    box-shadow: inset 0 12px 30px rgba(0,0,0,0.5);
   }
-  .menu-card {
-    position: relative;
-    display: block;
-    aspect-ratio: 3 / 4;
-    background: #ece2c8;
-    border: 1px solid var(--wov-rule);
-    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.35);
-    overflow: hidden;
-    transition: transform 0.45s ease, box-shadow 0.45s ease;
-  }
-  .menu-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 40px 90px rgba(0,0,0,0.65), 0 12px 28px rgba(75,40,120,0.35);
-  }
-  .menu-card img.menu-img {
+  /* hanging lamp casts a warm cone */
+  .lamp-cone {
     position: absolute;
-    inset: 0;
-    width: 100%;
+    top: 4%; left: 50%;
+    transform: translateX(-50%);
+    width: 380px; height: 50%;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(212,146,58,0.45), rgba(212,146,58,0.10) 40%, transparent 75%);
+    pointer-events: none;
+    filter: blur(2px);
+  }
+  .lamp-bulb {
+    position: absolute;
+    top: 2%; left: 50%;
+    transform: translateX(-50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #FFE9B5 0%, #D4923A 60%, transparent 100%);
+    box-shadow: 0 0 28px 8px rgba(212,146,58,0.45);
+  }
+  .lamp-wire {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 1px; height: 6%;
+    background: rgba(200,155,108,0.4);
+  }
+  /* bottle silhouettes on back shelf */
+  .shelves {
+    position: absolute;
+    top: 22%; left: 5%; right: 5%;
+    height: 38%;
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: 14px;
+    align-items: end;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+  .bottle {
     height: 100%;
-    object-fit: cover;
-    object-position: top center;
-    display: block;
+    background: linear-gradient(180deg, rgba(200,155,108,0.05) 0%, rgba(75,40,120,0.42) 100%);
+    border-radius: 8px 8px 4px 4px;
+    border-top: 2px solid rgba(200,155,108,0.18);
+    position: relative;
+  }
+  .bottle::before {
+    content: ""; position: absolute;
+    top: -14px; left: 50%;
+    transform: translateX(-50%);
+    width: 30%; height: 14px;
+    background: rgba(200,155,108,0.22);
+    border-radius: 3px 3px 0 0;
+  }
+  .bottle:nth-child(odd)  { transform: translateY(8px); }
+  .bottle:nth-child(5n)   { background: linear-gradient(180deg, rgba(212,146,58,0.10) 0%, rgba(160,120,69,0.45) 100%); }
+  .bottle:nth-child(7n)   { background: linear-gradient(180deg, rgba(184,160,216,0.06) 0%, rgba(107,74,140,0.45) 100%); }
+  /* shelf lines */
+  .shelf-line {
+    position: absolute; left: 4%; right: 4%;
+    height: 1px; background: rgba(200,155,108,0.22);
+  }
+  .shelf-line.l1 { top: 38%; }
+  .shelf-line.l2 { top: 56%; }
+
+  /* turntable on the bar counter (centered) */
+  .turntable {
+    position: absolute;
+    left: 50%; top: 56%;
+    transform: translate(-50%, -50%);
+    width: 280px; height: 200px;
+    background: linear-gradient(180deg, #1F1230 0%, #0E0716 100%);
+    border-radius: 12px;
+    box-shadow:
+      0 28px 60px rgba(0,0,0,0.7),
+      0 0 0 1px rgba(200,155,108,0.15),
+      inset 0 1px 0 rgba(200,155,108,0.18);
+    z-index: 3;
+  }
+  .turntable .platter {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 168px; height: 168px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 50%, #C89B6C 0%, #A07845 18%, #1A0E2C 22%, #0A0414 100%);
+    box-shadow:
+      0 0 0 4px rgba(14,7,22,0.6),
+      0 8px 16px rgba(0,0,0,0.55);
+  }
+  /* concentric grooves on the small turntable vinyl */
+  .turntable .platter::before {
+    content: ""; position: absolute; inset: 6px;
+    border-radius: 50%;
+    background:
+      repeating-radial-gradient(circle, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px);
+  }
+  .turntable .platter::after {
+    content: ""; position: absolute;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
+    box-shadow: 0 0 0 2px rgba(14,7,22,0.5), 0 2px 4px rgba(0,0,0,0.4);
+  }
+  /* tonearm */
+  .tonearm {
+    position: absolute;
+    right: 18px; top: 30px;
+    width: 96px; height: 4px;
+    background: linear-gradient(90deg, var(--wov-copper-deep), var(--wov-copper));
+    border-radius: 2px;
+    transform-origin: 90% 50%;
+    transform: rotate(-32deg);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .tonearm::before {
+    content: ""; position: absolute;
+    left: -10px; top: -6px;
+    width: 14px; height: 16px;
+    background: var(--wov-copper-deep);
+    border-radius: 3px;
+  }
+  .tonearm::after {
+    content: ""; position: absolute;
+    right: -6px; top: -4px;
+    width: 12px; height: 12px;
+    background: var(--wov-copper);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+  }
+
+  /* whiskey glass to the left of turntable */
+  .glass {
+    position: absolute;
+    left: 22%; top: 60%;
+    width: 56px; height: 72px;
+    background: linear-gradient(180deg, rgba(212,146,58,0.18) 0%, rgba(160,90,40,0.55) 60%, rgba(120,60,20,0.85) 100%);
+    border: 1px solid rgba(200,155,108,0.35);
+    border-radius: 6px 6px 10px 10px;
+    box-shadow:
+      0 8px 20px rgba(0,0,0,0.4),
+      inset 0 -8px 12px rgba(0,0,0,0.25),
+      inset 0 2px 0 rgba(255,255,255,0.06);
+    z-index: 4;
+  }
+  .glass::before {
+    content: ""; position: absolute;
+    left: 50%; top: 14%;
+    transform: translateX(-50%);
+    width: 70%; height: 4px;
+    background: rgba(212,146,58,0.45);
+    border-radius: 2px;
+    filter: blur(1px);
+  }
+  /* ice cube hint */
+  .glass::after {
+    content: ""; position: absolute;
+    left: 22%; top: 52%;
+    width: 12px; height: 12px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+    transform: rotate(8deg);
+    box-shadow: inset 0 0 4px rgba(255,255,255,0.3);
+  }
+
+  /* "music playing" indicator (tiny equalizer bars next to turntable) */
+  .music-eq {
+    position: absolute;
+    left: calc(50% - 156px); top: calc(56% - 8px);
+    display: flex; gap: 3px; align-items: flex-end;
+    height: 18px;
+    z-index: 4;
+  }
+  .music-eq i {
+    display: block; width: 2px;
+    background: var(--wov-copper);
+    border-radius: 1px;
+    animation: eq 0.8s ease-in-out infinite;
+  }
+  .music-eq i:nth-child(1) { height: 30%; animation-delay: 0.0s; }
+  .music-eq i:nth-child(2) { height: 60%; animation-delay: 0.15s; }
+  .music-eq i:nth-child(3) { height: 90%; animation-delay: 0.3s; }
+  .music-eq i:nth-child(4) { height: 45%; animation-delay: 0.1s; }
+  .music-eq i:nth-child(5) { height: 70%; animation-delay: 0.25s; }
+  @keyframes eq { 0%,100% { height: 25%; } 50% { height: 90%; } }
+
+  /* ============================================================
+     SCENE B · VINYL (top-down, spinning)
+     ============================================================ */
+  .scene-vinyl {
+    z-index: 3;
+    opacity: 0;
     pointer-events: none;
   }
-  .menu-card .menu-tag {
+  .scene-vinyl.show { opacity: 1; pointer-events: auto; }
+
+  /* warm radial glow under the vinyl */
+  .vinyl-glow {
     position: absolute;
-    top: 14px; left: 14px;
-    padding: 5px 10px;
-    background: rgba(14, 7, 22, 0.78);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.28em;
-    color: var(--wov-paper);
-    text-transform: uppercase;
-    z-index: 2;
-  }
-  .menu-card .menu-foot {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    padding: 18px 18px 16px;
-    background: linear-gradient(180deg, transparent, rgba(14, 7, 22, 0.92));
-    color: var(--wov-paper);
-    font-family: var(--brush);
-    font-size: 22px;
-    letter-spacing: 0.12em;
-    text-align: center;
-    z-index: 2;
-  }
-  .menu-card .menu-foot small {
-    display: block;
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    color: var(--wov-paper-dim);
-    margin-top: 6px;
-    text-transform: uppercase;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vh; height: 90vh;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,146,58,0.18) 0%, rgba(75,40,120,0.10) 40%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
   }
 
-  /* ============================================================
-     EXHIBIT 05 — 20 AI renders horizontal scroll gallery
-     ============================================================ */
-  .renders-gallery {
-    margin: 0 -6vw;             /* full-bleed beyond the main column */
+  /* the big vinyl record */
+  .vinyl-wrap {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(78vh, 78vw);
+    aspect-ratio: 1;
+    will-change: transform;
+  }
+  .vinyl {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      /* outer rim highlight */
+      radial-gradient(circle at 30% 30%, rgba(200,155,108,0.12), transparent 40%),
+      /* concentric grooves */
+      repeating-radial-gradient(circle, rgba(255,255,255,0.025) 0 1.5px, transparent 1.5px 5px),
+      /* base vinyl */
+      radial-gradient(circle, #1A0E2C 0%, #0A0414 100%);
+    box-shadow:
+      0 40px 80px rgba(0,0,0,0.7),
+      0 0 0 1px rgba(184,160,216,0.08),
+      inset 0 0 80px rgba(0,0,0,0.4);
+    transform-origin: center;
+    will-change: transform;
+  }
+  /* the label in the center */
+  .vinyl-label {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32%; aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(232,221,240,0.15), transparent 50%),
+      linear-gradient(135deg, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    box-shadow:
+      0 0 0 3px rgba(14,7,22,0.5),
+      0 8px 16px rgba(0,0,0,0.4),
+      inset 0 0 30px rgba(0,0,0,0.25);
+    pointer-events: none;
+  }
+  .vinyl-label .mark {
+    font-family: var(--brush);
+    font-size: clamp(20px, 3.2vh, 36px);
+    color: var(--wov-ink-1);
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+  }
+  .vinyl-label .side {
+    margin-top: 4px;
+    font-family: var(--mono);
+    font-size: clamp(8px, 1.4vh, 11px);
+    letter-spacing: 0.32em;
+    color: rgba(14,7,22,0.7);
+    text-transform: uppercase;
+  }
+  .vinyl-label .twenty-two {
+    margin-top: 6px;
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: clamp(11px, 1.6vh, 13px);
+    color: rgba(14,7,22,0.8);
+  }
+  /* center spindle hole */
+  .vinyl-spindle {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--wov-ink-1);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* the tonearm overlaying the vinyl from the top-right */
+  .vinyl-needle {
+    position: absolute;
+    right: 8%; top: 8%;
+    width: 28%; height: 6px;
+    z-index: 4;
+    pointer-events: none;
+    transform-origin: 100% 50%;
+    transform: rotate(28deg);
+  }
+  .vinyl-needle .arm {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, var(--wov-copper), var(--wov-copper-deep));
+    border-radius: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .vinyl-needle .pivot {
+    position: absolute;
+    right: -10px; top: -8px;
+    width: 22px; height: 22px;
+    background: var(--wov-copper-deep);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.5);
+  }
+  .vinyl-needle .head {
+    position: absolute;
+    left: -8px; top: -6px;
+    width: 18px; height: 18px;
+    background: var(--wov-copper);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  /* ---------- chapter cards (revealed in sequence around the spinning vinyl) ---------- */
+  .cards-layer {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    display: flex; align-items: center; justify-content: flex-end;
     padding: 0 6vw;
   }
-  .renders-head {
-    max-width: 760px;
-    margin: 0 auto 50px;
-  }
-  .renders-strip {
-    display: flex;
-    gap: 18px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    padding: 8px 4vw 24px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--wov-smoke) transparent;
-    -webkit-overflow-scrolling: touch;
-  }
-  .renders-strip::-webkit-scrollbar { height: 6px; }
-  .renders-strip::-webkit-scrollbar-thumb { background: var(--wov-smoke); border-radius: 3px; }
-  .renders-strip::-webkit-scrollbar-track { background: transparent; }
-  .render-card {
-    flex: 0 0 auto;
-    width: clamp(280px, 38vw, 480px);
-    aspect-ratio: 16 / 9;
-    scroll-snap-align: center;
-    background: var(--wov-ink-2);
-    border: 1px solid var(--wov-rule);
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.4s ease, border-color 0.4s ease;
-  }
-  .render-card img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    transition: transform 0.6s ease;
-  }
-  .render-card:hover {
-    border-color: var(--wov-copper);
-    transform: translateY(-3px);
-  }
-  .render-card:hover img { transform: scale(1.03); }
-  .render-card .render-tag {
+  .card {
     position: absolute;
-    bottom: 10px; left: 12px;
-    padding: 4px 8px;
-    background: rgba(14, 7, 22, 0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    width: clamp(320px, 32vw, 420px);
+    padding: 32px 32px 28px;
+    background: rgba(21, 9, 42, 0.78);
+    border: 1px solid var(--wov-rule);
+    border-radius: 6px;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(184,160,216,0.08);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    pointer-events: auto;
+  }
+  .card.is-in { opacity: 1; transform: none; }
+
+  /* alternate left/right positioning */
+  .card.c1, .card.c3, .card.c5 { right: 6vw; }
+  .card.c2, .card.c4, .card.c6 { left: 6vw; }
+
+  .card .ev {
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.4em;
+    color: var(--wov-copper);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .card h3 {
+    font-family: var(--brush);
+    font-weight: 400;
+    font-size: clamp(24px, 2.4vw, 32px);
+    line-height: 1.15;
+    color: var(--wov-paper);
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+  .card h3 em {
+    font-style: normal;
+    color: var(--wov-mist);
+    text-shadow: 0 0 24px rgba(184,160,216,0.32);
+  }
+  .card p {
+    font-family: var(--serif-zh);
+    font-size: 14.5px;
+    color: var(--wov-paper);
+    line-height: 1.75;
+    margin-bottom: 12px;
+  }
+  .card p.muted { color: var(--wov-paper-dim); font-size: 13.5px; }
+  .card blockquote {
+    margin: 14px 0 4px;
+    padding: 6px 0 6px 16px;
+    border-left: 1px solid var(--wov-smoke);
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--wov-mist);
+    line-height: 1.6;
+  }
+  .card .meta {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--wov-rule);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.24em;
     color: var(--wov-paper-dim);
     text-transform: uppercase;
   }
+  .card .meta-pair {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .card .meta-pair span { color: var(--wov-copper); }
+
+  /* card progress dots (bottom-center) */
+  .card-progress {
+    position: absolute;
+    left: 50%; bottom: 5%;
+    transform: translateX(-50%);
+    z-index: 9;
+    display: flex; gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card-progress.show { opacity: 1; }
+  .card-progress .pd {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(184,160,216,0.3);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .card-progress .pd.active {
+    background: var(--wov-copper);
+    transform: scale(1.4);
+    box-shadow: 0 0 12px rgba(200,155,108,0.6);
+  }
 
   /* ============================================================
-     EXHIBIT 05 — 3D model centrepiece
+     BELOW STAGE · lessons + cta
      ============================================================ */
-  .centerpiece {
-    padding: 100px 0 60px;
-    text-align: center;
-  }
-  .centerpiece .copy {
-    max-width: 720px;
-    margin: 0 auto 60px;
-    text-align: left;
-  }
-  .centerpiece .copy h2.brush { text-align: left; }
-  .model-frame {
-    position: relative;
-    width: 100%;
+  .lessons-section {
+    position: relative; z-index: 2;
     max-width: 1080px;
-    aspect-ratio: 16 / 10;
     margin: 0 auto;
-    background: linear-gradient(180deg, rgba(20,10,40,0.6), rgba(14,7,22,0.6));
-    border: 1px solid var(--wov-rule);
-    box-shadow: 0 40px 100px rgba(0,0,0,0.55), inset 0 0 80px rgba(75,40,120,0.18);
-    overflow: hidden;
+    padding: 100px 6vw 60px;
   }
-  .model-frame model-viewer {
-    width: 100%; height: 100%;
-    --progress-bar-color: var(--wov-copper);
-    --progress-bar-height: 2px;
-    background: transparent;
-  }
-  .model-loading {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: none;
+  .l-eyebrow {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.4em;
-    color: var(--wov-paper-dim);
-    opacity: 0.7;
+    color: var(--wov-copper);
+    text-transform: uppercase;
+    margin-bottom: 18px;
   }
-  model-viewer[loaded] ~ .model-loading { display: none; }
-  .platform-chain {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    justify-content: center;
-    margin: 36px auto 0;
-    max-width: 880px;
+  .l-title {
+    font-family: var(--brush);
+    font-weight: 400;
+    font-size: clamp(34px, 4.4vw, 56px);
+    color: var(--wov-paper);
+    margin-bottom: 36px;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+  }
+  .l-title em { font-style: normal; color: var(--wov-mist); text-shadow: 0 0 28px rgba(184,160,216,0.32); }
+  .lessons {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
+    margin-top: 36px;
+  }
+  .lesson {
+    position: relative;
+    background: rgba(21,9,42,0.55);
+    border: 1px solid var(--wov-rule);
+    border-radius: 4px;
+    padding: 32px 28px 26px;
+  }
+  .lesson .num {
+    position: absolute;
+    top: -14px; left: 22px;
+    background: var(--wov-copper);
+    color: var(--wov-ink-1);
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.18em;
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+  .lesson h4 {
+    font-family: var(--serif-zh);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--wov-paper);
+    margin: 8px 0 12px;
+    line-height: 1.4;
+  }
+  .lesson p {
+    font-family: var(--serif-zh);
+    font-size: 14px;
     color: var(--wov-paper-dim);
+    line-height: 1.7;
+    margin: 0;
   }
-  .platform-chain span { white-space: nowrap; }
-  .platform-chain .arrow { color: var(--wov-copper); opacity: 0.6; }
-  .platform-chain .killed { text-decoration: line-through; opacity: 0.5; }
-
-  /* ============================================================
-     EXHIBIT 06 — the decision (text-only, single column)
-     ============================================================ */
-  .decision {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 100px 0;
+  .next-block {
+    margin-top: 60px;
+    padding: 32px 36px;
+    background: linear-gradient(135deg, rgba(75,40,120,0.18), rgba(200,155,108,0.08));
+    border-left: 2px solid var(--wov-copper);
+  }
+  .next-block ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  .next-block li {
+    position: relative;
+    padding-left: 26px;
+    font-family: var(--serif-zh); font-size: 15px;
+    color: var(--wov-paper);
+    line-height: 1.7;
+  }
+  .next-block li::before {
+    content: "→";
+    position: absolute; left: 0; top: 1px;
+    color: var(--wov-copper);
+    font-family: var(--mono);
+    font-weight: 500;
   }
 
-  /* ---------- big CTA ---------- */
   .cta-block {
-    padding: 140px 0 60px;
+    max-width: 880px; margin: 0 auto;
+    padding: 80px 6vw 80px;
     text-align: center;
   }
   .cta-eyebrow {
@@ -534,7 +728,7 @@
     letter-spacing: 0.35em;
     color: var(--wov-paper-dim);
     text-transform: uppercase;
-    margin-bottom: 28px;
+    margin-bottom: 26px;
   }
   .cta-big {
     display: inline-block;
@@ -545,29 +739,27 @@
     color: var(--wov-paper);
     border: 1px solid var(--wov-smoke);
     background: linear-gradient(135deg, rgba(75,40,120,0.4), rgba(45,27,78,0.15));
-    transition: all 0.4s ease;
+    transition: all 0.35s;
   }
   .cta-big:hover {
     border-color: var(--wov-copper);
     background: linear-gradient(135deg, rgba(107,74,140,0.6), rgba(75,40,120,0.3));
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(75,40,120,0.4);
+    box-shadow: 0 14px 40px rgba(75,40,120,0.4);
   }
   .cta-meta {
-    margin-top: 36px;
+    margin-top: 34px;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.25em;
     color: var(--wov-paper-dim);
   }
 
-  /* ---------- footer ---------- */
+  /* footer */
   .proj-foot {
-    position: relative; z-index: 2;
     text-align: center;
-    padding: 80px 5vw 60px;
+    padding: 60px 5vw 50px;
     border-top: 1px solid var(--wov-rule);
-    margin-top: 40px;
   }
   .proj-foot p {
     font-family: var(--serif-en);
@@ -577,566 +769,393 @@
     color: var(--wov-paper-dim);
     margin: 4px 0;
   }
-  .proj-foot a {
-    border-bottom: 1px solid var(--wov-rule);
-    transition: color 0.2s ease, border-color 0.2s ease;
-  }
+  .proj-foot a { color: var(--wov-paper); border-bottom: 1px solid var(--wov-rule); transition: color 0.2s, border-color 0.2s; }
   .proj-foot a:hover { color: var(--wov-mist); border-color: var(--wov-mist); }
 
-  /* ---------- responsive ---------- */
-  @media (max-width: 880px) {
-    .opening { grid-template-columns: 1fr; }
-    .opening .col-right { padding-top: 0; }
-    .biz-stack { max-width: 360px; margin: 0 auto; }
-    .clock-versions { grid-template-columns: 1fr; }
-    .floorplan-meta { grid-template-columns: 1fr; }
-    .model-frame { aspect-ratio: 4 / 3; }
-  }
-  @media (max-width: 720px) {
-    .proj-nav { padding: 12px 18px; }
-    .back-link { font-size: 12px; letter-spacing: 0.18em; }
-    .nav-brand { display: none; }
-    main.exhibit-hall { padding: 100px 7vw 0; }
-    .cta-big { padding: 18px 32px; font-size: 22px; }
-    .render-card { width: 78vw; }
-  }
-
-  /* scroll reveal */
-  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 1s ease, transform 1s ease; }
-  .reveal.is-in { opacity: 1; transform: none; }
-  @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; transition: none; }
-  }
-
-  /* ---------- language toggle (mirrors index.html) ---------- */
+  /* ---------- lang switch + floating CTA ---------- */
   body.lang-en [data-lang="cn"] { display: none !important; }
   body.lang-cn [data-lang="en"] { display: none !important; }
-  body.lang-en h1.brush,
-  body.lang-en h2.brush,
-  body.lang-en h3.brush {
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-weight: 400;
-    letter-spacing: 0.03em;
-  }
-  body.lang-en .cta-big { font-family: var(--serif-en); font-style: italic; letter-spacing: 0.18em; }
-  body.lang-en .menu-card .menu-foot { font-family: var(--serif-en); font-style: italic; letter-spacing: 0.1em; }
 
   .lang-switch {
     position: fixed;
-    right: 28px; bottom: 28px;
-    z-index: 200;
+    right: 28px; bottom: 28px; z-index: 200;
     display: inline-flex; align-items: center; gap: 14px;
     padding: 12px 22px;
     border-radius: 999px;
-    background: rgba(10, 8, 18, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(14,7,22,0.62);
+    border: 1px solid rgba(184,160,216,0.32);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    font-size: 16px; font-weight: 600; letter-spacing: 0.16em; line-height: 1;
-    pointer-events: auto;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    font-family: var(--serif-en); font-style: italic;
+    font-size: 14px; font-weight: 500;
+    letter-spacing: 0.14em;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
   }
   .lang-switch button {
     background: transparent; border: 0;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(232,221,240,0.55);
     font: inherit; letter-spacing: inherit;
-    padding: 4px 6px;
-    cursor: pointer;
-    transition: color 0.2s ease, transform 0.2s ease;
+    padding: 4px 6px; cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
   }
-  .lang-switch button:hover { color: #fff; transform: translateY(-1px); }
+  .lang-switch button:hover { color: var(--wov-paper); transform: translateY(-1px); }
   .lang-switch button.active { color: var(--wov-copper); }
-  .lang-switch .lang-divider { color: rgba(255, 255, 255, 0.3); font-size: 14px; }
+  .lang-switch .lang-divider { color: rgba(232,221,240,0.25); font-size: 13px; }
 
-  /* ---------- floating CTA pill (bottom-left) ---------- */
   .cta-float {
     position: fixed;
-    left: 28px; bottom: 28px;
-    z-index: 200;
+    left: 28px; bottom: 28px; z-index: 200;
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 12px 22px;
+    padding: 14px 24px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(75,40,120,0.7), rgba(45,27,78,0.55));
-    border: 1px solid rgba(184,160,216,0.4);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: 14px;
-    letter-spacing: 0.2em;
+    background: linear-gradient(135deg, rgba(107,74,140,0.85), rgba(75,40,120,0.85));
     color: var(--wov-paper);
-    text-transform: uppercase;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(75,40,120,0.35);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    font-family: var(--brush);
+    font-size: 15px;
+    letter-spacing: 0.18em;
+    border: 1px solid var(--wov-copper);
+    box-shadow: 0 12px 30px rgba(75,40,120,0.4), 0 0 24px rgba(184,160,216,0.18);
+    transition: transform 0.3s, box-shadow 0.3s;
   }
-  .cta-float:hover {
-    border-color: var(--wov-copper);
-    box-shadow: 0 14px 40px rgba(0,0,0,0.55), 0 0 30px rgba(200,155,108,0.4);
-  }
-  .cta-float .arrow { color: var(--wov-copper); transition: transform 0.3s ease; }
+  .cta-float:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(75,40,120,0.55); }
+  .cta-float .arrow { color: var(--wov-copper); transition: transform 0.3s; }
   .cta-float:hover .arrow { transform: translateX(4px); }
-  body.lang-cn .cta-float { font-family: var(--brush); font-style: normal; font-size: 16px; letter-spacing: 0.18em; text-transform: none; }
 
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s, transform 0.9s; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* ---------- responsive ---------- */
   @media (max-width: 720px) {
-    .lang-switch { right: 14px; bottom: 14px; padding: 10px 16px; font-size: 14px; gap: 10px; }
-    .cta-float   { left:  14px; bottom: 14px; padding: 10px 16px; font-size: 12px; letter-spacing: 0.15em; }
+    .scroll-track { height: auto; }
+    .scene-stage { position: relative; height: auto; padding: 60px 0; min-height: 50vh; }
+    .scene-bar, .scene-vinyl { position: relative; opacity: 1 !important; pointer-events: auto; }
+    .camera-bar { transform: none !important; position: relative; }
+    .turntable { transform: translate(-50%, 0); top: 30%; }
+    .vinyl-wrap { position: relative; left: auto; top: auto; transform: none; margin: 30px auto; width: 80vw; }
+    .cards-layer { position: relative; display: block; padding: 30px 6vw; }
+    .card {
+      position: relative !important; opacity: 1; transform: none;
+      left: auto !important; right: auto !important;
+      width: 100%; margin: 16px 0;
+    }
+    .card-progress { display: none; }
+    .lessons { grid-template-columns: 1fr; }
+    .lang-switch { right: 14px; bottom: 14px; padding: 9px 16px; font-size: 13px; gap: 10px; }
+    .cta-float   { left:  14px; bottom: 14px; padding: 11px 18px; font-size: 13px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vinyl, .music-eq i, .card { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
 
 <body class="lang-cn">
 
-<div class="ambient grain"></div>
 <div class="ambient glow glow-a"></div>
 <div class="ambient glow glow-b"></div>
+<div class="ambient grain"></div>
 
 <header class="proj-nav">
   <a href="../" class="back-link">← Back to Lab</a>
-  <span class="nav-brand">Yao Design Lab.</span>
+  <span class="nav-brand">Whiskey on Vinyl · behind</span>
 </header>
 
-<main class="exhibit-hall">
+<section class="intro-section">
+  <p class="eyebrow"><span data-lang="cn">起点 · 一个不催促人的房间</span><span data-lang="en">CHAPTER 01 · A ROOM THAT DOESN'T RUSH YOU</span></p>
+  <h1>
+    <span data-lang="cn">一张 22 分钟的<br/><em>房间</em></span>
+    <span data-lang="en">A 22-minute<br/><em>room</em></span>
+  </h1>
+  <p class="tagline">A room, not a bar.</p>
+  <p class="lead">
+    <span data-lang="cn">我想做的不是另一家酒吧。是想看 — 在所有都要快、要翻台、要 KPI 的城市里, 一个不催促人的房间, 还能不能存在。</span>
+    <span data-lang="en">I didn't want to design another bar. I wanted to see — in a city where everything wants you to be faster, in and out, hitting KPIs — whether a room that doesn't rush you could still exist.</span>
+  </p>
+  <p class="hint">
+    <span data-lang="cn">把唱针放下 · 让它转</span>
+    <span data-lang="en">drop the needle · let it spin</span>
+    <span class="arr">↓</span>
+  </p>
+</section>
 
-  <!-- ===========================================================
-       EXHIBIT 01 — THE INVITATION
-       Logo upper-left + opener 文案 + business plan stack + 文案2
-       =========================================================== -->
-  <section class="opening reveal">
 
-    <div class="col-left">
+<!-- ===================== sticky stage ===================== -->
+<div class="scroll-track" id="scrollTrack">
+  <div class="scene-stage">
 
-      <img class="logo-tag"
-           src="../assets/whiskey-on-vinyl/logo.png"
-           alt="Whiskey on Vinyl logo" />
+    <!-- ---------- SCENE A · BAR ---------- -->
+    <div class="scene-bar" id="sceneBar">
+      <div class="camera-bar" id="cameraBar">
+        <div class="bar-wall"></div>
+        <div class="bar-counter"></div>
+        <div class="lamp-wire"></div>
+        <div class="lamp-bulb"></div>
+        <div class="lamp-cone"></div>
 
-      <div>
-        <p class="ex-label">EXHIBIT 01 — THE INVITATION</p>
-        <h1 class="brush">
-          <span data-lang="cn"><span>黑胶上的</span><br/><em>威士忌</em></span>
-          <span data-lang="en">Whiskey<br/><em>on Vinyl</em></span>
-        </h1>
-        <p class="tagline-en">A room, not a bar.</p>
-        <p>
-          <span data-lang="cn">这不是一份产品介绍 — 是一封写给愿意慢下来的人的信。</span>
-          <span data-lang="en">This isn't a product page — it's a letter to anyone willing to slow down.</span>
-        </p>
-        <p>
-          <span data-lang="cn">城市需要一个不催促的房间: 没有翻台 · 没有推销 · 没有需要被介绍的自己。</span>
-          <span data-lang="en">The city needs a room that doesn't rush you: no table turnover · no upselling · no "self" to be introduced.</span>
-        </p>
-        <p class="muted">
-          <span data-lang="cn">下面这些, 是这间屋子从概念到成形, 留下的几张草稿、几次失败的实验、几版 AI 渲染, 和我自己的笔记。</span>
-          <span data-lang="en">What follows are the drafts, failed experiments, AI renders and notes left behind as this room moved from concept toward form.</span>
-        </p>
-      </div>
-
-      <figure class="biz-stack">
-        <img class="biz-back"  src="../assets/whiskey-on-vinyl/bizplan-2.png" alt="business plan page 2" />
-        <img class="biz-front" src="../assets/whiskey-on-vinyl/bizplan-1.png" alt="business plan page 1" />
-        <figcaption class="ex-caption">
-          <span data-lang="cn">v1.0 · 概念阶段商业计划书 · 2026.03</span>
-          <span data-lang="en">v1.0 · concept-stage business plan · 2026.03</span>
-        </figcaption>
-      </figure>
-    </div>
-
-    <div class="col-right">
-      <p class="ex-label">NOTES · v1 → v2</p>
-      <h2 class="brush">
-        <span data-lang="cn">22 分钟<br/>是一个真实参数</span>
-        <span data-lang="en">22 minutes<br/>is an actual parameter</span>
-      </h2>
-
-      <p>
-        <span data-lang="cn">一张 12 寸黑胶 A 面的长度, 约 22 分钟。这个数字成了整间屋子的设计单位 — 灯光渐暗的周期、推荐切下一张唱片的间隔、客人安静坐着不被打扰的最小窗口。</span>
-        <span data-lang="en">One side of a 12-inch vinyl runs about 22 minutes. That number became the design unit of the entire room — the dimming cycle, the interval between suggesting the next record, the minimum window of being-left-alone.</span>
-      </p>
-
-      <p>
-        <span data-lang="cn">它不是修辞, 是工程参数。</span>
-        <span data-lang="en">Not a metaphor — an engineering parameter.</span>
-      </p>
-
-      <blockquote>The first draft sold drinks.<br/>This one sells permission.</blockquote>
-
-      <p class="muted">
-        <span data-lang="cn">左边那份计划书是 v1.0 — 标准独立酒吧 landing page 的思路: 主视觉、菜单、地址、预约表单。我做完后看一遍, 关掉, 一周没再打开。</span>
-        <span data-lang="en">The plan on the left is v1.0 — the standard indie-bar landing-page playbook: hero visual, menu, address, reservation form. I finished it, looked at it once, closed it, didn't reopen it for a week.</span>
-      </p>
-
-      <p>
-        <span data-lang="cn">问题不是它不够好看 — 是它在解释 "我们卖什么", 完全没有回答 "为什么应该来"。</span>
-        <span data-lang="en">The problem wasn't that it looked bad — it explained <em>what we sell</em> without ever answering <em>why you should come</em>.</span>
-      </p>
-
-      <p>
-        <span data-lang="cn">v2 之后, 整个项目的方向转向 attitude 的设计: 不卖 inventory, 卖一种允许。</span>
-        <span data-lang="en">After v2, the project pivoted toward designing an attitude — not selling inventory, but selling a kind of permission.</span>
-      </p>
-    </div>
-  </section>
-
-  <!-- ===========================================================
-       EXHIBIT 02 — V2 · THE CLOCK
-       The vinyl clock hand iteration (stir spoon → absinthe → pick)
-       =========================================================== -->
-  <section class="ex-section clock-evolution reveal">
-    <p class="ex-label">
-      <span data-lang="cn">EXHIBIT 02 — V2 · 一根针走了三版</span>
-      <span data-lang="en">EXHIBIT 02 — V2 · ONE HAND, THREE DRAFTS</span>
-    </p>
-    <h2 class="brush">
-      <span data-lang="cn">把黑胶<br/>变成一只钟</span>
-      <span data-lang="en">Turning a vinyl<br/>into a clock</span>
-    </h2>
-
-    <p>
-      <span data-lang="cn">v2.1 给首屏的黑胶加上了真实时间的指针 — 转盘是装饰, 时针分针绑到浏览器时钟。一开始时针是普通调酒长匙, 后来发现它在视觉上"太硬"了 — 像工具, 不像氛围。</span>
-      <span data-lang="en">v2.1 gave the hero vinyl real clock hands — the platter is decorative, but the hour and minute hands are bound to the browser clock. The hour hand started as a long bar spoon — visually "too hard," more like a tool than an atmosphere.</span>
-    </p>
-
-    <p>
-      <span data-lang="cn">替换成苦艾酒匙 (一种带镂空叶片的吧台用具) 之后, 时针有了仪式感; 分针换成水果鸡尾酒签 + 黑橄榄, 整套钟终于"住进"了酒吧。</span>
-      <span data-lang="en">Swapping it for an absinthe spoon (a slotted-leaf bar tool) gave the hour hand a sense of ritual; the minute hand became a cocktail pick + black olive. The whole clock finally "moved in" to the bar.</span>
-    </p>
-
-    <p class="muted">
-      <span data-lang="cn">这一段没有什么大故事 — 但它是整个 v2 网站里我最满意的一个细节。一根针走了三版, 才像。</span>
-      <span data-lang="en">No big story here — but it's the detail in the whole v2 site I'm proudest of. One hand took three drafts before it felt right.</span>
-    </p>
-
-    <div class="clock-versions">
-      <article>
-        <h4>v2.1.1 · ABANDONED</h4>
-        <div class="glyph">
-          <span data-lang="cn">调酒长匙</span>
-          <span data-lang="en">Bar spoon</span>
+        <!-- shelves with bottles -->
+        <div class="shelves">
+          <div class="shelf-line l1"></div>
+          <div class="shelf-line l2"></div>
+          <div class="bottle"></div><div class="bottle"></div><div class="bottle"></div>
+          <div class="bottle"></div><div class="bottle"></div><div class="bottle"></div>
+          <div class="bottle"></div><div class="bottle"></div><div class="bottle"></div>
+          <div class="bottle"></div><div class="bottle"></div>
         </div>
-        <p>
-          <span data-lang="cn">太工具, 太硬, 不属于这个房间。</span>
-          <span data-lang="en">Too tool, too hard. Doesn't belong in this room.</span>
-        </p>
-      </article>
-      <article>
-        <h4>v2.2.0 · TIME HAND</h4>
-        <div class="glyph">
-          <span data-lang="cn">苦艾酒匙</span>
-          <span data-lang="en">Absinthe spoon</span>
+
+        <!-- whiskey glass on counter -->
+        <div class="glass"></div>
+
+        <!-- turntable on counter -->
+        <div class="turntable">
+          <div class="platter"></div>
+          <div class="tonearm"></div>
         </div>
-        <p>
-          <span data-lang="cn">叶片镂空 + 短柄, 有仪式感而非工具感。</span>
-          <span data-lang="en">Slotted leaf + short shaft — ritual, not utility.</span>
-        </p>
-      </article>
-      <article>
-        <h4>v2.2.1 · MINUTE HAND</h4>
-        <div class="glyph">
-          <span data-lang="cn">鸡尾酒签</span>
-          <span data-lang="en">Cocktail pick</span>
+
+        <!-- "now playing" equalizer -->
+        <div class="music-eq" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
         </div>
-        <p>
-          <span data-lang="cn">木签穿过深紫橄榄 — 整套钟终于像酒吧。</span>
-          <span data-lang="en">Wood pick through a deep-purple olive — finally a bar's clock.</span>
-        </p>
-      </article>
-    </div>
-  </section>
-
-  <!-- ===========================================================
-       EXHIBIT 03 — V3 · THE FLOORPLAN
-       The full architectural floorplan
-       =========================================================== -->
-  <section class="ex-section floorplan-block reveal">
-    <div class="copy">
-      <p class="ex-label">
-        <span data-lang="cn">EXHIBIT 03 — V3 · 平面布局</span>
-        <span data-lang="en">EXHIBIT 03 — V3 · FLOOR PLAN</span>
-      </p>
-      <h2 class="brush">
-        <span data-lang="cn">这间屋子<br/>还不存在</span>
-        <span data-lang="en">This room<br/>does not exist yet</span>
-      </h2>
-
-      <p>
-        <span data-lang="cn">v3 阶段开始想做空间。在没有实体场地之前, 我需要先在脑子里把这间屋子走一遍 — 入口缓冲、酒柜+音乐总控、主厅、VIP、调酒区、卫生间。</span>
-        <span data-lang="en">v3 turned to space. Before any physical site existed, I needed to walk through the room in my head — entrance buffer, cellar + music control, main hall, VIP, bar, restrooms.</span>
-      </p>
-
-      <p>
-        <span data-lang="cn">所有的尺度、光照色温、声学吸音参数 (RT60 ≈ 0.4-0.6s), 都先在这张图上对齐。</span>
-        <span data-lang="en">All scale, color-temperature schedule and acoustic absorption (RT60 ≈ 0.4–0.6s) get aligned on this one drawing first.</span>
-      </p>
-
-      <p class="muted">
-        <span data-lang="cn">代号 "落日飛車 · Sunset Car" — 在建筑图层面用的项目名。"黑胶上的威士忌" 是对外的品牌名。</span>
-        <span data-lang="en">Codename "Sunset Car · 落日飛車" — the project name used on the architectural layer. "Whiskey on Vinyl" is the outward-facing brand.</span>
-      </p>
-    </div>
-
-    <div class="floorplan-wrap">
-      <img src="../assets/whiskey-on-vinyl/floorplan.jpg" alt="Sunset Car · Floor Plan" />
-    </div>
-    <p class="ex-caption">
-      <span data-lang="cn">AI 俯视 v1 · 包含 6 个分区 + 灯光色温时间表 + 音响三角图</span>
-      <span data-lang="en">AI top-down v1 · 6 zones + color-temperature schedule + speaker triangle</span>
-    </p>
-
-    <dl class="floorplan-meta">
-      <div>
-        <dt>9:00 PM</dt>
-        <dd>
-          <span data-lang="cn">2700K · 温暖舒适</span>
-          <span data-lang="en">2700K · warm</span>
-        </dd>
       </div>
-      <div>
-        <dt>12:00 AM</dt>
-        <dd>
-          <span data-lang="cn">2200K · 更暗更沉漫</span>
-          <span data-lang="en">2200K · dimmer, heavier</span>
-        </dd>
+    </div>
+
+    <!-- ---------- SCENE B · TOP-DOWN VINYL ---------- -->
+    <div class="scene-vinyl" id="sceneVinyl">
+      <div class="vinyl-glow"></div>
+
+      <div class="vinyl-wrap" id="vinylWrap">
+        <div class="vinyl" id="vinyl"></div>
+        <div class="vinyl-label">
+          <div class="mark">黑胶上的<br/>威士忌</div>
+          <div class="side"><span data-lang="cn">A 面</span><span data-lang="en">Side A</span></div>
+          <div class="twenty-two">22 minutes</div>
+        </div>
+        <div class="vinyl-spindle"></div>
+        <div class="vinyl-needle">
+          <div class="arm"></div>
+          <div class="pivot"></div>
+          <div class="head"></div>
+        </div>
       </div>
-      <div>
-        <dt>2:00 AM</dt>
-        <dd>
-          <span data-lang="cn">1800K · 极暗 · 深夜氛围</span>
-          <span data-lang="en">1800K · deep night</span>
-        </dd>
+
+      <!-- chapter cards -->
+      <div class="cards-layer">
+
+        <article class="card c1" data-i="0">
+          <p class="ev">v1 → v2 · <span data-lang="cn">第一次转向</span><span data-lang="en">first pivot</span></p>
+          <h3>
+            <span data-lang="cn">从"我们卖什么"<br/>到"<em>为什么应该来</em>"</span>
+            <span data-lang="en">From "what we sell"<br/>to "<em>why you'd come</em>"</span>
+          </h3>
+          <p>
+            <span data-lang="cn">v1 是标准独立酒吧 landing page — 主视觉、菜单、地址、预约表单。做完看了一眼关掉, 一周没再打开。</span>
+            <span data-lang="en">v1 was the standard indie-bar playbook — hero visual, menu, address, reservation form. I finished it, looked at it once, closed it, didn't reopen for a week.</span>
+          </p>
+          <p class="muted">
+            <span data-lang="cn">问题不是它不够好看 — 是它在解释"我们卖什么", 完全没回答"为什么应该来"。v2 之后整个项目转向 attitude 的设计: 不卖 inventory, 卖一种允许。</span>
+            <span data-lang="en">The problem wasn't that it looked bad — it explained what we sell without ever answering why you'd come. After v2, the whole project pivoted to designing an attitude: not selling inventory, but selling a kind of permission.</span>
+          </p>
+          <blockquote>The first draft sold drinks.<br/>This one sells permission.</blockquote>
+          <div class="meta meta-pair"><span>v1 → v2</span> <span>· 2026.02</span></div>
+        </article>
+
+        <article class="card c2" data-i="1">
+          <p class="ev">v2.2 · <span data-lang="cn">一根针, 走了三版</span><span data-lang="en">one hand, three drafts</span></p>
+          <h3>
+            <span data-lang="cn">把黑胶<br/>变成<em>一只钟</em></span>
+            <span data-lang="en">Turning vinyl<br/>into <em>a clock</em></span>
+          </h3>
+          <p>
+            <span data-lang="cn">v2.1 给首屏的黑胶加上真实时间的指针。一开始时针是普通调酒长匙 — 视觉上"太硬", 像工具不像氛围。</span>
+            <span data-lang="en">v2.1 gave the hero vinyl real clock hands. The hour hand started as a regular bar spoon — "too hard," more tool than atmosphere.</span>
+          </p>
+          <p>
+            <span data-lang="cn">换成苦艾酒匙 (镂空叶片 + 短柄) 之后, 时针有了仪式感; 分针换成水果鸡尾酒签 + 黑橄榄。一根针走三版, 才像。</span>
+            <span data-lang="en">Swapped to an absinthe spoon (slotted leaf + short shaft) and the hour hand gained ritual; the minute became a cocktail pick + black olive. One hand, three drafts before it felt right.</span>
+          </p>
+          <p class="muted">
+            <span data-lang="cn">这一段没什么大故事 — 但它是整个 v2 网站里我最满意的一个细节。</span>
+            <span data-lang="en">No big narrative here — but it's the detail in v2 I'm proudest of.</span>
+          </p>
+          <div class="meta meta-pair"><span>v2.1.1 → v2.2.1</span> <span>· bar spoon → absinthe → pick</span></div>
+        </article>
+
+        <article class="card c3" data-i="2">
+          <p class="ev">v3 · <span data-lang="cn">在没有房子之前</span><span data-lang="en">before the room exists</span></p>
+          <h3>
+            <span data-lang="cn">先把<em>光</em><br/>画出来</span>
+            <span data-lang="en">Paint the <em>light</em><br/>first</span>
+          </h3>
+          <p>
+            <span data-lang="cn">v3 开始想做空间。没实体场地, 所以先在脑子里走一遍 — 入口缓冲、酒柜+音乐总控、主厅、VIP、调酒区、卫生间。所有的尺度、色温、声学吸音参数 (RT60 ≈ 0.4-0.6s) 都先在一张平面图上对齐。</span>
+            <span data-lang="en">v3 turned to space. With no physical site, I had to walk the room in my head first — entrance buffer, cellar + music control, main hall, VIP, bar, restrooms. All scale, colour-temp, acoustic absorption (RT60 ≈ 0.4-0.6s) aligned on one floorplan before anything else.</span>
+          </p>
+          <p>
+            <span data-lang="cn">然后用 FLUX.1-merged 生成了 20 张实景渲染 — 9pm 2700K → 12am 2200K → 2am 1800K, 整间屋子按时间慢慢沉进夜里。</span>
+            <span data-lang="en">Then FLUX.1-merged generated 20 photoreal renders — 9pm 2700K → 12am 2200K → 2am 1800K. The whole room slowly settles into the night.</span>
+          </p>
+          <p class="muted"><span data-lang="cn">代号: 落日飛車 · Sunset Car。</span><span data-lang="en">Codename: Sunset Car · 落日飛車.</span></p>
+          <div class="meta meta-pair"><span>20 scenes</span> <span>· 3 color-temp states</span></div>
+        </article>
+
+        <article class="card c4" data-i="3">
+          <p class="ev">v3.5 · <span data-lang="cn">工程含量最高的一段</span><span data-lang="en">the engineering moment</span></p>
+          <h3>
+            <span data-lang="cn">137 MB <em>→</em> 3.49 MB</span>
+            <span data-lang="en">137 MB <em>→</em> 3.49 MB</span>
+          </h3>
+          <p>
+            <span data-lang="cn">用 Microsoft TRELLIS 把所有 AI 实景图反过来 multidiffusion 融成一个完整的 GLB 场景。原始模型 137 MB, Safari 加载到一半就崩。</span>
+            <span data-lang="en">Microsoft TRELLIS fed all the AI scenes back in and multidiffusion-fused them into one complete GLB. Raw model: 137 MB — Safari crashed mid-load.</span>
+          </p>
+          <p>
+            <span data-lang="cn">用 gltf-transform 加 Draco 几何压缩 — <strong>3.49 MB</strong>, 网页可以即时加载。这一段是整个项目里, 我自己学到最多的部分。</span>
+            <span data-lang="en">After gltf-transform + Draco geometry compression — <strong>3.49 MB</strong>, instant in-browser load. The most I learned in the whole project came out of this segment.</span>
+          </p>
+          <p class="muted">
+            <span data-lang="cn">尝试过的工作链: Three.js 手搭 / Spline 导出 / Hunyuan3D 单件 — 全失败。TRELLIS 是第一个跑通的。</span>
+            <span data-lang="en">Earlier attempts: hand-built Three.js / Spline export / Hunyuan3D single objects — all failed. TRELLIS was the first that ran through.</span>
+          </p>
+          <div class="meta meta-pair"><span>TRELLIS · multidiffusion</span> <span>· Draco geometry</span></div>
+        </article>
+
+        <article class="card c5" data-i="4">
+          <p class="ev">v4 · <span data-lang="cn">选择不做</span><span data-lang="en">choosing not to make more</span></p>
+          <h3>
+            <span data-lang="cn">3D 暂停 — <br/>等<em>真实的</em>房子</span>
+            <span data-lang="en">3D paused —<br/>waiting for the <em>real</em> room</span>
+          </h3>
+          <p>
+            <span data-lang="cn">v3.5 之后, 我把 3D 模块封存了。原因: 这间屋子终究是要建出来的, 一旦实体存在, 用 iPhone LiDAR 扫一次就能得到 100% 真实的模型。任何"想象的渲染"都会被替代。</span>
+            <span data-lang="en">After v3.5, I shelved the 3D module. The reason — this room will eventually be built, and once a physical space exists, one iPhone LiDAR scan gets you a 100% truthful model. Any "imagined render" gets overwritten.</span>
+          </p>
+          <p>
+            <span data-lang="cn">继续在没有实体的阶段堆 AI 模型, 反而是在欺骗访客"你看到的就是它的样子"。事实是: 还没有人看到。</span>
+            <span data-lang="en">Stacking more AI without a real space is lying to visitors — "this is what it looks like." Truth: no one has seen it yet.</span>
+          </p>
+          <blockquote>The discipline isn't making more.<br/>It's knowing when to stop.</blockquote>
+          <div class="meta meta-pair"><span>v3.5 → v4.0</span> <span>· stop · wait for LiDAR</span></div>
+        </article>
+
+        <article class="card c6" data-i="5">
+          <p class="ev">v4.1 · <span data-lang="cn">写一本完整重建指南</span><span data-lang="en">a full reconstruction guide</span></p>
+          <h3>
+            <span data-lang="cn">把整个项目<br/><em>留给</em>下一个人</span>
+            <span data-lang="en">Hand the whole thing<br/><em>to the next person</em></span>
+          </h3>
+          <p>
+            <span data-lang="cn">v4.1 把这一切写成 《Whiskey on Vinyl · 完整重建指南》— 给未来任何一位接手者 (包括我自己) 可以从零重建整个网站的文档。代码、文案、决策、踩过的坑, 全部记下。</span>
+            <span data-lang="en">v4.1 wrote all of it into <em>Whiskey on Vinyl · A Full Reconstruction Guide</em> — a document any future caretaker (myself included) could use to rebuild the whole site from zero. Code, copy, decisions, mistakes, all logged.</span>
+          </p>
+          <p class="muted">
+            <span data-lang="cn">让一个项目可以"被别人重建", 比让它"看起来很厉害"更难。这是 v4 里我最在意的产出。</span>
+            <span data-lang="en">Making a project rebuildable by someone else is harder than making it look impressive. That guide is the v4 output I care about most.</span>
+          </p>
+          <div class="meta meta-pair"><span>Markdown · 6000+ lines</span> <span>· hand-written</span></div>
+        </article>
+
       </div>
-    </dl>
-  </section>
 
-  <!-- ===========================================================
-       EXHIBIT 04 — V3 · THREE MENUS (drinks / snacks / shisha)
-       =========================================================== -->
-  <section class="ex-section menus-block reveal">
-    <div class="menus-head">
-      <p class="ex-label">
-        <span data-lang="cn">EXHIBIT 04 — V3 · 三联菜单</span>
-        <span data-lang="en">EXHIBIT 04 — V3 · THREE MENUS</span>
-      </p>
-      <h2 class="brush">
-        <span data-lang="cn">这间屋子的语言<br/>写在三张纸上</span>
-        <span data-lang="en">The room's language<br/>lives on three sheets</span>
-      </h2>
+      <!-- progress dots -->
+      <div class="card-progress" id="cardProgress">
+        <div class="pd active"></div><div class="pd"></div><div class="pd"></div>
+        <div class="pd"></div><div class="pd"></div><div class="pd"></div>
+      </div>
+    </div>
 
+  </div><!-- /.scene-stage -->
+</div><!-- /.scroll-track -->
+
+
+<!-- ===================== below-stage flow ===================== -->
+<section class="lessons-section reveal">
+  <p class="l-eyebrow"><span data-lang="cn">尾声 · 把唱针抬起来</span><span data-lang="en">EPILOGUE · LIFTING THE NEEDLE</span></p>
+  <h2 class="l-title">
+    <span data-lang="cn">这张唱片<br/>教<em>我</em>的几件事</span>
+    <span data-lang="en">A few things <em>this record</em><br/>taught me</span>
+  </h2>
+
+  <div class="lessons">
+    <article class="lesson">
+      <span class="num">01</span>
+      <h4>
+        <span data-lang="cn">一个网站的真正问题是: 它在回答什么。</span>
+        <span data-lang="en">A site's real question is: what is it answering?</span>
+      </h4>
       <p>
-        <span data-lang="cn">酒单 · 小食单 · 水烟单 — 三份独立的视觉草案, 每一份都做成可印刷的完整页面, 而不是 UI 截图。它们是纸的产物 — 印出来, 摆在桌上。</span>
-        <span data-lang="en">Drinks · snacks · shisha — three separate visual drafts, each shipped as a complete printable page rather than a UI mockup. They are paper artefacts — printed, placed on the table.</span>
+        <span data-lang="cn">v1 解释"我们卖什么"。v2 改成回答"为什么应该来"。同一份内容, 不同的问题, 站点的灵魂就完全不一样。</span>
+        <span data-lang="en">v1 explained "what we sell." v2 answered "why you'd come." Same content, different question, completely different soul.</span>
       </p>
+    </article>
 
-      <p class="muted">
-        <span data-lang="cn">点开任意一张, 查看完整的菜单原稿。</span>
-        <span data-lang="en">Click any one to open the full menu draft.</span>
-      </p>
-    </div>
-
-    <div class="menus-grid">
-      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/drinks.jpg" target="_blank" rel="noopener">
-        <span class="menu-tag">01 · DRINKS</span>
-        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/drinks.jpg" alt="Whiskey on Vinyl · drinks menu" loading="lazy" />
-        <span class="menu-foot">
-          <span data-lang="cn">酒单<small>Drinks</small></span>
-          <span data-lang="en">Drinks<small>酒单</small></span>
-        </span>
-      </a>
-      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/snacks.jpg" target="_blank" rel="noopener">
-        <span class="menu-tag">02 · SNACKS</span>
-        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/snacks.jpg" alt="Whiskey on Vinyl · snacks menu" loading="lazy" />
-        <span class="menu-foot">
-          <span data-lang="cn">小食单<small>Snacks</small></span>
-          <span data-lang="en">Snacks<small>小食单</small></span>
-        </span>
-      </a>
-      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/shisha.jpg" target="_blank" rel="noopener">
-        <span class="menu-tag">03 · SHISHA</span>
-        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/shisha.jpg" alt="Whiskey on Vinyl · shisha menu" loading="lazy" />
-        <span class="menu-foot">
-          <span data-lang="cn">水烟单<small>Shisha</small></span>
-          <span data-lang="en">Shisha<small>水烟单</small></span>
-        </span>
-      </a>
-    </div>
-    <p class="ex-caption" style="text-align:center; margin-top: 28px;">
-      <span data-lang="cn">点击任意一张 · 查看完整成品图</span>
-      <span data-lang="en">Click any one for the full image</span>
-    </p>
-  </section>
-
-  <!-- ===========================================================
-       EXHIBIT 05 — V3 · 20 AI RENDERS
-       Horizontal scroll gallery of 20 AI scenes
-       =========================================================== -->
-  <section class="ex-section renders-gallery reveal">
-    <div class="renders-head">
-      <p class="ex-label">
-        <span data-lang="cn">EXHIBIT 05 — V3.4 · 20 间想象的房间</span>
-        <span data-lang="en">EXHIBIT 05 — V3.4 · 20 IMAGINED ROOMS</span>
-      </p>
-      <h2 class="brush">
-        <span data-lang="cn">在没有房子之前,<br/>先把光画出来</span>
-        <span data-lang="en">Before there's a house,<br/>paint the light first</span>
-      </h2>
-
+    <article class="lesson">
+      <span class="num">02</span>
+      <h4>
+        <span data-lang="cn">AI 渲染是脚手架, 不是建筑。</span>
+        <span data-lang="en">AI renders are scaffolding, not architecture.</span>
+      </h4>
       <p>
-        <span data-lang="cn">用 Hugging Face Pro 上的 FLUX.1-merged 生成了 20 张实景渲染 — 从入口缓冲、吧台细节、单人扶手椅、VIP 半弧形, 到顶棚黑胶仰望、深夜 1800K 的酒墙特写。</span>
-        <span data-lang="en">Twenty photoreal renders generated with FLUX.1-merged on Hugging Face Pro — from the entrance buffer and bar details to the single armchair, the VIP semicircle, the vinyl ceiling looking up, and the 1800K bottle-wall close-up.</span>
+        <span data-lang="cn">20 张实景图 + GLB 模型让我在没建之前先把屋子走完一遍。但它们不该被当成成品交付 — 一旦实体存在, 它们的功能就完成了。</span>
+        <span data-lang="en">Twenty renders + one GLB let me walk the room before it was built. But they shouldn't be shipped as the final product — once the physical space exists, their job is done.</span>
       </p>
+    </article>
 
-      <p class="muted">
-        <span data-lang="cn">最后三张 (18 / 19 / 20) 是同一空间在 9pm · 12am · 2am 的色温递进 — 整间屋子按时间会慢慢沉进夜里。</span>
-        <span data-lang="en">The last three (18 / 19 / 20) are the same space at 9pm · 12am · 2am — the whole room slowly settles into the night.</span>
-      </p>
-    </div>
-
-    <div class="renders-strip">
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" alt="01 floorplan master" loading="lazy" /><span class="render-tag">01 · floor plan</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" alt="02 hero wide" loading="lazy" /><span class="render-tag">02 · hero wide</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" alt="03 bar straight" loading="lazy" /><span class="render-tag">03 · bar straight</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" alt="04 bar from side" loading="lazy" /><span class="render-tag">04 · bar side</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" alt="05 bar tools" loading="lazy" /><span class="render-tag">05 · bar tools</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" alt="06 hall dense" loading="lazy" /><span class="render-tag">06 · hall dense</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" alt="07 hall clusters" loading="lazy" /><span class="render-tag">07 · hall clusters</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" alt="08 armchair pair" loading="lazy" /><span class="render-tag">08 · armchair pair</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" alt="09 solo armchair" loading="lazy" /><span class="render-tag">09 · solo corner</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" alt="10 vip semicircle" loading="lazy" /><span class="render-tag">10 · vip semicircle</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" alt="11 vip pov" loading="lazy" /><span class="render-tag">11 · vip → bar</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" alt="12 cellar full wall" loading="lazy" /><span class="render-tag">12 · cellar wall</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" alt="13 bottle wall" loading="lazy" /><span class="render-tag">13 · bottle wall</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" alt="14 ceiling vinyl" loading="lazy" /><span class="render-tag">14 · ceiling ↑</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" alt="15 entrance" loading="lazy" /><span class="render-tag">15 · entrance</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" alt="16 bathroom" loading="lazy" /><span class="render-tag">16 · corridor</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" alt="17 speaker sweet spot" loading="lazy" /><span class="render-tag">17 · sweet spot</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" alt="18 9pm 2700K" loading="lazy" /><span class="render-tag">18 · 9pm · 2700K</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" alt="19 12am 2200K" loading="lazy" /><span class="render-tag">19 · 12am · 2200K</span></a>
-      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" alt="20 2am 1800K" loading="lazy" /><span class="render-tag">20 · 2am · 1800K</span></a>
-    </div>
-    <p class="ex-caption" style="text-align:center;">点击单张图查看大图 · 横向拖动浏览 20 张</p>
-  </section>
-
-  <!-- ===========================================================
-       EXHIBIT 06 — V3 · 3D MODEL CENTREPIECE
-       =========================================================== -->
-  <section class="ex-section centerpiece reveal">
-    <div class="copy">
-      <p class="ex-label">
-        <span data-lang="cn">EXHIBIT 06 — V3.5 · 可走进的房间</span>
-        <span data-lang="en">EXHIBIT 06 — V3.5 · A WALKABLE ROOM</span>
-      </p>
-      <h2 class="brush">
-        <span data-lang="cn">137 MB → 3.49 MB<br/>压成可以加载的样子</span>
-        <span data-lang="en">137 MB → 3.49 MB<br/>compressed until it actually loads</span>
-      </h2>
-
+    <article class="lesson">
+      <span class="num">03</span>
+      <h4>
+        <span data-lang="cn">知道什么时候停, 比做更多更难。</span>
+        <span data-lang="en">Knowing when to stop is harder than making more.</span>
+      </h4>
       <p>
-        <span data-lang="cn">v3.5 把所有 AI 实景图反过来喂给 Microsoft TRELLIS, multidiffusion 融合成一个完整的 GLB 场景。原始模型 137 MB, 浏览器加载到一半 Safari 就崩。用 gltf-transform 加 Draco 几何压缩之后 — <strong>3.49 MB</strong>, 网页可以即时加载。</span>
-        <span data-lang="en">v3.5 fed all the AI scene images back into Microsoft TRELLIS, with multidiffusion fusing them into one complete GLB scene. Raw model: 137 MB — Safari crashed mid-load. After gltf-transform with Draco geometry compression — <strong>3.49 MB</strong>, instant in-browser load.</span>
+        <span data-lang="cn">v3.5 之后再加东西都是反向的 — 让项目"看起来更厉害", 但离它本来要回答的问题更远。v4 决定停下, 是整个项目里我最难做的决定。</span>
+        <span data-lang="en">After v3.5 every addition would have run backwards — making the project look more impressive while pulling it further from the question it was meant to answer. Choosing to stop at v4 was the hardest decision in the whole project.</span>
       </p>
+    </article>
 
-      <p class="muted">
-        <span data-lang="cn">下方是其中一个分镜 (02 · hero wide), 拖动旋转, 滚轮缩放。整间屋子之后会以这种交互方式逐个 section 拼起来。</span>
-        <span data-lang="en">Below is one shot (02 · hero wide) — drag to rotate, scroll to zoom. The entire room will eventually be reassembled section by section through this interaction.</span>
+    <article class="lesson">
+      <span class="num">04</span>
+      <h4>
+        <span data-lang="cn">项目最终的形状, 是知道"再做下去就在撒谎"。</span>
+        <span data-lang="en">The project's final shape is recognising when further work would be a lie.</span>
+      </h4>
+      <p>
+        <span data-lang="cn">这间屋子还没建。所有的渲染、3D、菜单, 都是想象。把它做得"像完成品"就是在撒谎 — 我宁愿这页保持"未完待续"。</span>
+        <span data-lang="en">The room isn't built. Every render, 3D scene, menu is imagined. Polishing it to "look finished" would be a lie — I'd rather this page stay openly unfinished.</span>
       </p>
-    </div>
+    </article>
+  </div>
 
-    <div class="model-frame">
-      <model-viewer
-        src="../assets/whiskey-on-vinyl/model-hero.glb"
-        alt="Whiskey on Vinyl · hero wide 3D 场景"
-        camera-controls
-        touch-action="pan-y"
-        auto-rotate
-        auto-rotate-delay="2000"
-        rotation-per-second="10deg"
-        interaction-prompt="auto"
-        shadow-intensity="0.85"
-        exposure="1.0"
-        environment-image="neutral"
-      ></model-viewer>
-      <div class="model-loading">LOADING SCENE ·</div>
-    </div>
-    <p class="ex-caption" style="text-align:center;">
-      <span data-lang="cn">02 · hero-wide · GLB / Draco compressed · 拖动旋转 · 滚轮缩放</span>
-      <span data-lang="en">02 · hero-wide · GLB / Draco compressed · drag to rotate · scroll to zoom</span>
+  <div class="next-block">
+    <p class="l-eyebrow" style="margin-bottom: 16px;">
+      <span data-lang="cn">下一步 · 等实体, 然后扫</span>
+      <span data-lang="en">NEXT · wait for the room, then scan</span>
     </p>
+    <ul>
+      <li><span data-lang="cn">实体场地落定后, 用 iPhone LiDAR 扫一次, 替换掉所有 AI 渲染。</span><span data-lang="en">Once the physical space lands, scan it with iPhone LiDAR and replace every AI render.</span></li>
+      <li><span data-lang="cn">把 22 分钟的色温变化做成真正会跑的灯光动画 (2700K → 1800K)。</span><span data-lang="en">Build the 22-minute color-temp progression (2700K → 1800K) as an actual running light animation.</span></li>
+      <li><span data-lang="cn">给《完整重建指南》做英文版, 让国外的人也能从零跑通。</span><span data-lang="en">Translate the Full Reconstruction Guide to English so it actually works for non-Chinese readers.</span></li>
+    </ul>
+  </div>
+</section>
 
-    <p class="platform-chain">
-      <span class="killed" data-lang="cn">Three.js 自建场景</span>
-      <span class="killed" data-lang="en">Three.js handbuilt scene</span>
-      <span class="arrow">→</span>
-      <span class="killed" data-lang="cn">Spline 导出 GLB</span>
-      <span class="killed" data-lang="en">Spline GLB export</span>
-      <span class="arrow">→</span>
-      <span class="killed" data-lang="cn">Hunyuan3D · 16 单件</span>
-      <span class="killed" data-lang="en">Hunyuan3D · 16 single objects</span>
-      <span class="arrow">→</span>
-      <span data-lang="cn">TRELLIS · 6 张图融合</span>
-      <span data-lang="en">TRELLIS · 6-image fusion</span>
-      <span class="arrow">→</span>
-      <span>gltf-transform · Draco</span>
-    </p>
-  </section>
-
-  <!-- ===========================================================
-       EXHIBIT 07 — V4 · THE DECISION
-       =========================================================== -->
-  <section class="ex-section decision reveal">
-    <p class="ex-label">
-      <span data-lang="cn">EXHIBIT 07 — V4 · 选择不做</span>
-      <span data-lang="en">EXHIBIT 07 — V4 · CHOOSING NOT TO</span>
-    </p>
-    <h2 class="brush">
-      <span data-lang="cn">3D 暂停。<br/>等真实的房子。</span>
-      <span data-lang="en">3D paused.<br/>Waiting for the real room.</span>
-    </h2>
-
-    <p>
-      <span data-lang="cn">v3.5 之后, 我把 3D 模块封存了。原因是 — 这间屋子终究是要建出来的, 一旦实体空间存在, 用 iPhone LiDAR 扫一次就能得到 100% 真实的模型, 任何"想象的渲染"都会被替代。</span>
-      <span data-lang="en">After v3.5, I shelved the 3D module. The reason — this room will eventually be built, and once a physical space exists, a single iPhone LiDAR scan returns a 100% truthful model. Any "imagined render" gets overwritten.</span>
-    </p>
-
-    <p>
-      <span data-lang="cn">继续在没有实体的阶段堆 AI 模型, 反而是在欺骗访客 "你看到的就是它的样子"。事实是: 还没有人看到。</span>
-      <span data-lang="en">Stacking more AI models without a real space lies to visitors — "this is what it looks like." Truth: no one has seen it yet.</span>
-    </p>
-
-    <p class="muted">
-      <span data-lang="cn">v4.1 把这一切写成 《Whiskey on Vinyl · 完整重建指南》— 一份给未来任何一位接手者 (包括我自己) 可以从零重建整个网站的文档。代码、文案、决策、踩过的坑, 全部记下。</span>
-      <span data-lang="en">v4.1 wrote all of this into <em>Whiskey on Vinyl · A Full Reconstruction Guide</em> — a document any future caretaker (myself included) could use to rebuild the whole site from zero. Code, copy, decisions, mistakes, all logged.</span>
-    </p>
-
-    <blockquote>The discipline isn't making more.<br/>It's knowing when to stop.</blockquote>
-  </section>
-
-  <!-- ===========================================================
-       CTA — step into the live site
-       =========================================================== -->
-  <section class="cta-block reveal">
-    <p class="cta-eyebrow">— Step inside</p>
-    <a class="cta-big" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
-      <span data-lang="cn">走进主站 →</span>
-      <span data-lang="en">Step into the room →</span>
-    </a>
-    <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
-  </section>
-
-</main>
+<section class="cta-block reveal">
+  <p class="cta-eyebrow">— <span data-lang="cn">想看 v2 那只钟在转</span><span data-lang="en">to see the v2 clock actually ticking</span></p>
+  <a class="cta-big" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
+    <span data-lang="cn">走进主站 →</span>
+    <span data-lang="en">step into the live site →</span>
+  </a>
+  <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
+</section>
 
 <footer class="proj-foot">
   <p>Whiskey on Vinyl · a Yao Design Lab project</p>
-  <p>© 2026 Daniel Rong · <a href="../">
-    <span data-lang="cn">返回实验室</span>
-    <span data-lang="en">back to lab</span>
-  </a></p>
+  <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
 </footer>
 
-<!-- floating "step inside" pill — appears after first scroll, sticks bottom-left -->
-<a class="cta-float" id="ctaFloat" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
+<a class="cta-float" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
   <span data-lang="cn">走进主站</span>
-  <span data-lang="en">Step inside</span>
+  <span data-lang="en">step inside</span>
   <span class="arrow">→</span>
 </a>
 
-<!-- language toggle — mirrors index.html, persists via localStorage 'ydl-lang' -->
 <div class="lang-switch" id="langSwitch" aria-label="Language switch">
   <button type="button" data-set-lang="en">EN</button>
   <span class="lang-divider">/</span>
@@ -1144,22 +1163,7 @@
 </div>
 
 <script>
-  /* scroll reveal */
-  (function () {
-    const targets = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
-      targets.forEach(el => el.classList.add('is-in'));
-      return;
-    }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -10% 0px' });
-    targets.forEach(el => io.observe(el));
-  })();
-
-  /* language toggle — synced with index.html via localStorage 'ydl-lang' */
+  /* language toggle (shared ydl-lang) */
   (function () {
     const LANG_KEY = 'ydl-lang';
     function setLang(lang) {
@@ -1175,13 +1179,113 @@
     document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
       b.addEventListener('click', () => setLang(b.dataset.setLang));
     });
-    try {
-      const saved = localStorage.getItem(LANG_KEY);
-      if (saved) setLang(saved);
-    } catch {}
+    try { const s = localStorage.getItem(LANG_KEY); if (s) setLang(s); } catch {}
   })();
 
-  /* floating CTA pill: always visible — no scroll trigger */
+  /* reveal observer for below-stage */
+  (function () {
+    const ts = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { ts.forEach(el => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }});
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    ts.forEach(el => io.observe(el));
+  })();
+
+  /* ---------- scroll-driven scene ---------- */
+  (function () {
+    /* phases:
+       0.00–0.10  WIDE     · bar shot
+       0.10–0.22  PUSH-IN  · zoom toward turntable
+       0.22–0.30  TILT     · cross-fade bar → top-down vinyl
+       0.30–0.94  SPIN     · vinyl rotates · cards 01–06 reveal
+       0.94–1.00  HANDOFF  · vinyl tilts back; outro flow follows */
+    const track   = document.getElementById('scrollTrack');
+    const camBar  = document.getElementById('cameraBar');
+    const sceneBar= document.getElementById('sceneBar');
+    const sceneViny=document.getElementById('sceneVinyl');
+    const vinyl   = document.getElementById('vinyl');
+    const cards   = document.querySelectorAll('.card');
+    const progress= document.getElementById('cardProgress');
+    const dots    = progress.querySelectorAll('.pd');
+    if (!track) return;
+
+    const PUSH_SCALE = 2.6;
+    const PUSH_DY    = -120;
+
+    let lastIdx = -1;
+
+    function smoothstep(a, b, x) {
+      const k = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return k * k * (3 - 2 * k);
+    }
+
+    function onScroll() {
+      const rect = track.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      const t = Math.max(0, Math.min(1, -rect.top / total));
+
+      /* bar camera push-in (0.10–0.22) */
+      let scale = 1, dy = 0;
+      if (t < 0.10) {
+        scale = 1; dy = 0;
+      } else if (t < 0.22) {
+        const p = smoothstep(0.10, 0.22, t);
+        scale = 1 + (PUSH_SCALE - 1) * p;
+        dy = PUSH_DY * p;
+      } else if (t < 0.94) {
+        scale = PUSH_SCALE; dy = PUSH_DY;
+      } else {
+        const p = smoothstep(0.94, 1.00, t);
+        scale = PUSH_SCALE - (PUSH_SCALE - 1) * p;
+        dy = PUSH_DY * (1 - p);
+      }
+      camBar.style.transform = `translate(0, ${dy}px) scale(${scale})`;
+
+      /* TILT cross-fade (0.18–0.32): bar fades out, vinyl fades in */
+      const barOp   = 1 - smoothstep(0.18, 0.30, t);
+      const vinylOp = smoothstep(0.22, 0.34, t);
+      sceneBar.style.opacity = barOp;
+      sceneViny.style.opacity = vinylOp;
+      sceneBar.style.pointerEvents = barOp > 0.4 ? 'auto' : 'none';
+      sceneViny.style.pointerEvents = vinylOp > 0.4 ? 'auto' : 'none';
+      sceneViny.classList.toggle('show', vinylOp > 0.1);
+
+      /* SPIN: vinyl rotates throughout the SPIN phase */
+      if (t > 0.22) {
+        const spinT = Math.max(0, t - 0.22);
+        const deg = spinT * 1440;     // ~4 full rotations across the spin
+        vinyl.style.transform = `rotate(${deg}deg)`;
+      }
+
+      /* CHAPTER cards (0.30–0.94): 6 cards, ~10.6% each */
+      const SPIN_START = 0.30, SPIN_END = 0.94;
+      if (t >= SPIN_START && t <= SPIN_END) {
+        progress.classList.add('show');
+        const inT = (t - SPIN_START) / (SPIN_END - SPIN_START);
+        const idx = Math.min(cards.length - 1, Math.floor(inT * cards.length));
+        if (idx !== lastIdx) {
+          cards.forEach((c, i) => c.classList.toggle('is-in', i === idx));
+          dots .forEach((d, i) => d.classList.toggle('active', i === idx));
+          lastIdx = idx;
+        }
+      } else {
+        progress.classList.remove('show');
+        if (t < SPIN_START) {
+          cards.forEach(c => c.classList.remove('is-in'));
+          lastIdx = -1;
+        }
+        if (t > SPIN_END) {
+          // keep last card visible during handoff
+          cards.forEach((c, i) => c.classList.toggle('is-in', i === cards.length - 1));
+        }
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
+  })();
 </script>
 
 </body>
