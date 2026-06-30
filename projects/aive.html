@@ -166,7 +166,21 @@
     position: absolute; inset: 0;
     transform-origin: 50% 78%;     /* push-in target = phone (in her lap) */
     transform: translate(0, 0) scale(1);
-    will-change: transform;
+    /* DON'T promote to its own layer — Safari caches it as a bitmap then
+       GPU-upscales when we PUSH IN, which is why the phone screen text
+       looked pixelated at the inside-phone phase. Letting the browser
+       re-rasterize dynamically keeps text crisp at all zoom levels. */
+  }
+  /* Phone screen contents stay sharp at any scale */
+  .phone-screen,
+  .phone-page,
+  .pp-bub,
+  .pp-head .nm,
+  .pp-em-grid > div,
+  .pp-bi-col .tag,
+  .pp-tag {
+    image-rendering: -webkit-optimize-contrast;
+    -webkit-font-smoothing: subpixel-antialiased;
   }
   .bedroom { position: absolute; inset: 0; pointer-events: none; }
   .wall {
@@ -1242,8 +1256,8 @@
           <div class="thought t5" data-i="4">
             <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
             <p class="t-text">
-              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。做双语不是翻译, 是<em>让更多人得到爱</em>。</span>
-              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. Going bilingual isn't translation — it's <em>letting more people be loved</em>.</span>
+              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>? 做双语不是翻译, 是<em>让更多人得到爱</em>。</span>
+              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>? Going bilingual isn't translation — it's <em>letting more people be loved</em>.</span>
             </p>
           </div>
         </div>
@@ -1346,10 +1360,8 @@
       <!-- overlay: title + 4 lesson cards + scroll-down hint -->
       <div class="outside-overlay">
         <div class="out-eyebrow">
-          <span data-lang="cn">尾声 · 现在回头看</span>
-          <span data-lang="en">EPILOGUE · LOOKING BACK</span>
-          <span class="muted" data-lang="cn">这 6 个月学到的几件事</span>
-          <span class="muted" data-lang="en">a few things learned over six months</span>
+          <span data-lang="cn">现在回头看</span>
+          <span data-lang="en">LOOKING BACK</span>
         </div>
 
         <article class="lesson-card l1">
