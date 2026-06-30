@@ -140,31 +140,35 @@
     background:
       radial-gradient(ellipse 60% 50% at 50% 30%, rgba(45,27,78,0.5), transparent 70%),
       var(--wov-ink-1);
-    perspective: 1500px;
-    perspective-origin: 50% 60%;
+    perspective: 1600px;
+    perspective-origin: 50% 62%;     /* camera looks at the turntable */
   }
 
   /* ---------- the 3D WORLD container · everything is positioned in 3D space ---------- */
   .world {
     position: absolute; inset: 0;
     transform-style: preserve-3d;
-    /* pivot the camera AROUND the turntable position (60% down the viewport,
-       slightly forward in Z). When we rotate the world around this point,
-       the turntable stays put on screen while the bar swings down behind it. */
-    transform-origin: 50% 60% 60px;
-    transform: rotateX(0deg);
+    /* pivot at the turntable position (50% horizontal, ~62% vertical of
+       viewport — exactly where the vinyl sits on the counter). Rotation +
+       scale happen AROUND this point so the turntable stays planted on
+       screen while the bar tilts down behind it and zooms toward us. */
+    transform-origin: 50% 62% 0;
+    transform: scale(1) rotateX(0deg);
     will-change: transform;
   }
 
-  /* === BACK WALL (vertical plane far back at Z = -700) === */
+  /* === BACK WALL (vertical plane far back at Z = -700)
+         Size compensates for perspective foreshortening — at Z=-700 with
+         perspective 1600, scale factor ≈ 0.7, so plane must be ~1.5× viewport
+         to fill the frame without showing corners. === */
   .wall-plane {
     position: absolute;
-    left: -200px; right: -200px;
-    top: -100px; bottom: -100px;
+    left: -800px; right: -800px;
+    top: -400px; bottom: -400px;
     transform: translateZ(-700px);
     background:
-      radial-gradient(ellipse 50% 35% at 50% 32%, rgba(212,146,58,0.55), rgba(212,146,58,0.10) 40%, transparent 70%),
-      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(45,27,78,0.45), transparent 70%),
+      radial-gradient(ellipse 30% 20% at 50% 38%, rgba(212,146,58,0.55), rgba(212,146,58,0.10) 50%, transparent 75%),
+      radial-gradient(ellipse 60% 50% at 50% 50%, rgba(45,27,78,0.45), transparent 70%),
       linear-gradient(180deg, #1A0E2C 0%, #14082A 60%, #0A0414 100%);
   }
   /* dado rail across the wall */
@@ -1411,15 +1415,17 @@
     /* phases:
        0.00–0.05  WIDE      · bar view, hold a moment
        0.05–0.30  PUSH+TILT · camera pivots AROUND the turntable, tilting
-                              down 72° (matching the counter's intrinsic
-                              -72° so the counter top ends up facing the
-                              camera = looking straight down at the vinyl).
-                              Also pushes in via translateZ.
+                              down +72° (matches counter's intrinsic -72° so
+                              the counter top ends up facing the camera =
+                              we're looking straight down at the vinyl).
+                              Also scales 1 → 1.45 around the same pivot for
+                              the "flying forward" feel. NO translateZ — that
+                              shoved everything past the camera.
        0.30–0.94  ABOVE     · cards reveal in turn; vinyl keeps spinning
        0.94–1.00  HANDOFF   · stay until below content takes over           */
 
-    const TILT_END = 72;
-    const PUSH_Z_END = 220;
+    const TILT_END  = 72;
+    const SCALE_END = 1.45;
 
     let lastIdx = -1;
 
@@ -1434,11 +1440,13 @@
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
       /* camera pivots AROUND the turntable (transform-origin set in CSS).
-         Push-in is on translateZ. No translateY — the pivot does the work. */
+         scale = "fly forward" feel · rotateX = tilt down to look at the
+         counter top. Pivot stays at the turntable so the vinyl never moves
+         off-screen. */
       const camT = smoothstep(0.05, 0.30, t);
       const tilt = TILT_END * camT;
-      const pushZ = PUSH_Z_END * camT;
-      world.style.transform = `translateZ(${pushZ}px) rotateX(${tilt}deg)`;
+      const sc   = 1 + (SCALE_END - 1) * camT;
+      world.style.transform = `scale(${sc}) rotateX(${tilt}deg)`;
 
       /* vinyl spin (continuous, faster while inside-above phase) */
       if (vinyl) {
