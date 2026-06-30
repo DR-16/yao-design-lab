@@ -1425,7 +1425,19 @@
        0.94–1.00  HANDOFF   · stay until below content takes over           */
 
     const TILT_END  = 72;
-    const SCALE_END = 1.45;
+    const SCALE_END = 1.55;
+
+    /* The 3D rotation IS putting the vinyl normal at the camera (math is
+       right). But the wall + lamp + counter-front are still visible at
+       the top of the viewport — that wood cue makes the user feel they're
+       "below a table looking up." Fix: fade these bar elements out as we
+       go above, so the final view is just turntable + vinyl + cards. */
+    const FADE_OUT = [
+      '.wall-plane', '.wall-rail',
+      '.shelves-plane', '.shelf-light.l1', '.shelf-light.l2',
+      '.lamp-wire', '.lamp-shade', '.lamp-bulb', '.lamp-cone',
+      '.counter-front-plane', '.glass-3d', '.music-eq'
+    ].map(s => document.querySelector(s)).filter(Boolean);
 
     /* MEASURE the natural final position of the vinyl, then compute the
        exact translateY needed to drop it onto viewport center. This adapts
@@ -1470,6 +1482,10 @@
       const sc   = 1 + (SCALE_END - 1) * camT;
       const lift = endLift * camT;
       world.style.transform = `translateY(${lift}px) scale(${sc}) rotateX(${tilt}deg)`;
+
+      /* fade out the "still in bar" cues as we tilt overhead */
+      const fade = String(1 - camT);
+      for (const el of FADE_OUT) el.style.opacity = fade;
 
       /* vinyl spin (continuous, faster while inside-above phase) */
       if (vinyl) {
