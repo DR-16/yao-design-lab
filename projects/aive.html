@@ -164,7 +164,7 @@
   }
   .camera {
     position: absolute; inset: 0;
-    transform-origin: 50% 64%;     /* push-in target = phone area */
+    transform-origin: 50% 78%;     /* push-in target = phone (in her lap) */
     transform: translate(0, 0) scale(1);
     will-change: transform;
   }
@@ -274,17 +274,17 @@
   .phone {
     position: absolute;
     left: 50%;
-    top: 56%;
-    width: 188px;
-    height: 336px;
-    transform: translate(-50%, -50%) perspective(1400px) rotateY(-22deg) rotateZ(-4deg);
+    top: 78%;                                    /* in her lap, not chest */
+    width: 124px;                                /* smaller — was 188 */
+    height: 220px;                               /* smaller — was 336 */
+    transform: translate(-50%, -50%) perspective(1400px) rotateY(-10deg) rotateZ(-3deg);
     transform-origin: 50% 50%;
     background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
-    border-radius: 28px;
-    padding: 6px;
+    border-radius: 24px;
+    padding: 5px;
     z-index: 6;
     box-shadow:
-      0 18px 40px rgba(61,44,74,0.45),
+      0 14px 30px rgba(61,44,74,0.42),
       0 0 0 1px rgba(255,255,255,0.05),
       inset 0 1px 0 rgba(255,255,255,0.10);
   }
@@ -1386,8 +1386,8 @@
     const dots     = progress.querySelectorAll('.pd');
     if (!track || !camera) return;
 
-    const PUSH_SCALE = 3.4;
-    const PUSH_DY    = -110;
+    const PUSH_SCALE = 3.0;       /* less aggressive zoom — was 3.4 */
+    const PUSH_DY    = -224;      /* lifts phone from lap (78%) to viewport center */
 
     let lastIdx = -1;
     let lastOutsideShown = false;
