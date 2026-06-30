@@ -10,7 +10,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
 
-<!-- model-viewer for the 3D scene card -->
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 
 <style>
@@ -63,7 +62,6 @@
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
 
-  /* ---------- nav ---------- */
   .proj-nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
@@ -73,10 +71,8 @@
     -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
   .back-link, .nav-brand {
-    font-family: var(--serif-en);
-    font-style: italic;
-    font-size: 14px;
-    letter-spacing: 0.25em;
+    font-family: var(--serif-en); font-style: italic;
+    font-size: 14px; letter-spacing: 0.25em;
     color: var(--wov-paper-dim);
     transition: color 0.25s;
   }
@@ -132,7 +128,7 @@
   @keyframes nudge { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
 
   /* ============================================================
-     SCROLL TRACK
+     SCROLL TRACK · sticky 3D stage
      ============================================================ */
   .scroll-track { position: relative; height: 850vh; }
   .scene-stage {
@@ -141,136 +137,107 @@
     height: 100vh;
     width: 100%;
     overflow: hidden;
-    background: var(--wov-ink-1);
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 30%, rgba(45,27,78,0.5), transparent 70%),
+      var(--wov-ink-1);
+    perspective: 1500px;
+    perspective-origin: 50% 60%;
   }
 
-  .scene-bar, .scene-vinyl {
+  /* ---------- the 3D WORLD container · everything is positioned in 3D space ---------- */
+  .world {
     position: absolute; inset: 0;
-    transition: opacity 0.6s ease;
-  }
-
-  /* ============================================================
-     SCENE A · BAR (faux-3D interior, 3/4 angle)
-     ============================================================ */
-  .scene-bar { z-index: 2; }
-  .camera-bar {
-    position: absolute; inset: 0;
-    transform-origin: 50% 60%;
-    transform: scale(1) translate(0,0);
+    transform-style: preserve-3d;
+    transform: translate3d(0, 0, 0) rotateX(0deg);
     will-change: transform;
   }
 
-  /* deep room atmosphere */
-  .room-bg {
-    position: absolute; inset: 0;
+  /* === BACK WALL (vertical plane far back at Z = -700) === */
+  .wall-plane {
+    position: absolute;
+    left: -200px; right: -200px;
+    top: -100px; bottom: -100px;
+    transform: translateZ(-700px);
     background:
-      /* warm spot from the lamp */
-      radial-gradient(ellipse 28% 22% at 50% 32%, rgba(212,146,58,0.55), rgba(212,146,58,0.10) 40%, transparent 70%),
-      /* back wall vignette */
-      radial-gradient(ellipse 80% 60% at 50% 35%, rgba(45,27,78,0.45), transparent 70%),
-      /* base wall gradient */
-      linear-gradient(180deg, #1A0E2C 0%, #14082A 50%, #0A0414 100%);
+      radial-gradient(ellipse 50% 35% at 50% 32%, rgba(212,146,58,0.55), rgba(212,146,58,0.10) 40%, transparent 70%),
+      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(45,27,78,0.45), transparent 70%),
+      linear-gradient(180deg, #1A0E2C 0%, #14082A 60%, #0A0414 100%);
   }
-  /* dark vignette corners for depth */
-  .room-vignette {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.5) 100%);
-    pointer-events: none;
-  }
-
-  /* horizontal accent stripe (top of wainscoting / dado rail) */
+  /* dado rail across the wall */
   .wall-rail {
     position: absolute;
-    left: 0; right: 0; top: 55%;
+    left: -100px; right: -100px;
+    top: 60%;
     height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(200,155,108,0.35) 30%, rgba(200,155,108,0.35) 70%, transparent);
-    box-shadow: 0 6px 24px rgba(212,146,58,0.10);
+    background: linear-gradient(90deg, transparent, rgba(200,155,108,0.45) 30%, rgba(200,155,108,0.45) 70%, transparent);
+    box-shadow: 0 6px 28px rgba(212,146,58,0.15);
+    transform: translateZ(-690px);
   }
-
-  /* shelves with bottles — using SVG for perspective accuracy */
-  .backbar {
+  /* shelves with bottles (SVG, on the wall) */
+  .shelves-plane {
     position: absolute;
-    left: 8%; right: 8%; top: 18%;
-    height: 36%;
+    left: 8%; right: 8%;
+    top: 16%;
+    height: 38%;
+    transform: translateZ(-690px);
     pointer-events: none;
   }
-  .backbar svg { width: 100%; height: 100%; display: block; overflow: visible; }
-  /* warm under-shelf lighting strip */
+  .shelves-plane svg { width: 100%; height: 100%; display: block; overflow: visible; }
   .shelf-light {
     position: absolute;
     left: 8%; right: 8%;
     height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(212,146,58,0.55) 20%, rgba(212,146,58,0.55) 80%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(212,146,58,0.65) 20%, rgba(212,146,58,0.65) 80%, transparent);
     filter: blur(1px);
-    box-shadow: 0 4px 18px rgba(212,146,58,0.35);
+    box-shadow: 0 4px 22px rgba(212,146,58,0.45);
+    transform: translateZ(-685px);
   }
   .shelf-light.l1 { top: 30%; }
   .shelf-light.l2 { top: 47%; }
 
-  /* hanging brass lamp */
+  /* === HANGING LAMP (in front of wall, between wall and counter) === */
   .lamp-wire {
     position: absolute;
-    top: 0; left: 50%;
-    transform: translateX(-50%);
-    width: 1px; height: 8%;
-    background: rgba(200,155,108,0.45);
+    left: 50%; top: 0;
+    transform: translateX(-50%) translateZ(-300px);
+    width: 1px; height: 9%;
+    background: rgba(200,155,108,0.5);
   }
   .lamp-shade {
     position: absolute;
-    top: 8%; left: 50%;
-    transform: translateX(-50%);
-    width: 76px; height: 38px;
+    left: 50%; top: 9%;
+    transform: translateX(-50%) translateZ(-300px);
+    width: 84px; height: 42px;
     background: linear-gradient(180deg, #6B4A26 0%, #3A2418 100%);
-    border-radius: 8px 8px 38px 38px / 8px 8px 24px 24px;
-    box-shadow:
-      0 4px 10px rgba(0,0,0,0.5),
-      inset 0 -8px 12px rgba(0,0,0,0.4);
+    border-radius: 8px 8px 42px 42px / 8px 8px 28px 28px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.55), inset 0 -8px 14px rgba(0,0,0,0.4);
   }
   .lamp-bulb {
     position: absolute;
-    top: calc(8% + 26px); left: 50%;
-    transform: translateX(-50%);
-    width: 18px; height: 18px;
+    left: 50%; top: 12%;
+    transform: translateX(-50%) translateZ(-298px);
+    width: 20px; height: 20px;
     border-radius: 50%;
     background: radial-gradient(circle, #FFE9B5 0%, #D4923A 60%, transparent 100%);
-    box-shadow: 0 0 32px 12px rgba(212,146,58,0.50);
+    box-shadow: 0 0 36px 14px rgba(212,146,58,0.55);
   }
   .lamp-cone {
     position: absolute;
-    top: 12%; left: 50%;
-    transform: translateX(-50%);
-    width: 440px; height: 45%;
+    left: 50%; top: 13%;
+    transform: translateX(-50%) translateZ(-200px);
+    width: 480px; height: 50%;
     background:
-      radial-gradient(ellipse at 50% 0%, rgba(212,146,58,0.35), rgba(212,146,58,0.08) 40%, transparent 75%);
+      radial-gradient(ellipse at 50% 0%, rgba(212,146,58,0.40), rgba(212,146,58,0.06) 40%, transparent 75%);
     pointer-events: none;
-    filter: blur(3px);
+    filter: blur(4px);
   }
 
-  /* === the BAR COUNTER — drawn with 3D perspective (skewed trapezoid)
-         + a vertical wood front panel so it reads as a real bar === */
-  .bar-counter-top {
+  /* === COUNTER FRONT (vertical wood panel at Z=-100, in front of camera baseline) === */
+  .counter-front-plane {
     position: absolute;
-    left: -8%; right: -8%;
-    bottom: 22%;
-    height: 14%;
-    background:
-      /* wood-grain highlight + base */
-      repeating-linear-gradient(90deg,
-        rgba(0,0,0,0) 0px,
-        rgba(0,0,0,0.06) 26px,
-        rgba(0,0,0,0) 52px),
-      linear-gradient(180deg, #6B4A26 0%, #4A3018 60%, #3A2418 100%);
-    /* trapezoid via clip-path: top edge narrower → perspective */
-    clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
-    box-shadow:
-      0 2px 0 rgba(212,146,58,0.18) inset,
-      0 -16px 30px rgba(212,146,58,0.18);
-  }
-  .bar-counter-front {
-    position: absolute;
-    left: 0; right: 0;
-    bottom: 0; height: 22%;
+    left: -200px; right: -200px;
+    top: 60%; bottom: -100px;
+    transform: translateZ(-100px);
     background:
       repeating-linear-gradient(0deg,
         rgba(0,0,0,0.10) 0px,
@@ -280,168 +247,159 @@
       linear-gradient(180deg, #3A2418 0%, #1F140A 100%);
     box-shadow: inset 0 6px 20px rgba(0,0,0,0.5);
   }
-  /* warm glow reflected on the counter top under the lamp */
-  .counter-spot {
+
+  /* === COUNTER TOP (horizontal plane: rectangle rotated -72deg around its
+         top edge so it recedes away into Z. Things sit on top of it.) === */
+  .counter-top-plane {
     position: absolute;
-    left: 50%; bottom: 30%;
+    left: -200px; right: -200px;
+    top: 60%;
+    height: 700px;
+    transform-origin: 50% 0%;
+    transform: rotateX(-72deg) translateZ(-100px);
+    transform-style: preserve-3d;
+    background:
+      repeating-linear-gradient(0deg,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0.04) 80px,
+        rgba(0,0,0,0) 160px),
+      linear-gradient(0deg, #6B4A26 0%, #4A3018 60%, #2D1B0E 100%);
+    box-shadow:
+      0 -2px 0 rgba(212,146,58,0.18),
+      inset 0 0 60px rgba(212,146,58,0.12);
+  }
+  /* warm pool of lamp light on the counter (a child of counter-top so it
+     inherits the horizontal rotation and looks like an actual reflection) */
+  .counter-pool {
+    position: absolute;
+    left: 50%; top: 80px;
     transform: translateX(-50%);
-    width: 360px; height: 80px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(212,146,58,0.40), transparent 70%);
-    filter: blur(4px);
+    width: 460px; height: 200px;
+    background: radial-gradient(ellipse, rgba(212,146,58,0.55), rgba(212,146,58,0.15) 40%, transparent 75%);
+    filter: blur(8px);
     pointer-events: none;
   }
 
-  /* === TURNTABLE on the counter (centred) === */
-  .turntable {
+  /* === TURNTABLE (a 3D object on the counter top) === */
+  .turntable-3d {
     position: absolute;
-    left: 50%; bottom: 27%;
-    transform: translateX(-50%);
-    width: 300px; height: 210px;
-    background:
-      linear-gradient(180deg, #1F1230 0%, #15092A 100%);
-    border-radius: 14px;
+    left: 50%; top: 50px;
+    transform: translate(-50%, 0) translateZ(20px);
+    transform-style: preserve-3d;
+    width: 340px; height: 230px;
+  }
+  .turntable-base {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #1F1230 0%, #15092A 100%);
+    border-radius: 16px;
     box-shadow:
-      0 32px 48px rgba(0,0,0,0.75),
-      0 0 0 1px rgba(200,155,108,0.20),
+      0 12px 24px rgba(0,0,0,0.55),
+      0 0 0 1px rgba(200,155,108,0.22),
       inset 0 1px 0 rgba(200,155,108,0.22);
-    z-index: 4;
   }
-  .turntable::before {  /* base shadow stretched on the wood */
-    content: ""; position: absolute;
-    left: -20px; right: -20px; bottom: -16px;
-    height: 24px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.6), transparent 70%);
-    filter: blur(8px);
-    z-index: -1;
-  }
-  .turntable .platter {
+  /* the vinyl on the turntable — same plane as counter, spins continuously */
+  .vinyl-3d {
     position: absolute;
     left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: 176px; height: 176px;
+    transform: translate(-50%, -50%) translateZ(4px);
+    width: 200px; height: 200px;
     border-radius: 50%;
     background:
-      radial-gradient(circle at 36% 36%, rgba(200,155,108,0.18), transparent 35%),
-      repeating-radial-gradient(circle, rgba(255,255,255,0.03) 0 1px, transparent 1px 3px),
+      radial-gradient(circle at 36% 36%, rgba(200,155,108,0.16), transparent 35%),
+      repeating-radial-gradient(circle, rgba(255,255,255,0.030) 0 1.5px, transparent 1.5px 4px),
       radial-gradient(circle, #1A0E2C 0%, #0A0414 100%);
     box-shadow:
       0 0 0 4px rgba(14,7,22,0.6),
       0 8px 16px rgba(0,0,0,0.55);
-    animation: spinSlow 12s linear infinite;
+    will-change: transform;
+    transform-origin: center center;
   }
-  @keyframes spinSlow { to { transform: translate(-50%, -50%) rotate(360deg); } }
-  .turntable .label {
+  /* label in the center of the vinyl */
+  .vinyl-label {
     position: absolute;
     left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: 50px; height: 50px;
+    transform: translate(-50%, -50%) translateZ(5px);
+    width: 64px; height: 64px;
     border-radius: 50%;
-    background: radial-gradient(circle, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
+    background: radial-gradient(circle at 30% 30%, rgba(232,221,240,0.15), transparent 50%),
+                linear-gradient(135deg, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
     box-shadow: 0 0 0 2px rgba(14,7,22,0.5), 0 2px 4px rgba(0,0,0,0.4);
-    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--brush);
+    font-size: 11px; line-height: 1.05;
+    color: var(--wov-ink-1);
+    text-align: center;
+    letter-spacing: 0.04em;
   }
-  .turntable .tonearm {
+  .vinyl-spindle {
     position: absolute;
-    right: 22px; top: 32px;
-    width: 100px; height: 4px;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) translateZ(6px);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--wov-ink-1);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+  }
+  /* tonearm sits on the turntable base, slightly raised */
+  .tonearm-3d {
+    position: absolute;
+    right: 22px; top: 30px;
+    transform: translateZ(4px);
+    width: 110px; height: 4px;
     background: linear-gradient(90deg, var(--wov-copper-deep), var(--wov-copper));
     border-radius: 2px;
     transform-origin: 92% 50%;
-    transform: rotate(-30deg);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    z-index: 3;
   }
-  .turntable .tonearm::before {
-    content: ""; position: absolute;
-    left: -12px; top: -6px;
-    width: 16px; height: 16px;
+  .tonearm-pivot {
+    position: absolute;
+    right: 8px; top: 22px;
+    transform: translateZ(6px);
+    width: 18px; height: 18px;
     background: var(--wov-copper-deep);
-    border-radius: 3px;
-  }
-  .turntable .tonearm::after {
-    content: ""; position: absolute;
-    right: -8px; top: -4px;
-    width: 14px; height: 12px;
-    background: var(--wov-copper);
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
   }
 
-  /* whiskey glass on the counter, left of turntable */
-  .glass {
+  /* whiskey glass next to turntable, also on the counter plane */
+  .glass-3d {
     position: absolute;
-    left: 30%; bottom: 25%;
-    width: 58px; height: 78px;
-    background: linear-gradient(180deg, rgba(212,146,58,0.20) 0%, rgba(160,90,40,0.6) 60%, rgba(120,60,20,0.88) 100%);
-    border: 1px solid rgba(200,155,108,0.40);
+    left: 18%; top: 100px;
+    transform: translateZ(2px);
+    width: 62px; height: 82px;
+    background: linear-gradient(180deg, rgba(212,146,58,0.22) 0%, rgba(160,90,40,0.6) 60%, rgba(120,60,20,0.88) 100%);
+    border: 1px solid rgba(200,155,108,0.4);
     border-radius: 6px 6px 12px 12px;
     box-shadow:
-      0 12px 24px rgba(0,0,0,0.55),
+      0 8px 16px rgba(0,0,0,0.55),
       inset 0 -10px 14px rgba(0,0,0,0.30),
       inset 0 2px 0 rgba(255,255,255,0.07);
-    z-index: 5;
   }
-  .glass::before {
+  .glass-3d::before {
     content: ""; position: absolute;
     left: 50%; top: 18%; transform: translateX(-50%);
     width: 72%; height: 4px;
-    background: rgba(212,146,58,0.50);
-    border-radius: 2px;
-    filter: blur(1px);
+    background: rgba(212,146,58,0.50); border-radius: 2px; filter: blur(1px);
   }
-  .glass::after {
+  .glass-3d::after {
     content: ""; position: absolute;
     left: 22%; top: 54%;
     width: 14px; height: 14px;
     background: rgba(255,255,255,0.22);
-    border-radius: 2px;
-    transform: rotate(8deg);
+    border-radius: 2px; transform: rotate(8deg);
     box-shadow: inset 0 0 4px rgba(255,255,255,0.35);
   }
-  /* small puddle reflection under glass */
-  .glass-shadow {
-    position: absolute;
-    left: calc(30% - 6px); bottom: 24.5%;
-    width: 76px; height: 6px;
-    background: radial-gradient(ellipse at center, rgba(212,146,58,0.30), transparent 70%);
-    filter: blur(3px);
-    z-index: 4;
-  }
 
-  /* a bar stool back peeking from the lower-left foreground (depth cue) */
-  .stool {
-    position: absolute;
-    left: -2%; bottom: -2%;
-    width: 18%; height: 28%;
-    background:
-      radial-gradient(ellipse at 50% 0%, #3A2418 60%, transparent 70%),
-      linear-gradient(180deg, transparent 18%, #2A1A0E 18%, #2A1A0E 22%, transparent 22%),
-      linear-gradient(180deg, transparent 30%, #3A2418 30%);
-    pointer-events: none;
-    z-index: 5;
-    opacity: 0.9;
-  }
-  .stool::before {  /* seat top */
-    content: ""; position: absolute;
-    top: 14%; left: 10%; right: 10%;
-    height: 14%;
-    background: radial-gradient(ellipse at 50% 0%, #5C3A22, #3A2418 70%);
-    border-radius: 50%;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-  }
-
-  /* "now playing" mini equalizer just below tonearm */
+  /* "now playing" equalizer */
   .music-eq {
     position: absolute;
-    left: calc(50% + 70px); bottom: calc(27% - 24px);
+    left: 64%; top: 200px;
+    transform: translateZ(4px);
     display: flex; gap: 3px; align-items: flex-end;
-    height: 16px;
-    z-index: 6;
+    height: 18px;
   }
   .music-eq i {
     display: block; width: 2px;
-    background: var(--wov-copper);
-    border-radius: 1px;
+    background: var(--wov-copper); border-radius: 1px;
     animation: eq 0.8s ease-in-out infinite;
   }
   .music-eq i:nth-child(1) { height: 30%; animation-delay: 0.0s; }
@@ -451,143 +409,11 @@
   .music-eq i:nth-child(5) { height: 70%; animation-delay: 0.25s; }
   @keyframes eq { 0%,100% { height: 25%; } 50% { height: 90%; } }
 
-  /* floor visible as a small strip at the very bottom (perspective hint) */
-  .floor {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 4%;
-    background:
-      linear-gradient(180deg, #1A0E08 0%, #08040A 100%);
-    box-shadow: inset 0 4px 10px rgba(0,0,0,0.6);
-  }
-
-  /* ============================================================
-     SCENE B · TOP-DOWN VINYL (after the camera tilts overhead)
-     ============================================================ */
-  .scene-vinyl {
-    z-index: 3;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .scene-vinyl.show { opacity: 1; pointer-events: auto; }
-
-  .vinyl-glow {
-    position: absolute;
-    left: 28%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: 80vh; height: 80vh;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(212,146,58,0.18) 0%, rgba(75,40,120,0.10) 40%, transparent 70%);
-    filter: blur(40px);
-    pointer-events: none;
-  }
-
-  .vinyl-wrap {
-    position: absolute;
-    left: 28%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: min(72vh, 46vw);
-    aspect-ratio: 1;
-  }
-  .vinyl {
-    position: absolute; inset: 0;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 30%, rgba(200,155,108,0.12), transparent 40%),
-      repeating-radial-gradient(circle, rgba(255,255,255,0.025) 0 1.5px, transparent 1.5px 5px),
-      radial-gradient(circle, #1A0E2C 0%, #0A0414 100%);
-    box-shadow:
-      0 40px 80px rgba(0,0,0,0.7),
-      0 0 0 1px rgba(184,160,216,0.08),
-      inset 0 0 80px rgba(0,0,0,0.4);
-    transform-origin: center;
-    will-change: transform;
-  }
-  .vinyl-label {
-    position: absolute;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: 32%; aspect-ratio: 1;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 30%, rgba(232,221,240,0.15), transparent 50%),
-      linear-gradient(135deg, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    box-shadow:
-      0 0 0 3px rgba(14,7,22,0.5),
-      0 8px 16px rgba(0,0,0,0.4),
-      inset 0 0 30px rgba(0,0,0,0.25);
-    pointer-events: none;
-  }
-  .vinyl-label .mark {
-    font-family: var(--brush);
-    font-size: clamp(18px, 2.8vh, 32px);
-    color: var(--wov-ink-1);
-    letter-spacing: 0.08em; line-height: 1.1;
-  }
-  .vinyl-label .side {
-    margin-top: 4px;
-    font-family: var(--mono);
-    font-size: clamp(8px, 1.2vh, 10px);
-    letter-spacing: 0.32em;
-    color: rgba(14,7,22,0.7);
-    text-transform: uppercase;
-  }
-  .vinyl-label .twenty-two {
-    margin-top: 6px;
-    font-family: var(--serif-en); font-style: italic;
-    font-size: clamp(10px, 1.4vh, 12px);
-    color: rgba(14,7,22,0.8);
-  }
-  .vinyl-spindle {
-    position: absolute;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--wov-ink-1);
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
-    z-index: 2;
-  }
-  .vinyl-needle {
-    position: absolute;
-    right: -8%; top: -8%;
-    width: 38%; height: 6px;
-    z-index: 4;
-    pointer-events: none;
-    transform-origin: 100% 50%;
-    transform: rotate(28deg);
-  }
-  .vinyl-needle .arm {
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, var(--wov-copper), var(--wov-copper-deep));
-    border-radius: 3px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-  }
-  .vinyl-needle .pivot {
-    position: absolute;
-    right: -10px; top: -8px;
-    width: 22px; height: 22px;
-    background: var(--wov-copper-deep);
-    border-radius: 50%;
-    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.5);
-  }
-  .vinyl-needle .head {
-    position: absolute;
-    left: -8px; top: -6px;
-    width: 18px; height: 18px;
-    background: var(--wov-copper);
-    border-radius: 4px;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5);
-  }
-
-  /* ---------- chapter cards (image-heavy, right of the vinyl) ---------- */
+  /* ---------- chapter cards (HTML 2D overlay on top of the 3D scene) ---------- */
   .cards-layer {
     position: absolute; inset: 0;
     pointer-events: none;
-    z-index: 5;
+    z-index: 10;
   }
   .card {
     position: absolute;
@@ -595,17 +421,17 @@
     top: 50%;
     transform: translateY(-50%) translateX(20px);
     width: clamp(380px, 42vw, 560px);
-    max-height: 84vh;
+    max-height: 86vh;
     overflow-y: auto;
-    padding: 26px 28px 24px;
-    background: rgba(21, 9, 42, 0.85);
+    padding: 24px 26px 22px;
+    background: rgba(21, 9, 42, 0.86);
     border: 1px solid var(--wov-rule);
     border-radius: 6px;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
-    box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,160,216,0.08);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
     opacity: 0;
-    transition: opacity 0.7s ease, transform 0.7s ease;
+    transition: opacity 0.6s ease, transform 0.6s ease;
     pointer-events: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--wov-smoke) transparent;
@@ -616,15 +442,12 @@
 
   .card .ev {
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.4em;
-    color: var(--wov-copper);
-    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.4em;
+    color: var(--wov-copper); text-transform: uppercase;
     margin-bottom: 10px;
   }
   .card h3 {
-    font-family: var(--brush);
-    font-weight: 400;
+    font-family: var(--brush); font-weight: 400;
     font-size: clamp(22px, 2.2vw, 30px);
     line-height: 1.15;
     color: var(--wov-paper);
@@ -658,29 +481,20 @@
     padding-top: 10px;
     border-top: 1px dashed var(--wov-rule);
     font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.24em;
-    color: var(--wov-paper-dim);
-    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.24em;
+    color: var(--wov-paper-dim); text-transform: uppercase;
     display: flex; gap: 12px; flex-wrap: wrap;
   }
   .card .meta span { color: var(--wov-copper); }
 
-  /* --- card images (assets dominate) --- */
+  /* card image areas */
   .card-img {
-    width: calc(100% + 56px);
-    margin: -26px -28px 18px;
+    width: calc(100% + 52px);
+    margin: -24px -26px 16px;
     background: rgba(0,0,0,0.4);
     border-bottom: 1px solid var(--wov-rule);
   }
-  .card-img.single img {
-    width: 100%; height: auto;
-    max-height: 280px;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-  }
-  /* stacked bizplan: two tilted pages */
+  /* bizplan stack */
   .biz-stack {
     position: relative;
     width: 100%; height: 280px;
@@ -695,44 +509,120 @@
   }
   .biz-stack img.back  { left: 18%; top: 24px; transform: rotate(4deg); opacity: 0.85; }
   .biz-stack img.front { left: 30%; top: 12px; transform: rotate(-2.5deg); z-index: 2; }
-  /* floorplan: one big image */
+  /* floorplan + scene strip */
   .floorplan-img { width: 100%; height: 220px; object-fit: cover; display: block; }
-  /* scene strip: 4 thumbnails in a row */
-  .scene-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 2px;
-    padding: 0;
+  /* === 20-SCENE HORIZONTAL SLIDER === */
+  .scenes-strip-wrap {
+    position: relative;
+    background: rgba(0,0,0,0.4);
+    padding: 10px 0 14px;
   }
-  .scene-strip img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
-  /* menu grid: 3 menu posters side by side */
+  .scenes-strip {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wov-smoke) transparent;
+  }
+  .scenes-strip::-webkit-scrollbar { height: 4px; }
+  .scenes-strip::-webkit-scrollbar-thumb { background: var(--wov-smoke); border-radius: 2px; }
+  .scenes-strip > a {
+    flex: 0 0 auto;
+    width: 170px;
+    aspect-ratio: 16 / 9;
+    scroll-snap-align: start;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--wov-rule);
+    transition: transform 0.3s, border-color 0.3s;
+    display: block;
+    cursor: pointer;
+  }
+  .scenes-strip > a:hover {
+    border-color: var(--wov-copper);
+    transform: translateY(-2px);
+  }
+  .scenes-strip > a img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .scenes-strip > a .num {
+    position: absolute;
+    bottom: 4px; left: 6px;
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.18em;
+    color: var(--wov-paper);
+    background: rgba(14,7,22,0.7);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .scenes-strip-hint {
+    margin: 8px 14px 0;
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.28em;
+    color: var(--wov-paper-dim);
+    text-transform: uppercase;
+    text-align: center;
+  }
+  /* === MENU GRID — clickable, with hover === */
   .menu-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
+    gap: 6px;
     padding: 14px;
     background: rgba(0,0,0,0.5);
   }
-  .menu-grid a { display: block; transition: transform 0.3s; }
-  .menu-grid a:hover { transform: translateY(-3px); }
+  .menu-grid a {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+  }
+  .menu-grid a:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.6), 0 0 20px rgba(200,155,108,0.25);
+  }
   .menu-grid img {
     width: 100%; aspect-ratio: 3/4;
     object-fit: cover;
     box-shadow: 0 6px 14px rgba(0,0,0,0.5);
     border: 1px solid rgba(200,155,108,0.18);
+    display: block;
   }
-  /* 3D model frame */
+  .menu-grid a::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 6px 4px;
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.18em;
+    color: var(--wov-paper);
+    background: linear-gradient(180deg, transparent, rgba(14,7,22,0.92));
+    text-align: center;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .menu-grid a:hover::after { opacity: 1; }
+  /* === 3D model frame · pointer-events handled correctly for drag === */
   .model-frame {
     position: relative;
-    width: 100%; height: 300px;
+    width: 100%; height: 320px;
     background: linear-gradient(180deg, rgba(20,10,40,0.5), rgba(14,7,22,0.6));
     overflow: hidden;
+    touch-action: none;          /* let model-viewer own the gestures */
   }
   .model-frame model-viewer {
     width: 100%; height: 100%;
     --progress-bar-color: var(--wov-copper);
     --progress-bar-height: 2px;
     background: transparent;
+    pointer-events: auto;
+    touch-action: none;
   }
   .model-loading {
     position: absolute; inset: 0;
@@ -744,12 +634,11 @@
     opacity: 0.7;
   }
   model-viewer[loaded] ~ .model-loading { display: none; }
-  /* guide "document stack" visual */
+  /* guide stack */
   .guide-stack {
     position: relative;
     width: 100%; height: 200px;
-    background:
-      linear-gradient(180deg, rgba(45,27,78,0.4), rgba(14,7,22,0.6));
+    background: linear-gradient(180deg, rgba(45,27,78,0.4), rgba(14,7,22,0.6));
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
   }
@@ -763,25 +652,15 @@
     content: ""; position: absolute;
     top: 14px; left: 14px; right: 14px;
     height: 1px;
-    background:
-      linear-gradient(180deg, transparent 0, rgba(45,27,78,0.55) 0, rgba(45,27,78,0.55) 1px,
-        transparent 1px, transparent 10px, rgba(45,27,78,0.55) 10px, rgba(45,27,78,0.55) 11px,
-        transparent 11px, transparent 20px, rgba(45,27,78,0.55) 20px, rgba(45,27,78,0.55) 21px);
+    background: rgba(45,27,78,0.55);
     box-shadow:
-      0 8px 0 rgba(45,27,78,0.55),
-      0 16px 0 rgba(45,27,78,0.55),
-      0 24px 0 rgba(45,27,78,0.55),
-      0 32px 0 rgba(45,27,78,0.55),
-      0 40px 0 rgba(45,27,78,0.55),
-      0 48px 0 rgba(45,27,78,0.55),
-      0 56px 0 rgba(45,27,78,0.55),
-      0 64px 0 rgba(45,27,78,0.55),
-      0 72px 0 rgba(45,27,78,0.55),
-      0 80px 0 rgba(45,27,78,0.55),
-      0 88px 0 rgba(45,27,78,0.55),
-      0 96px 0 rgba(45,27,78,0.55),
-      0 104px 0 rgba(45,27,78,0.55),
-      0 112px 0 rgba(45,27,78,0.55);
+      0 8px 0 rgba(45,27,78,0.55), 0 16px 0 rgba(45,27,78,0.55),
+      0 24px 0 rgba(45,27,78,0.55), 0 32px 0 rgba(45,27,78,0.55),
+      0 40px 0 rgba(45,27,78,0.55), 0 48px 0 rgba(45,27,78,0.55),
+      0 56px 0 rgba(45,27,78,0.55), 0 64px 0 rgba(45,27,78,0.55),
+      0 72px 0 rgba(45,27,78,0.55), 0 80px 0 rgba(45,27,78,0.55),
+      0 88px 0 rgba(45,27,78,0.55), 0 96px 0 rgba(45,27,78,0.55),
+      0 104px 0 rgba(45,27,78,0.55), 0 112px 0 rgba(45,27,78,0.55);
   }
   .guide-stack .doc.b1 { transform: rotate(-6deg) translateX(-30px); opacity: 0.6; }
   .guide-stack .doc.b2 { transform: rotate(3deg)  translateX(0); opacity: 0.85; }
@@ -791,17 +670,15 @@
     right: 16px; bottom: 12px;
     font-family: var(--mono);
     font-size: 9px; letter-spacing: 0.4em;
-    color: var(--wov-copper);
-    text-transform: uppercase;
+    color: var(--wov-copper); text-transform: uppercase;
     z-index: 3;
   }
 
-  /* card progress dots */
   .card-progress {
     position: absolute;
-    left: 28%; bottom: 6%;
+    left: 30%; bottom: 6%;
     transform: translateX(-50%);
-    z-index: 9;
+    z-index: 11;
     display: flex; gap: 10px;
     opacity: 0;
     transition: opacity 0.3s;
@@ -820,7 +697,7 @@
   }
 
   /* ============================================================
-     BELOW STAGE · lessons + cta
+     BELOW STAGE
      ============================================================ */
   .lessons-section {
     position: relative; z-index: 2;
@@ -939,7 +816,6 @@
   .proj-foot a { color: var(--wov-paper); border-bottom: 1px solid var(--wov-rule); transition: color 0.2s, border-color 0.2s; }
   .proj-foot a:hover { color: var(--wov-mist); border-color: var(--wov-mist); }
 
-  /* ---------- lang switch + floating CTA ---------- */
   body.lang-en [data-lang="cn"] { display: none !important; }
   body.lang-cn [data-lang="en"] { display: none !important; }
 
@@ -989,14 +865,14 @@
   .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s, transform 0.9s; }
   .reveal.is-in { opacity: 1; transform: none; }
 
-  /* ---------- responsive ---------- */
   @media (max-width: 720px) {
     .scroll-track { height: auto; }
-    .scene-stage { position: relative; height: auto; padding: 60px 0; min-height: 50vh; }
-    .scene-bar, .scene-vinyl { position: relative; opacity: 1 !important; pointer-events: auto; }
-    .camera-bar { transform: none !important; position: relative; }
-    .vinyl-wrap { position: relative; left: auto; top: auto; transform: none; margin: 30px auto; width: 80vw; }
-    .vinyl-glow { display: none; }
+    .scene-stage { position: relative; height: auto; padding: 60px 0; min-height: 50vh; perspective: none; }
+    .world { transform: none !important; position: relative; }
+    .wall-plane, .counter-front-plane, .counter-top-plane,
+    .lamp-wire, .lamp-shade, .lamp-bulb, .lamp-cone,
+    .shelves-plane, .shelf-light, .wall-rail, .music-eq, .glass-3d { display: none; }
+    .turntable-3d { position: relative; left: auto; top: auto; transform: none; margin: 30px auto; width: 300px; height: 220px; }
     .cards-layer { position: relative; padding: 30px 5vw; }
     .card {
       position: relative !important; opacity: 1 !important;
@@ -1010,7 +886,7 @@
     .cta-float   { left:  14px; bottom: 14px; padding: 11px 18px; font-size: 13px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .vinyl, .music-eq i, .card, .turntable .platter { animation: none !important; transition: none !important; }
+    .vinyl-3d, .music-eq i, .card { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -1038,361 +914,353 @@
     <span data-lang="en">I didn't want to design another bar. I wanted to see — in a city where everything wants you to be faster, in and out, hitting KPIs — whether a room that doesn't rush you could still exist.</span>
   </p>
   <p class="hint">
-    <span data-lang="cn">把唱针放下 · 让它转</span>
-    <span data-lang="en">drop the needle · let it spin</span>
+    <span data-lang="cn">向前推进 · 落到唱片上方</span>
+    <span data-lang="en">push forward · land above the record</span>
     <span class="arr">↓</span>
   </p>
 </section>
 
 
-<!-- ===================== sticky stage ===================== -->
+<!-- ===================== sticky 3D stage ===================== -->
 <div class="scroll-track" id="scrollTrack">
   <div class="scene-stage">
 
-    <!-- ---------- SCENE A · BAR (faux-3D) ---------- -->
-    <div class="scene-bar" id="sceneBar">
-      <div class="camera-bar" id="cameraBar">
-        <div class="room-bg"></div>
+    <div class="world" id="world">
 
-        <!-- back wall: dado rail + light strips + bottle shelves -->
-        <div class="wall-rail"></div>
+      <!-- BACK WALL (far back) -->
+      <div class="wall-plane"></div>
+      <div class="wall-rail"></div>
 
-        <div class="backbar">
-          <svg viewBox="0 0 1000 380" preserveAspectRatio="xMidYMid meet">
-            <!-- two shelves -->
-            <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(200,155,108,0.4)" stroke-width="2"/>
-            <line x1="0" y1="252" x2="1000" y2="252" stroke="rgba(200,155,108,0.4)" stroke-width="2"/>
-            <!-- bottles on shelf 1 -->
-            <g opacity="0.85">
-              <!-- tall liquor bottles -->
-              <rect x="30"  y="40"  width="34" height="78" rx="3" fill="url(#bAmber)"/>
-              <rect x="80"  y="48"  width="28" height="70" rx="3" fill="url(#bSmoke)"/>
-              <rect x="124" y="32"  width="36" height="86" rx="3" fill="url(#bDark)"/>
-              <rect x="176" y="44"  width="30" height="74" rx="3" fill="url(#bAmber)"/>
-              <rect x="222" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
-              <rect x="262" y="36"  width="34" height="82" rx="3" fill="url(#bDark)"/>
-              <rect x="310" y="46"  width="30" height="72" rx="3" fill="url(#bAmber)"/>
-              <rect x="354" y="40"  width="32" height="78" rx="3" fill="url(#bDark)"/>
-              <rect x="400" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
-              <rect x="440" y="34"  width="36" height="84" rx="3" fill="url(#bAmber)"/>
-              <rect x="490" y="46"  width="28" height="72" rx="3" fill="url(#bDark)"/>
-              <rect x="534" y="40"  width="32" height="78" rx="3" fill="url(#bSmoke)"/>
-              <rect x="580" y="48"  width="30" height="70" rx="3" fill="url(#bAmber)"/>
-              <rect x="624" y="34"  width="34" height="84" rx="3" fill="url(#bDark)"/>
-              <rect x="672" y="44"  width="28" height="74" rx="3" fill="url(#bAmber)"/>
-              <rect x="714" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
-              <rect x="752" y="36"  width="32" height="82" rx="3" fill="url(#bDark)"/>
-              <rect x="798" y="46"  width="30" height="72" rx="3" fill="url(#bAmber)"/>
-              <rect x="842" y="40"  width="32" height="78" rx="3" fill="url(#bSmoke)"/>
-              <rect x="888" y="34"  width="34" height="84" rx="3" fill="url(#bAmber)"/>
-              <rect x="936" y="50"  width="26" height="68" rx="3" fill="url(#bDark)"/>
-              <!-- bottle necks -->
-              <g fill="rgba(200,155,108,0.35)">
-                <rect x="42"  y="28"  width="10" height="12"/>
-                <rect x="89"  y="36"  width="10" height="12"/>
-                <rect x="137" y="20"  width="10" height="12"/>
-                <rect x="186" y="32"  width="10" height="12"/>
-                <rect x="230" y="38"  width="10" height="12"/>
-                <rect x="274" y="24"  width="10" height="12"/>
-                <rect x="320" y="34"  width="10" height="12"/>
-                <rect x="365" y="28"  width="10" height="12"/>
-                <rect x="408" y="38"  width="10" height="12"/>
-                <rect x="453" y="22"  width="10" height="12"/>
-                <rect x="500" y="34"  width="10" height="12"/>
-                <rect x="545" y="28"  width="10" height="12"/>
-                <rect x="590" y="36"  width="10" height="12"/>
-                <rect x="636" y="22"  width="10" height="12"/>
-                <rect x="681" y="32"  width="10" height="12"/>
-                <rect x="722" y="38"  width="10" height="12"/>
-                <rect x="763" y="24"  width="10" height="12"/>
-                <rect x="808" y="34"  width="10" height="12"/>
-                <rect x="853" y="28"  width="10" height="12"/>
-                <rect x="900" y="22"  width="10" height="12"/>
-                <rect x="944" y="38"  width="10" height="12"/>
-              </g>
+      <!-- shelves with bottles, on back wall -->
+      <div class="shelves-plane">
+        <svg viewBox="0 0 1000 380" preserveAspectRatio="xMidYMid meet">
+          <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(200,155,108,0.45)" stroke-width="2"/>
+          <line x1="0" y1="252" x2="1000" y2="252" stroke="rgba(200,155,108,0.45)" stroke-width="2"/>
+          <g opacity="0.85">
+            <rect x="30"  y="40"  width="34" height="78" rx="3" fill="url(#bAmber)"/>
+            <rect x="80"  y="48"  width="28" height="70" rx="3" fill="url(#bSmoke)"/>
+            <rect x="124" y="32"  width="36" height="86" rx="3" fill="url(#bDark)"/>
+            <rect x="176" y="44"  width="30" height="74" rx="3" fill="url(#bAmber)"/>
+            <rect x="222" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
+            <rect x="262" y="36"  width="34" height="82" rx="3" fill="url(#bDark)"/>
+            <rect x="310" y="46"  width="30" height="72" rx="3" fill="url(#bAmber)"/>
+            <rect x="354" y="40"  width="32" height="78" rx="3" fill="url(#bDark)"/>
+            <rect x="400" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
+            <rect x="440" y="34"  width="36" height="84" rx="3" fill="url(#bAmber)"/>
+            <rect x="490" y="46"  width="28" height="72" rx="3" fill="url(#bDark)"/>
+            <rect x="534" y="40"  width="32" height="78" rx="3" fill="url(#bSmoke)"/>
+            <rect x="580" y="48"  width="30" height="70" rx="3" fill="url(#bAmber)"/>
+            <rect x="624" y="34"  width="34" height="84" rx="3" fill="url(#bDark)"/>
+            <rect x="672" y="44"  width="28" height="74" rx="3" fill="url(#bAmber)"/>
+            <rect x="714" y="50"  width="26" height="68" rx="3" fill="url(#bSmoke)"/>
+            <rect x="752" y="36"  width="32" height="82" rx="3" fill="url(#bDark)"/>
+            <rect x="798" y="46"  width="30" height="72" rx="3" fill="url(#bAmber)"/>
+            <rect x="842" y="40"  width="32" height="78" rx="3" fill="url(#bSmoke)"/>
+            <rect x="888" y="34"  width="34" height="84" rx="3" fill="url(#bAmber)"/>
+            <rect x="936" y="50"  width="26" height="68" rx="3" fill="url(#bDark)"/>
+            <g fill="rgba(200,155,108,0.35)">
+              <rect x="42"  y="28"  width="10" height="12"/>
+              <rect x="89"  y="36"  width="10" height="12"/>
+              <rect x="137" y="20"  width="10" height="12"/>
+              <rect x="186" y="32"  width="10" height="12"/>
+              <rect x="230" y="38"  width="10" height="12"/>
+              <rect x="274" y="24"  width="10" height="12"/>
+              <rect x="320" y="34"  width="10" height="12"/>
+              <rect x="365" y="28"  width="10" height="12"/>
+              <rect x="408" y="38"  width="10" height="12"/>
+              <rect x="453" y="22"  width="10" height="12"/>
+              <rect x="500" y="34"  width="10" height="12"/>
+              <rect x="545" y="28"  width="10" height="12"/>
+              <rect x="590" y="36"  width="10" height="12"/>
+              <rect x="636" y="22"  width="10" height="12"/>
+              <rect x="681" y="32"  width="10" height="12"/>
+              <rect x="722" y="38"  width="10" height="12"/>
+              <rect x="763" y="24"  width="10" height="12"/>
+              <rect x="808" y="34"  width="10" height="12"/>
+              <rect x="853" y="28"  width="10" height="12"/>
+              <rect x="900" y="22"  width="10" height="12"/>
+              <rect x="944" y="38"  width="10" height="12"/>
             </g>
-            <!-- bottles on shelf 2 (smaller, mixed) -->
-            <g opacity="0.75">
-              <rect x="40"  y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
-              <rect x="84"  y="172" width="32" height="72" rx="3" fill="url(#bAmber)"/>
-              <rect x="130" y="182" width="26" height="62" rx="3" fill="url(#bSmoke)"/>
-              <rect x="170" y="174" width="30" height="70" rx="3" fill="url(#bDark)"/>
-              <rect x="216" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
-              <rect x="258" y="172" width="34" height="72" rx="3" fill="url(#bSmoke)"/>
-              <rect x="306" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
-              <rect x="348" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
-              <rect x="392" y="184" width="26" height="60" rx="3" fill="url(#bSmoke)"/>
-              <rect x="432" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
-              <rect x="478" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
-              <rect x="522" y="172" width="32" height="72" rx="3" fill="url(#bSmoke)"/>
-              <rect x="568" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
-              <rect x="610" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
-              <rect x="654" y="186" width="26" height="58" rx="3" fill="url(#bSmoke)"/>
-              <rect x="694" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
-              <rect x="740" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
-              <rect x="784" y="172" width="32" height="72" rx="3" fill="url(#bSmoke)"/>
-              <rect x="830" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
-              <rect x="872" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
-              <rect x="916" y="184" width="26" height="60" rx="3" fill="url(#bSmoke)"/>
-              <rect x="956" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
-            </g>
-            <!-- bottle gradients -->
-            <defs>
-              <linearGradient id="bAmber" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="rgba(212,146,58,0.2)"/>
-                <stop offset="1" stop-color="rgba(160,120,69,0.55)"/>
-              </linearGradient>
-              <linearGradient id="bSmoke" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="rgba(184,160,216,0.15)"/>
-                <stop offset="1" stop-color="rgba(107,74,140,0.55)"/>
-              </linearGradient>
-              <linearGradient id="bDark" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="rgba(75,40,120,0.20)"/>
-                <stop offset="1" stop-color="rgba(45,27,78,0.65)"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <div class="shelf-light l1"></div>
-        <div class="shelf-light l2"></div>
+          </g>
+          <g opacity="0.7">
+            <rect x="40"  y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
+            <rect x="84"  y="172" width="32" height="72" rx="3" fill="url(#bAmber)"/>
+            <rect x="130" y="182" width="26" height="62" rx="3" fill="url(#bSmoke)"/>
+            <rect x="170" y="174" width="30" height="70" rx="3" fill="url(#bDark)"/>
+            <rect x="216" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
+            <rect x="258" y="172" width="34" height="72" rx="3" fill="url(#bSmoke)"/>
+            <rect x="306" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
+            <rect x="348" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
+            <rect x="392" y="184" width="26" height="60" rx="3" fill="url(#bSmoke)"/>
+            <rect x="432" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
+            <rect x="478" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
+            <rect x="522" y="172" width="32" height="72" rx="3" fill="url(#bSmoke)"/>
+            <rect x="568" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
+            <rect x="610" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
+            <rect x="654" y="186" width="26" height="58" rx="3" fill="url(#bSmoke)"/>
+            <rect x="694" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
+            <rect x="740" y="184" width="28" height="60" rx="3" fill="url(#bAmber)"/>
+            <rect x="784" y="172" width="32" height="72" rx="3" fill="url(#bSmoke)"/>
+            <rect x="830" y="180" width="28" height="64" rx="3" fill="url(#bDark)"/>
+            <rect x="872" y="178" width="30" height="66" rx="3" fill="url(#bAmber)"/>
+            <rect x="916" y="184" width="26" height="60" rx="3" fill="url(#bSmoke)"/>
+            <rect x="956" y="176" width="32" height="68" rx="3" fill="url(#bDark)"/>
+          </g>
+          <defs>
+            <linearGradient id="bAmber" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(212,146,58,0.2)"/>
+              <stop offset="1" stop-color="rgba(160,120,69,0.55)"/>
+            </linearGradient>
+            <linearGradient id="bSmoke" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(184,160,216,0.15)"/>
+              <stop offset="1" stop-color="rgba(107,74,140,0.55)"/>
+            </linearGradient>
+            <linearGradient id="bDark" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(75,40,120,0.20)"/>
+              <stop offset="1" stop-color="rgba(45,27,78,0.65)"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="shelf-light l1"></div>
+      <div class="shelf-light l2"></div>
 
-        <!-- hanging brass lamp -->
-        <div class="lamp-wire"></div>
-        <div class="lamp-shade"></div>
-        <div class="lamp-bulb"></div>
-        <div class="lamp-cone"></div>
+      <!-- HANGING LAMP -->
+      <div class="lamp-wire"></div>
+      <div class="lamp-shade"></div>
+      <div class="lamp-bulb"></div>
+      <div class="lamp-cone"></div>
 
-        <!-- counter (perspective trapezoid top + vertical front) -->
-        <div class="bar-counter-top"></div>
-        <div class="bar-counter-front"></div>
-        <div class="counter-spot"></div>
+      <!-- COUNTER FRONT (vertical) -->
+      <div class="counter-front-plane"></div>
 
-        <!-- whiskey glass + shadow -->
-        <div class="glass-shadow"></div>
-        <div class="glass"></div>
+      <!-- COUNTER TOP (rotated horizontal · everything on top inherits) -->
+      <div class="counter-top-plane">
+        <div class="counter-pool"></div>
 
-        <!-- the TURNTABLE on the counter -->
-        <div class="turntable">
-          <div class="platter">
-            <div class="label"></div>
+        <!-- glass on the counter -->
+        <div class="glass-3d"></div>
+
+        <!-- TURNTABLE -->
+        <div class="turntable-3d">
+          <div class="turntable-base"></div>
+          <div class="vinyl-3d" id="vinyl3d">
+            <div class="vinyl-label">
+              黑胶上的<br/>威士忌
+            </div>
+            <div class="vinyl-spindle"></div>
           </div>
-          <div class="tonearm"></div>
+          <div class="tonearm-3d" style="transform: translateZ(4px) rotate(-30deg);"></div>
+          <div class="tonearm-pivot"></div>
         </div>
 
-        <!-- "now playing" mini equalizer -->
+        <!-- now playing equalizer -->
         <div class="music-eq" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i>
         </div>
-
-        <!-- foreground stool (depth cue) -->
-        <div class="stool"></div>
-
-        <!-- room vignette + floor strip -->
-        <div class="room-vignette"></div>
-        <div class="floor"></div>
       </div>
+
+    </div><!-- /.world -->
+
+    <!-- chapter cards (overlay on top of 3D scene) -->
+    <div class="cards-layer">
+
+      <article class="card" data-i="0">
+        <div class="card-img">
+          <div class="biz-stack">
+            <img class="back"  src="../assets/whiskey-on-vinyl/bizplan-2.png" alt="business plan page 2" loading="lazy"/>
+            <img class="front" src="../assets/whiskey-on-vinyl/bizplan-1.png" alt="business plan page 1" loading="lazy"/>
+          </div>
+        </div>
+        <p class="ev">v1 → v2 · <span data-lang="cn">第一次转向</span><span data-lang="en">first pivot</span></p>
+        <h3>
+          <span data-lang="cn">从"我们卖什么"<br/>到"<em>为什么应该来</em>"</span>
+          <span data-lang="en">From "what we sell"<br/>to "<em>why you'd come</em>"</span>
+        </h3>
+        <p>
+          <span data-lang="cn">v1 是标准独立酒吧 landing page — 主视觉、菜单、地址、预约表单。做完看一眼关掉, 一周没再打开。问题不是它不好看, 是它在解释"我们卖什么", 完全没回答"为什么应该来"。</span>
+          <span data-lang="en">v1 was the standard indie-bar playbook — hero visual, menu, address, reservation form. I finished it, looked at it once, didn't reopen for a week. The problem wasn't that it looked bad — it explained what we sell without ever answering why you'd come.</span>
+        </p>
+        <blockquote>The first draft sold drinks.<br/>This one sells permission.</blockquote>
+        <div class="meta"><span>v1 → v2</span> <span>· 商业计划书 2026.02</span></div>
+      </article>
+
+      <article class="card" data-i="1">
+        <p class="ev">v2.2 · <span data-lang="cn">一根针, 走了三版</span><span data-lang="en">one hand, three drafts</span></p>
+        <h3>
+          <span data-lang="cn">把黑胶<br/>变成<em>一只钟</em></span>
+          <span data-lang="en">Turning vinyl<br/>into <em>a clock</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">22 分钟 — 一张 12 寸黑胶 A 面的长度。这个数字成了整间屋子的设计单位: 灯光渐暗的周期、推荐切下一张唱片的间隔、客人安静坐着不被打扰的最小窗口。</span>
+          <span data-lang="en">22 minutes — one side of a 12-inch vinyl. That number became the design unit of the whole room: dimming cycle, interval before recommending the next record, the minimum window of being-left-alone.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">v2.1 给首屏的黑胶加上真实时间的指针。时针走了三版 — 调酒长匙(太硬) → 苦艾酒匙(有仪式感) → 分针换成水果鸡尾酒签 + 黑橄榄。一根针走三版, 才像个样子。</span>
+          <span data-lang="en">v2.1 gave the hero vinyl real clock hands. The hour hand took three drafts — bar spoon (too hard) → absinthe spoon (ritual) → minute became a cocktail pick + olive. One hand took three drafts before it felt like anything at all.</span>
+        </p>
+        <div class="meta"><span>v2.1.1 → v2.2.1</span> <span>· bar spoon → absinthe → pick</span></div>
+      </article>
+
+      <article class="card" data-i="2">
+        <div class="card-img">
+          <img class="floorplan-img" src="../assets/whiskey-on-vinyl/floorplan.jpg" alt="Sunset Car · floor plan" loading="lazy"/>
+          <div class="scenes-strip-wrap">
+            <div class="scenes-strip">
+              <a href="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" alt="01 floorplan master" loading="lazy"/><span class="num">01</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" alt="02 hero wide" loading="lazy"/><span class="num">02</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" alt="03 bar straight" loading="lazy"/><span class="num">03</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" alt="04 bar side" loading="lazy"/><span class="num">04</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" alt="05 bar tools" loading="lazy"/><span class="num">05</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" alt="06 hall dense" loading="lazy"/><span class="num">06</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" alt="07 hall clusters" loading="lazy"/><span class="num">07</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" alt="08 armchair pair" loading="lazy"/><span class="num">08</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" alt="09 solo corner" loading="lazy"/><span class="num">09</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" alt="10 vip semicircle" loading="lazy"/><span class="num">10</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" alt="11 vip → bar" loading="lazy"/><span class="num">11</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" alt="12 cellar wall" loading="lazy"/><span class="num">12</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" alt="13 bottle wall" loading="lazy"/><span class="num">13</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" alt="14 ceiling vinyl" loading="lazy"/><span class="num">14</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" alt="15 entrance" loading="lazy"/><span class="num">15</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" alt="16 corridor" loading="lazy"/><span class="num">16</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" alt="17 sweet spot" loading="lazy"/><span class="num">17</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" alt="18 9pm 2700K" loading="lazy"/><span class="num">18</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" alt="19 12am 2200K" loading="lazy"/><span class="num">19</span></a>
+              <a href="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" target="_blank" rel="noopener"><img src="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" alt="20 2am 1800K" loading="lazy"/><span class="num">20</span></a>
+            </div>
+            <p class="scenes-strip-hint"><span data-lang="cn">← 横向拖动 · 20 张 · 点击放大 →</span><span data-lang="en">← drag horizontally · 20 scenes · click to expand →</span></p>
+          </div>
+        </div>
+        <p class="ev">v3 · <span data-lang="cn">在没有房子之前</span><span data-lang="en">before the room exists</span></p>
+        <h3>
+          <span data-lang="cn">先把<em>光</em><br/>画出来</span>
+          <span data-lang="en">Paint the <em>light</em><br/>first</span>
+        </h3>
+        <p>
+          <span data-lang="cn">v3 开始想做空间。没实体场地, 所以先在脑子里走一遍 — 入口缓冲、酒柜+音乐总控、主厅、VIP、调酒区、卫生间。所有的尺度、色温、声学吸音参数 (RT60 ≈ 0.4-0.6s) 都先在一张平面图上对齐。</span>
+          <span data-lang="en">v3 turned to space. With no physical site, I had to walk the room in my head first — entrance buffer, cellar + music control, main hall, VIP, bar, restrooms. All scale, color-temp, acoustic absorption (RT60 ≈ 0.4-0.6s) aligned on one floorplan before anything else.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">然后用 FLUX.1-merged 生成 20 张实景渲染 — 9pm 2700K → 12am 2200K → 2am 1800K。代号: 落日飛車。</span>
+          <span data-lang="en">Then FLUX.1-merged generated 20 photoreal renders — 9pm 2700K → 12am 2200K → 2am 1800K. Codename: Sunset Car.</span>
+        </p>
+        <div class="meta"><span>20 scenes</span> <span>· 6 zones</span> <span>· RT60 ≈ 0.4–0.6s</span></div>
+      </article>
+
+      <article class="card" data-i="3">
+        <div class="card-img">
+          <div class="menu-grid">
+            <a href="../assets/whiskey-on-vinyl/menus/drinks.jpg" target="_blank" rel="noopener" data-label="DRINKS · click to expand">
+              <img src="../assets/whiskey-on-vinyl/menus/drinks.jpg" alt="drinks menu" loading="lazy"/>
+            </a>
+            <a href="../assets/whiskey-on-vinyl/menus/snacks.jpg" target="_blank" rel="noopener" data-label="SNACKS · click to expand">
+              <img src="../assets/whiskey-on-vinyl/menus/snacks.jpg" alt="snacks menu" loading="lazy"/>
+            </a>
+            <a href="../assets/whiskey-on-vinyl/menus/shisha.jpg" target="_blank" rel="noopener" data-label="SHISHA · click to expand">
+              <img src="../assets/whiskey-on-vinyl/menus/shisha.jpg" alt="shisha menu" loading="lazy"/>
+            </a>
+          </div>
+        </div>
+        <p class="ev">v3 · <span data-lang="cn">三联菜单</span><span data-lang="en">three menus</span></p>
+        <h3>
+          <span data-lang="cn">这间屋子的语言<br/>写在<em>三张纸</em>上</span>
+          <span data-lang="en">The room's language<br/>lives on <em>three sheets</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">酒单 · 小食单 · 水烟单 — 三份独立的视觉草案, 每一份都做成可印刷的完整页面, 而不是 UI 截图。它们是纸的产物, 不是屏幕的产物。</span>
+          <span data-lang="en">Drinks · snacks · shisha — three separate visual drafts, each shipped as a complete printable page rather than a UI mockup. They are paper artefacts, not screen artefacts.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">点击任一张, 查看完整成品。</span>
+          <span data-lang="en">Click any one to view the full final.</span>
+        </p>
+        <div class="meta"><span>drinks / snacks / shisha</span> <span>· 4 pages each</span></div>
+      </article>
+
+      <article class="card" data-i="4">
+        <div class="card-img">
+          <div class="model-frame">
+            <model-viewer
+              src="../assets/whiskey-on-vinyl/model-hero.glb"
+              alt="Whiskey on Vinyl · 3D scene"
+              camera-controls
+              auto-rotate
+              auto-rotate-delay="800"
+              rotation-per-second="14deg"
+              interaction-prompt="auto"
+              shadow-intensity="0.7"
+              exposure="0.95"
+              environment-image="neutral"
+              touch-action="none"
+              style="pointer-events: auto;"
+            ></model-viewer>
+            <div class="model-loading">LOADING SCENE ·</div>
+          </div>
+        </div>
+        <p class="ev">v3.5 · <span data-lang="cn">工程含量最高的一段</span><span data-lang="en">the engineering moment</span></p>
+        <h3>
+          <span data-lang="cn">137 MB <em>→</em> 3.49 MB</span>
+          <span data-lang="en">137 MB <em>→</em> 3.49 MB</span>
+        </h3>
+        <p>
+          <span data-lang="cn">用 Microsoft TRELLIS 把所有 AI 实景图反过来 multidiffusion 融成一个完整的 GLB 场景。原始模型 137 MB, Safari 加载到一半就崩。用 gltf-transform 加 Draco 几何压缩 — <strong>3.49 MB</strong>, 网页可以即时加载。</span>
+          <span data-lang="en">Microsoft TRELLIS fed all the AI scenes back in and multidiffusion-fused them into one complete GLB. Raw model: 137 MB — Safari crashed mid-load. After gltf-transform + Draco — <strong>3.49 MB</strong>, instant in-browser load.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">先后失败的工作链: Three.js 手搭 → Spline 导出 → Hunyuan3D 单件 → TRELLIS (跑通)。</span>
+          <span data-lang="en">Earlier chains that failed: Three.js handbuilt → Spline export → Hunyuan3D singles → TRELLIS (worked).</span>
+        </p>
+        <div class="meta"><span>TRELLIS · multidiffusion</span> <span>· Draco</span> <span>· <span data-lang="cn">拖动旋转</span><span data-lang="en">drag to rotate</span></span></div>
+      </article>
+
+      <article class="card" data-i="5">
+        <p class="ev">v4 · <span data-lang="cn">选择不做</span><span data-lang="en">choosing not to make more</span></p>
+        <h3>
+          <span data-lang="cn">3D 暂停 — <br/>等<em>真实的</em>房子</span>
+          <span data-lang="en">3D paused —<br/>waiting for the <em>real</em> room</span>
+        </h3>
+        <p>
+          <span data-lang="cn">v3.5 之后, 我把 3D 模块封存了。原因: 这间屋子终究是要建出来的, 一旦实体存在, 用 iPhone LiDAR 扫一次就能得到 100% 真实的模型。任何"想象的渲染"都会被替代。</span>
+          <span data-lang="en">After v3.5, I shelved the 3D module. The reason — this room will eventually be built, and once a physical space exists, one iPhone LiDAR scan gets you a 100% truthful model. Any "imagined render" gets overwritten.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">继续在没有实体的阶段堆 AI 模型, 反而是在欺骗访客"你看到的就是它的样子"。事实是: 还没有人看到。</span>
+          <span data-lang="en">Stacking more AI without a real space is lying to visitors — "this is what it looks like." Truth: no one has seen it yet.</span>
+        </p>
+        <blockquote>The discipline isn't making more.<br/>It's knowing when to stop.</blockquote>
+        <div class="meta"><span>v3.5 → v4.0</span> <span>· stop · wait for LiDAR</span></div>
+      </article>
+
+      <article class="card" data-i="6">
+        <div class="card-img">
+          <div class="guide-stack">
+            <div class="doc b1"></div>
+            <div class="doc b2"></div>
+            <div class="doc b3"></div>
+            <span class="stamp">v4.1 · GUIDE</span>
+          </div>
+        </div>
+        <p class="ev">v4.1 · <span data-lang="cn">写一本完整重建指南</span><span data-lang="en">a full reconstruction guide</span></p>
+        <h3>
+          <span data-lang="cn">把整个项目<br/><em>留给</em>下一个人</span>
+          <span data-lang="en">Hand the whole thing<br/><em>to the next person</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">v4.1 把这一切写成 《Whiskey on Vinyl · 完整重建指南》— 给未来任何一位接手者 (包括我自己) 可以从零重建整个网站的文档。代码、文案、决策、踩过的坑, 全部记下。</span>
+          <span data-lang="en">v4.1 wrote all of it into <em>Whiskey on Vinyl · A Full Reconstruction Guide</em> — a document any future caretaker (myself included) could use to rebuild the whole site from zero. Code, copy, decisions, mistakes, all logged.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">让一个项目可以"被别人重建", 比让它"看起来很厉害"更难。这是 v4 里我最在意的产出。</span>
+          <span data-lang="en">Making a project rebuildable by someone else is harder than making it look impressive. It's the v4 output I care about most.</span>
+        </p>
+        <div class="meta"><span>Markdown · 6000+ lines</span> <span>· hand-written</span></div>
+      </article>
+
     </div>
 
-    <!-- ---------- SCENE B · TOP-DOWN VINYL ---------- -->
-    <div class="scene-vinyl" id="sceneVinyl">
-      <div class="vinyl-glow"></div>
-
-      <div class="vinyl-wrap" id="vinylWrap">
-        <div class="vinyl" id="vinyl"></div>
-        <div class="vinyl-label">
-          <div class="mark">黑胶上的<br/>威士忌</div>
-          <div class="side"><span data-lang="cn">A 面</span><span data-lang="en">Side A</span></div>
-          <div class="twenty-two">22 minutes</div>
-        </div>
-        <div class="vinyl-spindle"></div>
-        <div class="vinyl-needle">
-          <div class="arm"></div>
-          <div class="pivot"></div>
-          <div class="head"></div>
-        </div>
-      </div>
-
-      <!-- chapter cards (image-heavy, right of vinyl) -->
-      <div class="cards-layer">
-
-        <article class="card" data-i="0">
-          <div class="card-img">
-            <div class="biz-stack">
-              <img class="back"  src="../assets/whiskey-on-vinyl/bizplan-2.png" alt="business plan page 2" loading="lazy"/>
-              <img class="front" src="../assets/whiskey-on-vinyl/bizplan-1.png" alt="business plan page 1" loading="lazy"/>
-            </div>
-          </div>
-          <p class="ev">v1 → v2 · <span data-lang="cn">第一次转向</span><span data-lang="en">first pivot</span></p>
-          <h3>
-            <span data-lang="cn">从"我们卖什么"<br/>到"<em>为什么应该来</em>"</span>
-            <span data-lang="en">From "what we sell"<br/>to "<em>why you'd come</em>"</span>
-          </h3>
-          <p>
-            <span data-lang="cn">v1 是标准独立酒吧 landing page — 主视觉、菜单、地址、预约表单。做完看一眼关掉, 一周没再打开。问题不是它不好看, 是它在解释"我们卖什么", 完全没回答"为什么应该来"。</span>
-            <span data-lang="en">v1 was the standard indie-bar playbook — hero visual, menu, address, reservation form. I finished it, looked at it once, didn't reopen for a week. The problem wasn't that it looked bad — it explained what we sell without ever answering why you'd come.</span>
-          </p>
-          <blockquote>The first draft sold drinks.<br/>This one sells permission.</blockquote>
-          <div class="meta"><span>v1 → v2</span> <span>· 商业计划书 2026.02</span></div>
-        </article>
-
-        <article class="card" data-i="1">
-          <p class="ev">v2.2 · <span data-lang="cn">一根针, 走了三版</span><span data-lang="en">one hand, three drafts</span></p>
-          <h3>
-            <span data-lang="cn">把黑胶<br/>变成<em>一只钟</em></span>
-            <span data-lang="en">Turning vinyl<br/>into <em>a clock</em></span>
-          </h3>
-          <p>
-            <span data-lang="cn">22 分钟 — 一张 12 寸黑胶 A 面的长度。这个数字成了整间屋子的设计单位: 灯光渐暗的周期、推荐切下一张唱片的间隔、客人安静坐着不被打扰的最小窗口。</span>
-            <span data-lang="en">22 minutes — one side of a 12-inch vinyl. That number became the design unit of the whole room: dimming cycle, interval before recommending the next record, the minimum window of being-left-alone.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">v2.1 给首屏的黑胶加上真实时间的指针。时针走了三版 — 调酒长匙(太硬) → 苦艾酒匙(有仪式感) → 分针换成水果鸡尾酒签 + 黑橄榄。一根针走三版, 才像。</span>
-            <span data-lang="en">v2.1 gave the hero vinyl real clock hands. The hour hand took three drafts — bar spoon (too hard) → absinthe spoon (ritual) → minute became a cocktail pick + olive. One hand, three drafts before it felt right.</span>
-          </p>
-          <div class="meta"><span>v2.1.1 → v2.2.1</span> <span>· bar spoon → absinthe → pick</span></div>
-        </article>
-
-        <article class="card" data-i="2">
-          <div class="card-img">
-            <img class="floorplan-img" src="../assets/whiskey-on-vinyl/floorplan.jpg" alt="Sunset Car · floor plan" loading="lazy"/>
-            <div class="scene-strip">
-              <img src="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" alt="hero wide scene" loading="lazy"/>
-              <img src="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" alt="vip semicircle" loading="lazy"/>
-              <img src="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" alt="ceiling vinyl" loading="lazy"/>
-              <img src="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" alt="2am 1800K" loading="lazy"/>
-            </div>
-          </div>
-          <p class="ev">v3 · <span data-lang="cn">在没有房子之前</span><span data-lang="en">before the room exists</span></p>
-          <h3>
-            <span data-lang="cn">先把<em>光</em><br/>画出来</span>
-            <span data-lang="en">Paint the <em>light</em><br/>first</span>
-          </h3>
-          <p>
-            <span data-lang="cn">v3 开始想做空间。没实体场地, 所以先在脑子里走一遍 — 入口缓冲、酒柜+音乐总控、主厅、VIP、调酒区、卫生间。所有的尺度、色温、声学吸音参数 (RT60 ≈ 0.4-0.6s) 都先在一张平面图上对齐。</span>
-            <span data-lang="en">v3 turned to space. With no physical site, I had to walk the room in my head first — entrance buffer, cellar + music control, main hall, VIP, bar, restrooms. All scale, color-temp, acoustic absorption (RT60 ≈ 0.4-0.6s) aligned on one floorplan before anything else.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">然后用 FLUX.1-merged 生成 20 张实景渲染 — 9pm 2700K → 12am 2200K → 2am 1800K。代号: 落日飛車。</span>
-            <span data-lang="en">Then FLUX.1-merged generated 20 photoreal renders — 9pm 2700K → 12am 2200K → 2am 1800K. Codename: Sunset Car.</span>
-          </p>
-          <div class="meta"><span>20 scenes</span> <span>· 6 zones</span> <span>· RT60 ≈ 0.4–0.6s</span></div>
-        </article>
-
-        <article class="card" data-i="3">
-          <div class="card-img">
-            <div class="menu-grid">
-              <a href="../assets/whiskey-on-vinyl/menus/drinks.jpg" target="_blank" rel="noopener">
-                <img src="../assets/whiskey-on-vinyl/menus/drinks.jpg" alt="drinks menu" loading="lazy"/>
-              </a>
-              <a href="../assets/whiskey-on-vinyl/menus/snacks.jpg" target="_blank" rel="noopener">
-                <img src="../assets/whiskey-on-vinyl/menus/snacks.jpg" alt="snacks menu" loading="lazy"/>
-              </a>
-              <a href="../assets/whiskey-on-vinyl/menus/shisha.jpg" target="_blank" rel="noopener">
-                <img src="../assets/whiskey-on-vinyl/menus/shisha.jpg" alt="shisha menu" loading="lazy"/>
-              </a>
-            </div>
-          </div>
-          <p class="ev">v3 · <span data-lang="cn">三联菜单</span><span data-lang="en">three menus</span></p>
-          <h3>
-            <span data-lang="cn">这间屋子的语言<br/>写在<em>三张纸</em>上</span>
-            <span data-lang="en">The room's language<br/>lives on <em>three sheets</em></span>
-          </h3>
-          <p>
-            <span data-lang="cn">酒单 · 小食单 · 水烟单 — 三份独立的视觉草案, 每一份都做成可印刷的完整页面, 而不是 UI 截图。它们是纸的产物, 不是屏幕的产物。</span>
-            <span data-lang="en">Drinks · snacks · shisha — three separate visual drafts, each shipped as a complete printable page rather than a UI mockup. They are paper artefacts, not screen artefacts.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">点开任一张, 查看完整成品。</span>
-            <span data-lang="en">Click any one to view the full final.</span>
-          </p>
-          <div class="meta"><span>drinks / snacks / shisha</span> <span>· 4 pages each</span></div>
-        </article>
-
-        <article class="card" data-i="4">
-          <div class="card-img">
-            <div class="model-frame">
-              <model-viewer
-                src="../assets/whiskey-on-vinyl/model-hero.glb"
-                alt="Whiskey on Vinyl · 3D 场景"
-                camera-controls
-                touch-action="pan-y"
-                auto-rotate
-                auto-rotate-delay="800"
-                rotation-per-second="14deg"
-                interaction-prompt="auto"
-                shadow-intensity="0.7"
-                exposure="0.95"
-                environment-image="neutral"
-              ></model-viewer>
-              <div class="model-loading">LOADING SCENE ·</div>
-            </div>
-          </div>
-          <p class="ev">v3.5 · <span data-lang="cn">工程含量最高的一段</span><span data-lang="en">the engineering moment</span></p>
-          <h3>
-            <span data-lang="cn">137 MB <em>→</em> 3.49 MB</span>
-            <span data-lang="en">137 MB <em>→</em> 3.49 MB</span>
-          </h3>
-          <p>
-            <span data-lang="cn">用 Microsoft TRELLIS 把所有 AI 实景图反过来 multidiffusion 融成一个完整的 GLB 场景。原始模型 137 MB, Safari 加载到一半就崩。用 gltf-transform 加 Draco 几何压缩 — <strong>3.49 MB</strong>, 网页可以即时加载。</span>
-            <span data-lang="en">Microsoft TRELLIS fed all the AI scenes back in and multidiffusion-fused them into one complete GLB. Raw model: 137 MB — Safari crashed mid-load. After gltf-transform + Draco — <strong>3.49 MB</strong>, instant in-browser load.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">先后失败的工作链: Three.js 手搭 → Spline 导出 → Hunyuan3D 单件 → TRELLIS (跑通)。</span>
-            <span data-lang="en">Earlier chains that failed: Three.js handbuilt → Spline export → Hunyuan3D singles → TRELLIS (worked).</span>
-          </p>
-          <div class="meta"><span>TRELLIS · multidiffusion</span> <span>· Draco</span> <span>· 拖动旋转</span></div>
-        </article>
-
-        <article class="card" data-i="5">
-          <p class="ev">v4 · <span data-lang="cn">选择不做</span><span data-lang="en">choosing not to make more</span></p>
-          <h3>
-            <span data-lang="cn">3D 暂停 — <br/>等<em>真实的</em>房子</span>
-            <span data-lang="en">3D paused —<br/>waiting for the <em>real</em> room</span>
-          </h3>
-          <p>
-            <span data-lang="cn">v3.5 之后, 我把 3D 模块封存了。原因: 这间屋子终究是要建出来的, 一旦实体存在, 用 iPhone LiDAR 扫一次就能得到 100% 真实的模型。任何"想象的渲染"都会被替代。</span>
-            <span data-lang="en">After v3.5, I shelved the 3D module. The reason — this room will eventually be built, and once a physical space exists, one iPhone LiDAR scan gets you a 100% truthful model. Any "imagined render" gets overwritten.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">继续在没有实体的阶段堆 AI 模型, 反而是在欺骗访客"你看到的就是它的样子"。事实是: 还没有人看到。</span>
-            <span data-lang="en">Stacking more AI without a real space is lying to visitors — "this is what it looks like." Truth: no one has seen it yet.</span>
-          </p>
-          <blockquote>The discipline isn't making more.<br/>It's knowing when to stop.</blockquote>
-          <div class="meta"><span>v3.5 → v4.0</span> <span>· stop · wait for LiDAR</span></div>
-        </article>
-
-        <article class="card" data-i="6">
-          <div class="card-img">
-            <div class="guide-stack">
-              <div class="doc b1"></div>
-              <div class="doc b2"></div>
-              <div class="doc b3"></div>
-              <span class="stamp">v4.1 · GUIDE</span>
-            </div>
-          </div>
-          <p class="ev">v4.1 · <span data-lang="cn">写一本完整重建指南</span><span data-lang="en">a full reconstruction guide</span></p>
-          <h3>
-            <span data-lang="cn">把整个项目<br/><em>留给</em>下一个人</span>
-            <span data-lang="en">Hand the whole thing<br/><em>to the next person</em></span>
-          </h3>
-          <p>
-            <span data-lang="cn">v4.1 把这一切写成 《Whiskey on Vinyl · 完整重建指南》— 给未来任何一位接手者 (包括我自己) 可以从零重建整个网站的文档。代码、文案、决策、踩过的坑, 全部记下。</span>
-            <span data-lang="en">v4.1 wrote all of it into <em>Whiskey on Vinyl · A Full Reconstruction Guide</em> — a document any future caretaker (myself included) could use to rebuild the whole site from zero. Code, copy, decisions, mistakes, all logged.</span>
-          </p>
-          <p class="muted">
-            <span data-lang="cn">让一个项目可以"被别人重建", 比让它"看起来很厉害"更难。这是 v4 里我最在意的产出。</span>
-            <span data-lang="en">Making a project rebuildable by someone else is harder than making it look impressive. It's the v4 output I care about most.</span>
-          </p>
-          <div class="meta"><span>Markdown · 6000+ lines</span> <span>· hand-written</span></div>
-        </article>
-
-      </div>
-
-      <!-- progress dots -->
-      <div class="card-progress" id="cardProgress">
-        <div class="pd active"></div><div class="pd"></div><div class="pd"></div>
-        <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
-      </div>
+    <div class="card-progress" id="cardProgress">
+      <div class="pd active"></div><div class="pd"></div><div class="pd"></div>
+      <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
     </div>
 
   </div><!-- /.scene-stage -->
@@ -1403,8 +1271,8 @@
 <section class="lessons-section reveal">
   <p class="l-eyebrow"><span data-lang="cn">尾声 · 把唱针抬起来</span><span data-lang="en">EPILOGUE · LIFTING THE NEEDLE</span></p>
   <h2 class="l-title">
-    <span data-lang="cn">这张唱片<br/>教<em>我</em>的几件事</span>
-    <span data-lang="en">A few things <em>this record</em><br/>taught me</span>
+    <span data-lang="cn">这张唱片<br/>的<em>意义</em>何在?</span>
+    <span data-lang="en">What does <em>this record</em><br/>actually mean?</span>
   </h2>
 
   <div class="lessons">
@@ -1516,7 +1384,7 @@
     try { const s = localStorage.getItem(LANG_KEY); if (s) setLang(s); } catch {}
   })();
 
-  /* reveal observer for below-stage */
+  /* reveal observer */
   (function () {
     const ts = document.querySelectorAll('.reveal');
     if (!('IntersectionObserver' in window)) { ts.forEach(el => el.classList.add('is-in')); return; }
@@ -1526,20 +1394,26 @@
     ts.forEach(el => io.observe(el));
   })();
 
-  /* ---------- scroll-driven scene ---------- */
+  /* ---------- one continuous 3D camera moving from bar view to top-of-vinyl ---------- */
   (function () {
     const track   = document.getElementById('scrollTrack');
-    const camBar  = document.getElementById('cameraBar');
-    const sceneBar= document.getElementById('sceneBar');
-    const sceneViny=document.getElementById('sceneVinyl');
-    const vinyl   = document.getElementById('vinyl');
+    const world   = document.getElementById('world');
+    const vinyl   = document.getElementById('vinyl3d');
     const cards   = document.querySelectorAll('.card');
     const progress= document.getElementById('cardProgress');
     const dots    = progress.querySelectorAll('.pd');
-    if (!track) return;
+    if (!track || !world) return;
 
-    const PUSH_SCALE = 2.4;
-    const PUSH_DY    = -100;
+    /* phases:
+       0.00–0.05  WIDE      · bar view, hold a moment
+       0.05–0.30  PUSH+TILT · camera pushes forward AND tilts down 70°
+                              ending directly above the turntable
+       0.30–0.94  ABOVE     · vinyl fills the view spinning; 7 cards reveal
+       0.94–1.00  HANDOFF   · stay until below content takes over           */
+
+    const TILT_END = 70;
+    const PUSH_Z_END = 280;
+    const LIFT_Y_END = 60;
 
     let lastIdx = -1;
 
@@ -1553,48 +1427,31 @@
       const total = rect.height - window.innerHeight;
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
-      /* bar camera push-in (0.08–0.20) */
-      let scale = 1, dy = 0;
-      if (t < 0.08) {
-        scale = 1; dy = 0;
-      } else if (t < 0.20) {
-        const p = smoothstep(0.08, 0.20, t);
-        scale = 1 + (PUSH_SCALE - 1) * p;
-        dy = PUSH_DY * p;
-      } else if (t < 0.94) {
-        scale = PUSH_SCALE; dy = PUSH_DY;
-      } else {
-        const p = smoothstep(0.94, 1.00, t);
-        scale = PUSH_SCALE - (PUSH_SCALE - 1) * p;
-        dy = PUSH_DY * (1 - p);
-      }
-      camBar.style.transform = `translate(0, ${dy}px) scale(${scale})`;
+      /* camera: push forward + tilt down in a single continuous move */
+      const camT = smoothstep(0.05, 0.30, t);
+      const tilt = TILT_END * camT;
+      const liftY = LIFT_Y_END * camT;
+      const pushZ = PUSH_Z_END * camT;
+      world.style.transform =
+        `translate3d(0, ${liftY}px, ${pushZ}px) rotateX(${tilt}deg)`;
 
-      /* cross-fade bar → vinyl (0.16–0.28) */
-      const barOp   = 1 - smoothstep(0.16, 0.28, t);
-      const vinylOp = smoothstep(0.20, 0.32, t);
-      sceneBar.style.opacity = barOp;
-      sceneViny.style.opacity = vinylOp;
-      sceneBar.style.pointerEvents = barOp > 0.4 ? 'auto' : 'none';
-      sceneViny.style.pointerEvents = vinylOp > 0.4 ? 'auto' : 'none';
-      sceneViny.classList.toggle('show', vinylOp > 0.1);
-
-      /* vinyl spin */
-      if (t > 0.20) {
-        const spinT = Math.max(0, t - 0.20);
-        const deg = spinT * 1440;
-        vinyl.style.transform = `rotate(${deg}deg)`;
+      /* vinyl spin (continuous, faster while inside-above phase) */
+      if (vinyl) {
+        const baseSpin = t * 720;            // 2 turns across whole page
+        const aboveSpin = Math.max(0, t - 0.30) * 1200;
+        const deg = baseSpin + aboveSpin;
+        vinyl.style.transform = `translate(-50%, -50%) translateZ(4px) rotate(${deg}deg)`;
       }
 
-      /* CHAPTER cards (0.28–0.94): 7 cards, ~9.4% each */
-      const SPIN_START = 0.28, SPIN_END = 0.94;
+      /* CHAPTER cards (0.30–0.94): 7 cards, ~9.1% each */
+      const SPIN_START = 0.30, SPIN_END = 0.94;
       if (t >= SPIN_START && t <= SPIN_END) {
         progress.classList.add('show');
         const inT = (t - SPIN_START) / (SPIN_END - SPIN_START);
         const idx = Math.min(cards.length - 1, Math.floor(inT * cards.length));
         if (idx !== lastIdx) {
           cards.forEach((c, i) => c.classList.toggle('is-in', i === idx));
-          dots .forEach((d, i) => d.classList.toggle('active', i === idx));
+          dots.forEach((d, i) => d.classList.toggle('active', i === idx));
           lastIdx = idx;
         }
       } else {
