@@ -141,7 +141,10 @@
       radial-gradient(ellipse 60% 50% at 50% 30%, rgba(45,27,78,0.5), transparent 70%),
       var(--wov-ink-1);
     perspective: 1600px;
-    perspective-origin: 50% 62%;     /* camera looks at the turntable */
+    /* perspective-origin LOW = camera HIGH (above the bar looking down).
+       Was 62% which read as "below" — now 88% reads as "standing tall
+       looking down at the counter from above." */
+    perspective-origin: 50% 88%;
   }
 
   /* ---------- the BAR scene · stays in 2D, just scales + fades ----------
@@ -239,11 +242,11 @@
     filter: blur(4px);
   }
 
-  /* === COUNTER FRONT (vertical wood panel at Z=-100, in front of camera baseline) === */
+  /* === COUNTER FRONT (vertical wood panel, top edge aligned with counter top) === */
   .counter-front-plane {
     position: absolute;
     left: -200px; right: -200px;
-    top: 60%; bottom: -100px;
+    top: 50%; bottom: -100px;        /* match the new counter-top start */
     transform: translateZ(-100px);
     background:
       repeating-linear-gradient(0deg,
@@ -260,10 +263,13 @@
   .counter-top-plane {
     position: absolute;
     left: -200px; right: -200px;
-    top: 60%;
-    height: 700px;
+    top: 50%;                          /* up from 60% — counter top visible higher */
+    height: 600px;
     transform-origin: 50% 0%;
-    transform: rotateX(-72deg) translateZ(-100px);
+    transform: rotateX(-55deg) translateZ(-100px);
+    /* less rotation: counter top is visible AS a horizontal surface from
+       above-front, not nearly edge-on. Reads as eye-level standing at the
+       bar, not low/below the counter. */
     transform-style: preserve-3d;
     background: transparent;
   }
