@@ -144,17 +144,16 @@
     perspective-origin: 50% 62%;     /* camera looks at the turntable */
   }
 
-  /* ---------- the 3D WORLD container · everything is positioned in 3D space ---------- */
+  /* ---------- the BAR scene · stays in 2D, just scales + fades ----------
+     The previous CSS-3D rotation kept rendering the camera as if it were
+     ducking below the counter (rotateX behaviour under perspective is
+     counterintuitive). Replaced with a clean 2D "walk forward" zoom that
+     hands off to an overhead vinyl element above the scene. */
   .world {
     position: absolute; inset: 0;
-    transform-style: preserve-3d;
-    /* pivot at the turntable position (50% horizontal, ~62% vertical of
-       viewport — exactly where the vinyl sits on the counter). Rotation +
-       scale happen AROUND this point so the turntable stays planted on
-       screen while the bar tilts down behind it and zooms toward us. */
-    transform-origin: 50% 62% 0;
-    transform: scale(1) rotateX(0deg);
-    will-change: transform;
+    transform-origin: 50% 60%;
+    transform: scale(1);
+    will-change: transform, opacity;
   }
 
   /* === BACK WALL (vertical plane far back at Z = -700)
@@ -423,6 +422,95 @@
   .music-eq i:nth-child(4) { height: 45%; animation-delay: 0.1s; }
   .music-eq i:nth-child(5) { height: 70%; animation-delay: 0.25s; }
   @keyframes eq { 0%,100% { height: 25%; } 50% { height: 90%; } }
+
+  /* ---------- OVERHEAD VINYL — the final "we're directly above" view.
+     Scales up from small (matching the bar's turntable size) to large
+     (filling viewport center) as scroll progresses. Spins continuously. */
+  .overhead-vinyl {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: min(75vh, 50vw);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%) scale(0.25);
+    opacity: 0;
+    z-index: 8;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  .oh-vinyl {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(200,155,108,0.16), transparent 38%),
+      repeating-radial-gradient(circle, rgba(255,255,255,0.030) 0 1.5px, transparent 1.5px 5px),
+      radial-gradient(circle, #1A0E2C 0%, #0A0414 100%);
+    box-shadow:
+      0 40px 80px rgba(0,0,0,0.7),
+      0 0 0 1px rgba(184,160,216,0.08),
+      inset 0 0 80px rgba(0,0,0,0.4);
+    will-change: transform;
+  }
+  .oh-label {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32%; aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(232,221,240,0.15), transparent 50%),
+      linear-gradient(135deg, var(--wov-copper) 0%, var(--wov-copper-deep) 70%, #6B4A26 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    box-shadow:
+      0 0 0 3px rgba(14,7,22,0.5),
+      0 8px 16px rgba(0,0,0,0.4),
+      inset 0 0 30px rgba(0,0,0,0.25);
+  }
+  .oh-label .mark {
+    font-family: var(--brush);
+    font-size: clamp(20px, 3vh, 34px);
+    color: var(--wov-ink-1);
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+  }
+  .oh-label .side {
+    margin-top: 4px;
+    font-family: var(--mono);
+    font-size: clamp(8px, 1.2vh, 11px);
+    letter-spacing: 0.32em;
+    color: rgba(14,7,22,0.7);
+    text-transform: uppercase;
+  }
+  .oh-label .twenty-two {
+    margin-top: 6px;
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: clamp(10px, 1.5vh, 13px);
+    color: rgba(14,7,22,0.8);
+  }
+  .oh-spindle {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--wov-ink-1);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+    z-index: 2;
+  }
+  /* warm glow under the overhead vinyl */
+  .oh-glow {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 130%; height: 130%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,146,58,0.22) 0%, rgba(75,40,120,0.10) 40%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: -1;
+  }
 
   /* ---------- chapter cards (HTML 2D overlay on top of the 3D scene) ---------- */
   .cards-layer {
@@ -1078,6 +1166,18 @@
 
     </div><!-- /.world -->
 
+    <!-- OVERHEAD VINYL — appears centered as we "rise above the bar" -->
+    <div class="overhead-vinyl" id="overheadVinyl">
+      <div class="oh-glow"></div>
+      <div class="oh-vinyl" id="ohVinyl"></div>
+      <div class="oh-label">
+        <div class="mark">黑胶上的<br/>威士忌</div>
+        <div class="side"><span data-lang="cn">A 面</span><span data-lang="en">Side A</span></div>
+        <div class="twenty-two">22 minutes</div>
+      </div>
+      <div class="oh-spindle"></div>
+    </div>
+
     <!-- chapter cards (overlay on top of 3D scene) -->
     <div class="cards-layer">
 
@@ -1432,43 +1532,12 @@
        0.30–0.94  ABOVE     · cards reveal in turn; vinyl keeps spinning
        0.94–1.00  HANDOFF   · stay until below content takes over           */
 
-    const TILT_END  = 72;
-    const SCALE_END = 1.55;
-
-    /* The 3D rotation IS putting the vinyl normal at the camera (math is
-       right). But the wall + lamp + counter-front are still visible at
-       the top of the viewport — that wood cue makes the user feel they're
-       "below a table looking up." Fix: fade these bar elements out as we
-       go above, so the final view is just turntable + vinyl + cards. */
-    const FADE_OUT = [
-      '.wall-plane', '.wall-rail',
-      '.shelves-plane', '.shelf-light.l1', '.shelf-light.l2',
-      '.lamp-wire', '.lamp-shade', '.lamp-bulb', '.lamp-cone',
-      '.counter-front-plane', '.counter-wood', '.counter-pool',
-      '.glass-3d', '.music-eq'
-    ].map(s => document.querySelector(s)).filter(Boolean);
-
-    /* MEASURE the natural final position of the vinyl, then compute the
-       exact translateY needed to drop it onto viewport center. This adapts
-       to any viewport size automatically — no magic constants. */
-    const vinylEl = document.querySelector('.vinyl-3d');
-    let endLift = 0;
-    function recomputeEndLift() {
-      if (!vinylEl) return;
-      const before = world.style.transform;
-      // apply the final scale + rotate WITHOUT the lift, force reflow, measure
-      world.style.transform = `scale(${SCALE_END}) rotateX(${TILT_END}deg)`;
-      void world.offsetHeight;
-      const r = vinylEl.getBoundingClientRect();
-      const vinylCenterY = r.top + r.height / 2;
-      endLift = Math.round(window.innerHeight / 2 - vinylCenterY);
-      world.style.transform = before;
-    }
-    window.addEventListener('load',   recomputeEndLift);
-    window.addEventListener('resize', recomputeEndLift);
-    /* run once now in case load already fired */
-    setTimeout(recomputeEndLift, 50);
-    setTimeout(recomputeEndLift, 500);
+    /* New cinematic camera path — two phases, both pure 2D scale + opacity.
+       Phase 1 (WALK):  bar scene scales up subtly (walking forward).
+       Phase 2 (RISE):  bar fades out · overhead vinyl scales up + appears.
+       After Phase 2: only the overhead vinyl is visible, centered, spinning. */
+    const overheadVinyl = document.getElementById('overheadVinyl');
+    const ohVinyl       = document.getElementById('ohVinyl');
 
     let lastIdx = -1;
 
@@ -1482,19 +1551,32 @@
       const total = rect.height - window.innerHeight;
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
-      /* camera pivots AROUND the turntable (transform-origin set in CSS).
-         translateY = camera flies UP above the bar · scale = pushes forward ·
-         rotateX = tilts down to face the counter top. Combined: by the end
-         we're hovering directly above the spinning vinyl. */
-      const camT = smoothstep(0.05, 0.30, t);
-      const tilt = TILT_END * camT;
-      const sc   = 1 + (SCALE_END - 1) * camT;
-      const lift = endLift * camT;
-      world.style.transform = `translateY(${lift}px) scale(${sc}) rotateX(${tilt}deg)`;
+      /* PHASE 1 · WALK FORWARD (0.03 → 0.22):
+         bar scales 1 → 1.35 — feels like camera dollies into the room toward
+         the turntable. Eye-level stays put (no tilt, no Y translation), so
+         we never duck under the counter. */
+      const walkT = smoothstep(0.03, 0.22, t);
+      const barScale = 1 + walkT * 0.35;
 
-      /* fade out the "still in bar" cues as we tilt overhead */
-      const fade = String(1 - camT);
-      for (const el of FADE_OUT) el.style.opacity = fade;
+      /* PHASE 2 · RISE & LOOK DOWN (0.18 → 0.42):
+         bar fades out while the overhead vinyl scales 0.25 → 1.0 and fades
+         in. The overhead vinyl is centered in viewport — there's no way to
+         end up under it. */
+      const riseT = smoothstep(0.18, 0.42, t);
+      const barOp = 1 - riseT;
+      const vScale = 0.25 + riseT * 0.75;
+      const vOp = riseT;
+
+      world.style.transform = `scale(${barScale})`;
+      world.style.opacity = String(barOp);
+      overheadVinyl.style.transform = `translate(-50%, -50%) scale(${vScale})`;
+      overheadVinyl.style.opacity = String(vOp);
+
+      /* overhead vinyl spins continuously through the whole journey */
+      if (ohVinyl) {
+        const spinDeg = t * 720 + Math.max(0, t - 0.30) * 900;
+        ohVinyl.style.transform = `rotate(${spinDeg}deg)`;
+      }
 
       /* vinyl spin (continuous, faster while inside-above phase) */
       if (vinyl) {
