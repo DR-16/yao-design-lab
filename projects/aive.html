@@ -271,28 +271,87 @@
   }
 
   /* ---------- the phone (HTML overlay) — held in front of her, angled toward viewer ---------- */
+  /* .phone is the positioning + perspective wrapper. .phone-flip is the
+     3D card with two faces: BACK (camera cluster, what she shows the world)
+     and FRONT (chat screen, what she actually sees). The flip happens during
+     push-in — the "camera" appears to swing 180° around the phone. */
   .phone {
     position: absolute;
     left: 50%;
-    top: 78%;                                    /* in her lap, not chest */
-    width: 124px;                                /* smaller — was 188 */
-    height: 220px;                               /* smaller — was 336 */
-    transform: translate(-50%, -50%) perspective(1400px) rotateY(-10deg) rotateZ(-3deg);
+    top: 78%;
+    width: 128px;
+    height: 228px;
+    transform: translate(-50%, -50%) rotateZ(-3deg);
     transform-origin: 50% 50%;
-    background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
-    border-radius: 24px;
-    padding: 5px;
     z-index: 6;
+    perspective: 1400px;
+  }
+  .phone-flip {
+    position: relative;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transform: rotateY(0deg);
+    transition: transform 1.1s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .phone-flip.flipped { transform: rotateY(180deg); }
+  .phone-back, .phone-front {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 24px;
     box-shadow:
       0 14px 30px rgba(61,44,74,0.42),
       0 0 0 1px rgba(255,255,255,0.05),
       inset 0 1px 0 rgba(255,255,255,0.10);
   }
+  /* BACK · what we see in the wide shot */
+  .phone-back {
+    background: linear-gradient(135deg, #4A3460 0%, #2B1F36 60%, #1A1024 100%);
+    overflow: hidden;
+  }
+  .phone-back .cam-cluster {
+    position: absolute;
+    top: 12px; left: 12px;
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #1A1024, #0F0818);
+    border-radius: 10px;
+    padding: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .phone-back .cam-cluster .lens {
+    background: radial-gradient(circle at 35% 35%, #5D4A6B, #1A1024 70%);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .phone-back .cam-cluster .lens.flash {
+    background: radial-gradient(circle at 35% 35%, #FFD4DC, #E892A7 70%);
+  }
+  .phone-back .logo {
+    position: absolute;
+    left: 50%; bottom: 24px;
+    transform: translateX(-50%);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: rgba(255,212,220,0.35);
+    text-transform: uppercase;
+  }
+
+  /* FRONT · the screen — only seen after the flip */
+  .phone-front {
+    background: linear-gradient(180deg, #3D2C4A 0%, #2B1F36 100%);
+    padding: 5px;
+    transform: rotateY(180deg);
+  }
   .phone-screen {
     position: relative;
     width: 100%; height: 100%;
     background: #FFF8F0;
-    border-radius: 22px;
+    border-radius: 20px;
     overflow: hidden;
   }
   .phone-screen::before {
@@ -925,13 +984,12 @@
             <circle cx="135" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
             <circle cx="285" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
 
-            <!-- HEAD DOME (skin) — visible round back-of-head shape -->
-            <ellipse cx="215" cy="180" rx="68" ry="76" fill="#FCE0D2"/>
-            <!-- subtle shading on the LEFT side of head (away from viewer) -->
-            <path d="M147 180 Q150 240 195 250 L215 240 Q175 220 162 180 Q150 150 147 180 Z" fill="#F0C8B8" opacity="0.55"/>
-            <!-- small ear peeking on the RIGHT (3/4 turn lets one ear show) -->
-            <ellipse cx="280" cy="190" rx="9" ry="15" fill="#FCE0D2" stroke="#E8B5A0" stroke-width="1"/>
-            <ellipse cx="280" cy="192" rx="4" ry="8" fill="#F0C8B8" opacity="0.6"/>
+            <!-- HEAD DOME (skin) — pure back-of-head, no face features at all.
+                 She's tilted slightly forward looking down at her phone, so the
+                 crown is more visible than a straight-back view. -->
+            <ellipse cx="215" cy="175" rx="66" ry="72" fill="#FCE0D2"/>
+            <!-- subtle nape shadow where neck meets head -->
+            <path d="M170 218 Q215 232 260 218 Q252 240 215 244 Q178 240 170 218 Z" fill="#E8B5A0" opacity="0.35"/>
 
             <!-- HAIR · top cap covering the crown -->
             <path d="M148 178
@@ -977,19 +1035,7 @@
             <!-- collar / hood opening at neck -->
             <ellipse cx="210" cy="262" rx="42" ry="6" fill="#E892A7" opacity="0.55"/>
 
-            <!-- cheek + jaw peeking from behind the hair on the RIGHT side (3/4 turn) -->
-            <path d="M275 200
-                     Q295 218 296 248
-                     Q292 268 278 270
-                     Q268 254 268 220
-                     Q268 205 275 200 Z"
-                  fill="#FCE0D2"/>
-            <!-- soft blush on the visible cheek -->
-            <ellipse cx="284" cy="240" rx="8" ry="5" fill="#FFB7C5" opacity="0.6"/>
-            <!-- eyelash / closed eye hint -->
-            <path d="M278 218 Q284 222 290 218" stroke="#3D2C4A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-            <!-- corner of smile peeking -->
-            <path d="M286 252 Q289 256 292 254" stroke="#D4517B" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <!-- (no face peek — pure back view, smile conveyed by body language + heart) -->
 
             <!-- LEFT shoulder/arm (far side from our view) -->
             <path d="M120 318 Q100 340 108 388 Q115 410 142 414 L182 396 Q172 374 170 340 Z" fill="#FFB7C5"/>
@@ -1008,8 +1054,23 @@
           </svg>
         </div>
 
-        <!-- THE PHONE (sibling of girl-wrap, position relative to .camera) -->
+        <!-- THE PHONE — flip card. BACK (camera cluster) shown in wide view;
+             the card rotates 180° during push-in to reveal the FRONT (screen). -->
         <div class="phone" id="phone">
+        <div class="phone-flip" id="phoneFlip">
+          <!-- BACK side: what someone sitting opposite her would see -->
+          <div class="phone-back">
+            <div class="cam-cluster">
+              <div class="lens"></div>
+              <div class="lens"></div>
+              <div class="lens"></div>
+              <div class="lens flash"></div>
+            </div>
+            <div class="logo">AIve</div>
+          </div>
+
+          <!-- FRONT side: the actual screen she's looking at -->
+          <div class="phone-front">
           <div class="phone-screen" id="phoneScreen">
 
             <!-- Page 1: live chat -->
@@ -1121,7 +1182,9 @@
             </div>
 
           </div>
-        </div>
+          </div><!-- /.phone-front -->
+        </div><!-- /.phone-flip -->
+        </div><!-- /.phone -->
 
         <!-- thought bubbles around her head (5, cascade in one by one) -->
         <div class="thoughts" id="thoughts">
@@ -1156,8 +1219,8 @@
           <div class="thought t5" data-i="4">
             <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
             <p class="t-text">
-              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。做双语不是翻译, 是身份。</span>
-              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. Going bilingual isn't translation, it's identity.</span>
+              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。做双语不是翻译, 是<em>让更多人得到爱</em>。</span>
+              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. Going bilingual isn't translation — it's <em>letting more people be loved</em>.</span>
             </p>
           </div>
         </div>
@@ -1402,6 +1465,7 @@
     const pages    = document.querySelectorAll('.phone-page');
     const progress = document.getElementById('phoneProgress');
     const dots     = progress.querySelectorAll('.pd');
+    const phoneFlip= document.getElementById('phoneFlip');
     if (!track || !camera) return;
 
     const PUSH_SCALE = 3.0;       /* less aggressive zoom — was 3.4 */
@@ -1451,6 +1515,11 @@
         scale = 1; dy = 0;
       }
       camera.style.transform = `translate(0, ${dy}px) scale(${scale})`;
+
+      /* PHONE FLIP · flips to "front" (screen visible) once push-in begins,
+         flips back to "back" (camera visible) as we pull out at the end */
+      const shouldFlip = t >= 0.26 && t < 0.70;
+      if (phoneFlip) phoneFlip.classList.toggle('flipped', shouldFlip);
 
       /* INSIDE phase · cycle phone pages */
       if (t >= 0.36 && t <= 0.62) {
