@@ -925,28 +925,42 @@
             <circle cx="135" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
             <circle cx="285" cy="498" r="17" fill="#FFB7C5" opacity="0.7"/>
 
-            <!-- LONG hair, falling down her back (the dominant shape) -->
-            <path d="M120 200
-                     Q105 110 210 95
-                     Q315 110 305 215
-                     Q318 330 305 420
-                     Q295 480 260 490
-                     Q230 460 210 460
-                     Q190 460 160 490
-                     Q125 480 115 420
-                     Q102 330 120 200 Z"
+            <!-- HEAD DOME (skin) — visible round back-of-head shape -->
+            <ellipse cx="215" cy="180" rx="68" ry="76" fill="#FCE0D2"/>
+            <!-- subtle shading on the LEFT side of head (away from viewer) -->
+            <path d="M147 180 Q150 240 195 250 L215 240 Q175 220 162 180 Q150 150 147 180 Z" fill="#F0C8B8" opacity="0.55"/>
+            <!-- small ear peeking on the RIGHT (3/4 turn lets one ear show) -->
+            <ellipse cx="280" cy="190" rx="9" ry="15" fill="#FCE0D2" stroke="#E8B5A0" stroke-width="1"/>
+            <ellipse cx="280" cy="192" rx="4" ry="8" fill="#F0C8B8" opacity="0.6"/>
+
+            <!-- HAIR · top cap covering the crown -->
+            <path d="M148 178
+                     Q145 110 215 92
+                     Q282 110 282 178
+                     Q278 150 260 134
+                     Q230 118 215 118
+                     Q200 118 170 134
+                     Q152 150 148 178 Z"
                   fill="#7B5B9B"/>
-            <!-- hair shading right side (the side we see slightly) -->
-            <path d="M210 95
-                     Q315 110 305 215
-                     Q318 330 305 420
-                     Q295 480 260 490
-                     Q235 460 215 458
-                     L210 95 Z"
-                  fill="#5E3F7B" opacity="0.55"/>
-            <!-- hair highlight strand on the back -->
-            <path d="M180 130 Q200 240 195 380" stroke="#9B7CB6" stroke-width="3" fill="none" opacity="0.4"/>
-            <path d="M230 130 Q245 240 240 380" stroke="#9B7CB6" stroke-width="3" fill="none" opacity="0.4"/>
+
+            <!-- HAIR · long back, flowing down past shoulders -->
+            <path d="M148 178
+                     Q120 250 130 420
+                     Q138 480 168 488
+                     Q195 462 215 462
+                     Q235 462 262 488
+                     Q292 480 300 420
+                     Q310 250 282 178
+                     Q295 280 270 380
+                     L160 380
+                     Q135 280 148 178 Z"
+                  fill="#7B5B9B"/>
+            <!-- hair shading on right side -->
+            <path d="M215 92 Q282 110 282 178 Q310 250 300 420 Q292 480 262 488 Q240 460 218 460 L215 92 Z"
+                  fill="#5E3F7B" opacity="0.4"/>
+            <!-- highlight strands -->
+            <path d="M195 145 Q205 260 200 400" stroke="#9B7CB6" stroke-width="2.5" fill="none" opacity="0.35"/>
+            <path d="M235 145 Q240 260 240 400" stroke="#9B7CB6" stroke-width="2.5" fill="none" opacity="0.35"/>
 
             <!-- body (sweater) from behind — shows back/shoulders -->
             <path d="M115 305
@@ -963,15 +977,19 @@
             <!-- collar / hood opening at neck -->
             <ellipse cx="210" cy="262" rx="42" ry="6" fill="#E892A7" opacity="0.55"/>
 
-            <!-- a sliver of cheek peeking from behind hair on the RIGHT side -->
-            <path d="M278 200
-                     Q290 215 290 235
-                     Q288 250 278 252
-                     Q272 240 272 218
-                     Q272 205 278 200 Z"
+            <!-- cheek + jaw peeking from behind the hair on the RIGHT side (3/4 turn) -->
+            <path d="M275 200
+                     Q295 218 296 248
+                     Q292 268 278 270
+                     Q268 254 268 220
+                     Q268 205 275 200 Z"
                   fill="#FCE0D2"/>
-            <!-- tiny eyelash hint on cheek -->
-            <path d="M280 220 Q284 222 286 226" stroke="#3D2C4A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <!-- soft blush on the visible cheek -->
+            <ellipse cx="284" cy="240" rx="8" ry="5" fill="#FFB7C5" opacity="0.6"/>
+            <!-- eyelash / closed eye hint -->
+            <path d="M278 218 Q284 222 290 218" stroke="#3D2C4A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <!-- corner of smile peeking -->
+            <path d="M286 252 Q289 256 292 254" stroke="#D4517B" stroke-width="1.6" fill="none" stroke-linecap="round"/>
 
             <!-- LEFT shoulder/arm (far side from our view) -->
             <path d="M120 318 Q100 340 108 388 Q115 410 142 414 L182 396 Q172 374 170 340 Z" fill="#FFB7C5"/>
@@ -1138,8 +1156,8 @@
           <div class="thought t5" data-i="4">
             <p class="t-eyebrow">v4 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third pivot</span></p>
             <p class="t-text">
-              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。i18n 不是翻译, 是身份。</span>
-              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. i18n is identity.</span>
+              <span data-lang="cn">中文她叫小爱, <em>英文她叫什么</em>。做双语不是翻译, 是身份。</span>
+              <span data-lang="en">In Chinese she's 小爱 — <em>what's her name in English</em>. Going bilingual isn't translation, it's identity.</span>
             </p>
           </div>
         </div>
