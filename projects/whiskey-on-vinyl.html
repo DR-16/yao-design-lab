@@ -1426,12 +1426,28 @@
 
     const TILT_END  = 72;
     const SCALE_END = 1.45;
-    /* After the tilt+scale, the vinyl naturally lands ~36% of viewport
-       below center because the counter geometry pushes it downward. Lift
-       the world up by that amount so the vinyl ends EXACTLY at viewport
-       center — that's what makes the final view read as "directly above
-       the turntable" instead of "below the bar looking up." */
-    function liftEnd() { return -Math.round(window.innerHeight * 0.362); }
+
+    /* MEASURE the natural final position of the vinyl, then compute the
+       exact translateY needed to drop it onto viewport center. This adapts
+       to any viewport size automatically — no magic constants. */
+    const vinylEl = document.querySelector('.vinyl-3d');
+    let endLift = 0;
+    function recomputeEndLift() {
+      if (!vinylEl) return;
+      const before = world.style.transform;
+      // apply the final scale + rotate WITHOUT the lift, force reflow, measure
+      world.style.transform = `scale(${SCALE_END}) rotateX(${TILT_END}deg)`;
+      void world.offsetHeight;
+      const r = vinylEl.getBoundingClientRect();
+      const vinylCenterY = r.top + r.height / 2;
+      endLift = Math.round(window.innerHeight / 2 - vinylCenterY);
+      world.style.transform = before;
+    }
+    window.addEventListener('load',   recomputeEndLift);
+    window.addEventListener('resize', recomputeEndLift);
+    /* run once now in case load already fired */
+    setTimeout(recomputeEndLift, 50);
+    setTimeout(recomputeEndLift, 500);
 
     let lastIdx = -1;
 
@@ -1452,7 +1468,7 @@
       const camT = smoothstep(0.05, 0.30, t);
       const tilt = TILT_END * camT;
       const sc   = 1 + (SCALE_END - 1) * camT;
-      const lift = liftEnd() * camT;
+      const lift = endLift * camT;
       world.style.transform = `translateY(${lift}px) scale(${sc}) rotateX(${tilt}deg)`;
 
       /* vinyl spin (continuous, faster while inside-above phase) */
