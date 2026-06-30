@@ -1576,50 +1576,82 @@
     ts.forEach(el => io.observe(el));
   })();
 
-  /* ---------- make interactive elements actually interactive ---------- */
-  /* (1) scenes-strip: mouse-drag horizontal scroll + wheel→horizontal */
+  /* ---------- make interactive elements actually interactive ----------
+     Safari-specific gotchas worked around here:
+     · <img> drags as a "save to desktop" operation by default — that
+       hijacks the mousedown before our handler can react. Need to
+       suppress dragstart on every image in the interactive zones.
+     · Use POINTER events (work on mouse, trackpad, touch uniformly)
+       not separate mouse + touch handlers.
+     · setPointerCapture so the drag continues even when the cursor
+       leaves the strip mid-drag.                                       */
+
+  /* (1) scenes-strip: drag horizontally with mouse / trackpad / finger */
   document.querySelectorAll('.scenes-strip').forEach((strip) => {
-    let down = false, startX = 0, startScroll = 0, moved = false;
-    strip.addEventListener('mousedown', (e) => {
-      down = true; moved = false;
-      startX = e.pageX;
+    strip.style.cursor = 'grab';
+    strip.style.userSelect = 'none';
+    strip.style.webkitUserSelect = 'none';
+    // kill the native "drag image to desktop" behaviour
+    strip.querySelectorAll('img, a').forEach((el) => {
+      el.setAttribute('draggable', 'false');
+      el.style.webkitUserDrag = 'none';
+      el.addEventListener('dragstart', (e) => e.preventDefault());
+    });
+
+    let pid = null, startX = 0, startScroll = 0, moved = false;
+    strip.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;     // left only
+      pid = e.pointerId;
+      moved = false;
+      startX = e.clientX;
       startScroll = strip.scrollLeft;
       strip.style.cursor = 'grabbing';
+      try { strip.setPointerCapture(pid); } catch {}
       e.preventDefault();
     });
-    strip.addEventListener('mousemove', (e) => {
-      if (!down) return;
-      const dx = e.pageX - startX;
+    strip.addEventListener('pointermove', (e) => {
+      if (pid === null || e.pointerId !== pid) return;
+      const dx = e.clientX - startX;
       if (Math.abs(dx) > 4) moved = true;
       strip.scrollLeft = startScroll - dx * 1.4;
     });
-    const release = () => { down = false; strip.style.cursor = ''; };
-    strip.addEventListener('mouseup', release);
-    strip.addEventListener('mouseleave', release);
-    // prevent navigation when drag-clicking
+    const release = (e) => {
+      if (pid === null) return;
+      try { strip.releasePointerCapture(pid); } catch {}
+      pid = null;
+      strip.style.cursor = 'grab';
+    };
+    strip.addEventListener('pointerup', release);
+    strip.addEventListener('pointercancel', release);
+    strip.addEventListener('lostpointercapture', release);
+
+    // suppress click navigation if a drag happened
     strip.querySelectorAll('a').forEach(a => {
-      a.addEventListener('click', (e) => { if (moved) e.preventDefault(); });
+      a.addEventListener('click', (e) => { if (moved) { e.preventDefault(); moved = false; } });
     });
-    // vertical wheel → horizontal scroll on this strip; DON'T bubble to page
+
+    // vertical wheel → horizontal scroll, eat the event
     strip.addEventListener('wheel', (e) => {
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       const max = strip.scrollWidth - strip.clientWidth;
-      const next = Math.max(0, Math.min(max, strip.scrollLeft + delta));
       if ((delta < 0 && strip.scrollLeft > 0) || (delta > 0 && strip.scrollLeft < max)) {
         e.preventDefault();
         e.stopPropagation();
-        strip.scrollLeft = next;
+        strip.scrollLeft = Math.max(0, Math.min(max, strip.scrollLeft + delta));
       }
     }, { passive: false });
   });
 
-  /* (2) model-viewer: wheel + pointer events must NOT bubble to page scroll
-         (otherwise dragging on the model just scrolls the page) */
+  /* (2) model-viewer: same pointer-capture approach — stop bubbling so the
+     drag rotates the model instead of doing nothing / scrolling the page */
   document.querySelectorAll('.model-frame').forEach((frame) => {
-    const stop = (e) => e.stopPropagation();
-    ['wheel', 'pointerdown', 'pointermove', 'mousedown', 'touchstart', 'touchmove'].forEach(evt => {
-      frame.addEventListener(evt, stop, { passive: false });
-    });
+    frame.style.cursor = 'grab';
+    // keep events on the model-viewer itself; just stop them from
+    // reaching the parent card and the page
+    const swallow = (e) => e.stopPropagation();
+    ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove',
+     'mouseup', 'touchstart', 'touchmove', 'touchend', 'wheel'
+    ].forEach(evt => frame.addEventListener(evt, swallow, { passive: false }));
   });
 
   /* (3) cards themselves: vertical wheel scrolls their inner content when
