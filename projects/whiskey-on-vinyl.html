@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Whiskey on Vinyl · Behind the room — Yao Design Lab</title>
+<meta name="theme-color" content="#0E0716" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+
+<!-- <model-viewer> for the GLB centrepiece -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+<style>
+  /* =================================================================
+     Whiskey on Vinyl · Behind the Room
+     Editorial / exhibition layout. Each section is one "exhibit" — an
+     artefact (logo, plan, render, 3D model, screenshot) with a museum
+     label and a paragraph or two of context. WoV palette + brush type.
+     ================================================================= */
+  :root {
+    --wov-ink-1: #0E0716;
+    --wov-ink-2: #15092A;
+    --wov-plum:  #2D1B4E;
+    --wov-smoke: #6B4A8C;
+    --wov-mist:  #B8A0D8;
+    --wov-paper: #E8DDF0;
+    --wov-paper-dim: #C4B5D4;
+    --wov-copper:#C89B6C;
+    --wov-rule:  rgba(184,160,216,0.18);
+
+    --brush:    "Ma Shan Zheng", "STKaiti", "KaiTi", "楷体", cursive;
+    --serif-zh: "Noto Serif SC", "Songti SC", "STSong", serif;
+    --serif-en: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+    --mono:     "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--wov-ink-1);
+    color: var(--wov-paper);
+    font-family: var(--serif-zh);
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  ::selection { background: var(--wov-smoke); color: var(--wov-paper); }
+
+  /* ---------- ambient layers ---------- */
+  .ambient { position: fixed; pointer-events: none; }
+  .grain {
+    inset: 0;
+    z-index: 1;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .glow {
+    z-index: 0;
+    width: 60vw; height: 60vw;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.55;
+  }
+  .glow-a { top: -20vw; left: -15vw; background: radial-gradient(circle, rgba(75,40,120,0.7), transparent 60%); }
+  .glow-b { bottom: -25vw; right: -20vw; background: radial-gradient(circle, rgba(130,80,170,0.45), transparent 65%); }
+
+  /* ---------- top nav ---------- */
+  .proj-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    background: linear-gradient(180deg, rgba(14,7,22,0.72), rgba(14,7,22,0));
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+  .back-link {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.25em;
+    color: var(--wov-paper-dim);
+    transition: color 0.25s ease;
+  }
+  .back-link:hover { color: var(--wov-mist); }
+  .nav-brand {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--wov-paper-dim);
+  }
+
+  /* ---------- exhibition canvas ---------- */
+  main.exhibit-hall {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 120px 6vw 0;
+  }
+
+  /* museum-label common style */
+  .ex-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.45em;
+    color: var(--wov-copper);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.92;
+  }
+  .ex-caption {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--wov-paper-dim);
+    margin-top: 14px;
+  }
+
+  .ex-section {
+    padding: 90px 0;
+  }
+
+  /* ---------- typography ---------- */
+  h1.brush, h2.brush, h3.brush {
+    font-family: var(--brush);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: var(--wov-paper);
+    line-height: 1.1;
+  }
+  h1.brush { font-size: clamp(48px, 6vw, 76px); margin-bottom: 24px; }
+  h2.brush { font-size: clamp(34px, 4.4vw, 52px); margin-bottom: 28px; }
+  h3.brush { font-size: clamp(28px, 3.4vw, 38px); margin-bottom: 22px; }
+  h1.brush em, h2.brush em {
+    font-style: normal;
+    color: var(--wov-mist);
+    text-shadow: 0 0 28px rgba(184,160,216,0.32);
+  }
+  p { font-family: var(--serif-zh); font-size: 17px; margin-bottom: 18px; color: var(--wov-paper); letter-spacing: 0.04em; }
+  p.muted { color: var(--wov-paper-dim); }
+  p.lead {
+    font-family: var(--serif-zh);
+    font-size: clamp(20px, 2.4vw, 26px);
+    line-height: 1.65;
+    color: var(--wov-mist);
+    margin-bottom: 32px;
+    letter-spacing: 0.06em;
+  }
+  blockquote {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--wov-mist);
+    border-left: 1px solid var(--wov-smoke);
+    padding: 4px 0 4px 22px;
+    margin: 28px 0;
+    letter-spacing: 0.05em;
+  }
+  .tagline-en {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: clamp(18px, 2vw, 22px);
+    letter-spacing: 0.06em;
+    color: var(--wov-paper-dim);
+    margin-bottom: 36px;
+  }
+
+  /* ============================================================
+     EXHIBIT 01 — opening spread (logo + opener + bizplan + notes)
+     ============================================================ */
+  .opening {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    column-gap: 6vw;
+    row-gap: 60px;
+    padding: 60px 0 100px;
+  }
+  .opening .col-left  { display: flex; flex-direction: column; gap: 56px; }
+  .opening .col-right { display: flex; flex-direction: column; gap: 28px; padding-top: 80px; }
+
+  .logo-tag {
+    width: clamp(180px, 22vw, 280px);
+    transform: rotate(-3deg);
+    filter: drop-shadow(0 18px 40px rgba(0,0,0,0.55)) drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+    transition: transform 0.6s ease;
+  }
+  .logo-tag:hover { transform: rotate(-1deg) translateY(-4px); }
+
+  /* business plan stack — two pages tilted on a desk */
+  .biz-stack {
+    position: relative;
+    align-self: flex-start;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 460px;
+  }
+  .biz-stack img {
+    width: 100%;
+    height: auto;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 10px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.25);
+    background: #fff;
+    transition: transform 0.5s ease;
+  }
+  .biz-stack .biz-back {
+    position: absolute;
+    top: 24px; left: 28px;
+    width: 100%;
+    transform: rotate(4deg);
+    z-index: 1;
+    opacity: 0.88;
+  }
+  .biz-stack .biz-front {
+    position: relative;
+    transform: rotate(-2.5deg);
+    z-index: 2;
+  }
+  .biz-stack:hover .biz-front { transform: rotate(-1deg) translateY(-6px); }
+
+  /* ============================================================
+     EXHIBIT 02 — V2 · clock evolution (text-only, three notes)
+     ============================================================ */
+  .clock-evolution {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .clock-versions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    margin-top: 44px;
+  }
+  .clock-versions article {
+    border-top: 1px solid var(--wov-rule);
+    padding-top: 20px;
+  }
+  .clock-versions h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--wov-copper);
+    margin-bottom: 14px;
+  }
+  .clock-versions .glyph {
+    font-family: var(--brush);
+    font-size: 28px;
+    color: var(--wov-mist);
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+  }
+  .clock-versions p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--wov-paper-dim);
+    margin: 0;
+  }
+
+  /* ============================================================
+     EXHIBIT 03 — V3 · floorplan (large hero image)
+     ============================================================ */
+  .floorplan-block {
+    max-width: 1160px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .floorplan-block h2.brush { text-align: left; }
+  .floorplan-block .copy {
+    text-align: left;
+    max-width: 680px;
+    margin: 0 0 60px;
+  }
+  .floorplan-wrap {
+    position: relative;
+    border: 1px solid var(--wov-rule);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.55);
+    overflow: hidden;
+  }
+  .floorplan-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .floorplan-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    max-width: 680px;
+    margin: 36px auto 0;
+    text-align: left;
+  }
+  .floorplan-meta dt {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    color: var(--wov-copper);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .floorplan-meta dd {
+    font-family: var(--serif-zh);
+    font-size: 15px;
+    color: var(--wov-paper);
+    line-height: 1.6;
+  }
+
+  /* ============================================================
+     EXHIBIT 04 — Three menus (drinks / snacks / shisha)
+     ============================================================ */
+  .menus-block {
+    max-width: 1160px;
+    margin: 0 auto;
+  }
+  .menus-head {
+    max-width: 760px;
+    margin: 0 auto 56px;
+  }
+  .menus-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .menu-card {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    background: #ece2c8;
+    border: 1px solid var(--wov-rule);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.35);
+    overflow: hidden;
+    transition: transform 0.45s ease, box-shadow 0.45s ease;
+  }
+  .menu-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 40px 90px rgba(0,0,0,0.65), 0 12px 28px rgba(75,40,120,0.35);
+  }
+  .menu-card img.menu-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    pointer-events: none;
+  }
+  .menu-card .menu-tag {
+    position: absolute;
+    top: 14px; left: 14px;
+    padding: 5px 10px;
+    background: rgba(14, 7, 22, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    color: var(--wov-paper);
+    text-transform: uppercase;
+    z-index: 2;
+  }
+  .menu-card .menu-foot {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 18px 18px 16px;
+    background: linear-gradient(180deg, transparent, rgba(14, 7, 22, 0.92));
+    color: var(--wov-paper);
+    font-family: var(--brush);
+    font-size: 22px;
+    letter-spacing: 0.12em;
+    text-align: center;
+    z-index: 2;
+  }
+  .menu-card .menu-foot small {
+    display: block;
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--wov-paper-dim);
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     EXHIBIT 05 — 20 AI renders horizontal scroll gallery
+     ============================================================ */
+  .renders-gallery {
+    margin: 0 -6vw;             /* full-bleed beyond the main column */
+    padding: 0 6vw;
+  }
+  .renders-head {
+    max-width: 760px;
+    margin: 0 auto 50px;
+  }
+  .renders-strip {
+    display: flex;
+    gap: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding: 8px 4vw 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--wov-smoke) transparent;
+    -webkit-overflow-scrolling: touch;
+  }
+  .renders-strip::-webkit-scrollbar { height: 6px; }
+  .renders-strip::-webkit-scrollbar-thumb { background: var(--wov-smoke); border-radius: 3px; }
+  .renders-strip::-webkit-scrollbar-track { background: transparent; }
+  .render-card {
+    flex: 0 0 auto;
+    width: clamp(280px, 38vw, 480px);
+    aspect-ratio: 16 / 9;
+    scroll-snap-align: center;
+    background: var(--wov-ink-2);
+    border: 1px solid var(--wov-rule);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s ease, border-color 0.4s ease;
+  }
+  .render-card img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+  }
+  .render-card:hover {
+    border-color: var(--wov-copper);
+    transform: translateY(-3px);
+  }
+  .render-card:hover img { transform: scale(1.03); }
+  .render-card .render-tag {
+    position: absolute;
+    bottom: 10px; left: 12px;
+    padding: 4px 8px;
+    background: rgba(14, 7, 22, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--wov-paper-dim);
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     EXHIBIT 05 — 3D model centrepiece
+     ============================================================ */
+  .centerpiece {
+    padding: 100px 0 60px;
+    text-align: center;
+  }
+  .centerpiece .copy {
+    max-width: 720px;
+    margin: 0 auto 60px;
+    text-align: left;
+  }
+  .centerpiece .copy h2.brush { text-align: left; }
+  .model-frame {
+    position: relative;
+    width: 100%;
+    max-width: 1080px;
+    aspect-ratio: 16 / 10;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(20,10,40,0.6), rgba(14,7,22,0.6));
+    border: 1px solid var(--wov-rule);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.55), inset 0 0 80px rgba(75,40,120,0.18);
+    overflow: hidden;
+  }
+  .model-frame model-viewer {
+    width: 100%; height: 100%;
+    --progress-bar-color: var(--wov-copper);
+    --progress-bar-height: 2px;
+    background: transparent;
+  }
+  .model-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--wov-paper-dim);
+    opacity: 0.7;
+  }
+  model-viewer[loaded] ~ .model-loading { display: none; }
+  .platform-chain {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    margin: 36px auto 0;
+    max-width: 880px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--wov-paper-dim);
+  }
+  .platform-chain span { white-space: nowrap; }
+  .platform-chain .arrow { color: var(--wov-copper); opacity: 0.6; }
+  .platform-chain .killed { text-decoration: line-through; opacity: 0.5; }
+
+  /* ============================================================
+     EXHIBIT 06 — the decision (text-only, single column)
+     ============================================================ */
+  .decision {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 100px 0;
+  }
+
+  /* ---------- big CTA ---------- */
+  .cta-block {
+    padding: 140px 0 60px;
+    text-align: center;
+  }
+  .cta-eyebrow {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 0.35em;
+    color: var(--wov-paper-dim);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .cta-big {
+    display: inline-block;
+    padding: 22px 48px;
+    font-family: var(--brush);
+    font-size: clamp(22px, 2.8vw, 32px);
+    letter-spacing: 0.2em;
+    color: var(--wov-paper);
+    border: 1px solid var(--wov-smoke);
+    background: linear-gradient(135deg, rgba(75,40,120,0.4), rgba(45,27,78,0.15));
+    transition: all 0.4s ease;
+  }
+  .cta-big:hover {
+    border-color: var(--wov-copper);
+    background: linear-gradient(135deg, rgba(107,74,140,0.6), rgba(75,40,120,0.3));
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(75,40,120,0.4);
+  }
+  .cta-meta {
+    margin-top: 36px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--wov-paper-dim);
+  }
+
+  /* ---------- footer ---------- */
+  .proj-foot {
+    position: relative; z-index: 2;
+    text-align: center;
+    padding: 80px 5vw 60px;
+    border-top: 1px solid var(--wov-rule);
+    margin-top: 40px;
+  }
+  .proj-foot p {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    color: var(--wov-paper-dim);
+    margin: 4px 0;
+  }
+  .proj-foot a {
+    border-bottom: 1px solid var(--wov-rule);
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .proj-foot a:hover { color: var(--wov-mist); border-color: var(--wov-mist); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 880px) {
+    .opening { grid-template-columns: 1fr; }
+    .opening .col-right { padding-top: 0; }
+    .biz-stack { max-width: 360px; margin: 0 auto; }
+    .clock-versions { grid-template-columns: 1fr; }
+    .floorplan-meta { grid-template-columns: 1fr; }
+    .model-frame { aspect-ratio: 4 / 3; }
+  }
+  @media (max-width: 720px) {
+    .proj-nav { padding: 12px 18px; }
+    .back-link { font-size: 12px; letter-spacing: 0.18em; }
+    .nav-brand { display: none; }
+    main.exhibit-hall { padding: 100px 7vw 0; }
+    .cta-big { padding: 18px 32px; font-size: 22px; }
+    .render-card { width: 78vw; }
+  }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 1s ease, transform 1s ease; }
+  .reveal.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- language toggle (mirrors index.html) ---------- */
+  body.lang-en [data-lang="cn"] { display: none !important; }
+  body.lang-cn [data-lang="en"] { display: none !important; }
+  body.lang-en h1.brush,
+  body.lang-en h2.brush,
+  body.lang-en h3.brush {
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+  }
+  body.lang-en .cta-big { font-family: var(--serif-en); font-style: italic; letter-spacing: 0.18em; }
+  body.lang-en .menu-card .menu-foot { font-family: var(--serif-en); font-style: italic; letter-spacing: 0.1em; }
+
+  .lang-switch {
+    position: fixed;
+    right: 28px; bottom: 28px;
+    z-index: 200;
+    display: inline-flex; align-items: center; gap: 14px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    background: rgba(10, 8, 18, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    font-size: 16px; font-weight: 600; letter-spacing: 0.16em; line-height: 1;
+    pointer-events: auto;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  }
+  .lang-switch button {
+    background: transparent; border: 0;
+    color: rgba(255, 255, 255, 0.6);
+    font: inherit; letter-spacing: inherit;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .lang-switch button:hover { color: #fff; transform: translateY(-1px); }
+  .lang-switch button.active { color: var(--wov-copper); }
+  .lang-switch .lang-divider { color: rgba(255, 255, 255, 0.3); font-size: 14px; }
+
+  /* ---------- floating CTA pill (bottom-left) ---------- */
+  .cta-float {
+    position: fixed;
+    left: 28px; bottom: 28px;
+    z-index: 200;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(75,40,120,0.7), rgba(45,27,78,0.55));
+    border: 1px solid rgba(184,160,216,0.4);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    color: var(--wov-paper);
+    text-transform: uppercase;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(75,40,120,0.35);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .cta-float:hover {
+    border-color: var(--wov-copper);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55), 0 0 30px rgba(200,155,108,0.4);
+  }
+  .cta-float .arrow { color: var(--wov-copper); transition: transform 0.3s ease; }
+  .cta-float:hover .arrow { transform: translateX(4px); }
+  body.lang-cn .cta-float { font-family: var(--brush); font-style: normal; font-size: 16px; letter-spacing: 0.18em; text-transform: none; }
+
+  @media (max-width: 720px) {
+    .lang-switch { right: 14px; bottom: 14px; padding: 10px 16px; font-size: 14px; gap: 10px; }
+    .cta-float   { left:  14px; bottom: 14px; padding: 10px 16px; font-size: 12px; letter-spacing: 0.15em; }
+  }
+</style>
+</head>
+
+<body class="lang-cn">
+
+<div class="ambient grain"></div>
+<div class="ambient glow glow-a"></div>
+<div class="ambient glow glow-b"></div>
+
+<header class="proj-nav">
+  <a href="../" class="back-link">← Back to Lab</a>
+  <span class="nav-brand">Yao Design Lab.</span>
+</header>
+
+<main class="exhibit-hall">
+
+  <!-- ===========================================================
+       EXHIBIT 01 — THE INVITATION
+       Logo upper-left + opener 文案 + business plan stack + 文案2
+       =========================================================== -->
+  <section class="opening reveal">
+
+    <div class="col-left">
+
+      <img class="logo-tag"
+           src="../assets/whiskey-on-vinyl/logo.png"
+           alt="Whiskey on Vinyl logo" />
+
+      <div>
+        <p class="ex-label">EXHIBIT 01 — THE INVITATION</p>
+        <h1 class="brush">
+          <span data-lang="cn"><span>黑胶上的</span><br/><em>威士忌</em></span>
+          <span data-lang="en">Whiskey<br/><em>on Vinyl</em></span>
+        </h1>
+        <p class="tagline-en">A room, not a bar.</p>
+        <p>
+          <span data-lang="cn">这不是一份产品介绍 — 是一封写给愿意慢下来的人的信。</span>
+          <span data-lang="en">This isn't a product page — it's a letter to anyone willing to slow down.</span>
+        </p>
+        <p>
+          <span data-lang="cn">城市需要一个不催促的房间: 没有翻台 · 没有推销 · 没有需要被介绍的自己。</span>
+          <span data-lang="en">The city needs a room that doesn't rush you: no table turnover · no upselling · no "self" to be introduced.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">下面这些, 是这间屋子从概念到成形, 留下的几张草稿、几次失败的实验、几版 AI 渲染, 和我自己的笔记。</span>
+          <span data-lang="en">What follows are the drafts, failed experiments, AI renders and notes left behind as this room moved from concept toward form.</span>
+        </p>
+      </div>
+
+      <figure class="biz-stack">
+        <img class="biz-back"  src="../assets/whiskey-on-vinyl/bizplan-2.png" alt="business plan page 2" />
+        <img class="biz-front" src="../assets/whiskey-on-vinyl/bizplan-1.png" alt="business plan page 1" />
+        <figcaption class="ex-caption">
+          <span data-lang="cn">v1.0 · 概念阶段商业计划书 · 2026.03</span>
+          <span data-lang="en">v1.0 · concept-stage business plan · 2026.03</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="col-right">
+      <p class="ex-label">NOTES · v1 → v2</p>
+      <h2 class="brush">
+        <span data-lang="cn">22 分钟<br/>是一个真实参数</span>
+        <span data-lang="en">22 minutes<br/>is an actual parameter</span>
+      </h2>
+
+      <p>
+        <span data-lang="cn">一张 12 寸黑胶 A 面的长度, 约 22 分钟。这个数字成了整间屋子的设计单位 — 灯光渐暗的周期、推荐切下一张唱片的间隔、客人安静坐着不被打扰的最小窗口。</span>
+        <span data-lang="en">One side of a 12-inch vinyl runs about 22 minutes. That number became the design unit of the entire room — the dimming cycle, the interval between suggesting the next record, the minimum window of being-left-alone.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">它不是修辞, 是工程参数。</span>
+        <span data-lang="en">Not a metaphor — an engineering parameter.</span>
+      </p>
+
+      <blockquote>The first draft sold drinks.<br/>This one sells permission.</blockquote>
+
+      <p class="muted">
+        <span data-lang="cn">左边那份计划书是 v1.0 — 标准独立酒吧 landing page 的思路: 主视觉、菜单、地址、预约表单。我做完后看一遍, 关掉, 一周没再打开。</span>
+        <span data-lang="en">The plan on the left is v1.0 — the standard indie-bar landing-page playbook: hero visual, menu, address, reservation form. I finished it, looked at it once, closed it, didn't reopen it for a week.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">问题不是它不够好看 — 是它在解释 "我们卖什么", 完全没有回答 "为什么应该来"。</span>
+        <span data-lang="en">The problem wasn't that it looked bad — it explained <em>what we sell</em> without ever answering <em>why you should come</em>.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">v2 之后, 整个项目的方向转向 attitude 的设计: 不卖 inventory, 卖一种允许。</span>
+        <span data-lang="en">After v2, the project pivoted toward designing an attitude — not selling inventory, but selling a kind of permission.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 02 — V2 · THE CLOCK
+       The vinyl clock hand iteration (stir spoon → absinthe → pick)
+       =========================================================== -->
+  <section class="ex-section clock-evolution reveal">
+    <p class="ex-label">
+      <span data-lang="cn">EXHIBIT 02 — V2 · 一根针走了三版</span>
+      <span data-lang="en">EXHIBIT 02 — V2 · ONE HAND, THREE DRAFTS</span>
+    </p>
+    <h2 class="brush">
+      <span data-lang="cn">把黑胶<br/>变成一只钟</span>
+      <span data-lang="en">Turning a vinyl<br/>into a clock</span>
+    </h2>
+
+    <p>
+      <span data-lang="cn">v2.1 给首屏的黑胶加上了真实时间的指针 — 转盘是装饰, 时针分针绑到浏览器时钟。一开始时针是普通调酒长匙, 后来发现它在视觉上"太硬"了 — 像工具, 不像氛围。</span>
+      <span data-lang="en">v2.1 gave the hero vinyl real clock hands — the platter is decorative, but the hour and minute hands are bound to the browser clock. The hour hand started as a long bar spoon — visually "too hard," more like a tool than an atmosphere.</span>
+    </p>
+
+    <p>
+      <span data-lang="cn">替换成苦艾酒匙 (一种带镂空叶片的吧台用具) 之后, 时针有了仪式感; 分针换成水果鸡尾酒签 + 黑橄榄, 整套钟终于"住进"了酒吧。</span>
+      <span data-lang="en">Swapping it for an absinthe spoon (a slotted-leaf bar tool) gave the hour hand a sense of ritual; the minute hand became a cocktail pick + black olive. The whole clock finally "moved in" to the bar.</span>
+    </p>
+
+    <p class="muted">
+      <span data-lang="cn">这一段没有什么大故事 — 但它是整个 v2 网站里我最满意的一个细节。一根针走了三版, 才像。</span>
+      <span data-lang="en">No big story here — but it's the detail in the whole v2 site I'm proudest of. One hand took three drafts before it felt right.</span>
+    </p>
+
+    <div class="clock-versions">
+      <article>
+        <h4>v2.1.1 · ABANDONED</h4>
+        <div class="glyph">
+          <span data-lang="cn">调酒长匙</span>
+          <span data-lang="en">Bar spoon</span>
+        </div>
+        <p>
+          <span data-lang="cn">太工具, 太硬, 不属于这个房间。</span>
+          <span data-lang="en">Too tool, too hard. Doesn't belong in this room.</span>
+        </p>
+      </article>
+      <article>
+        <h4>v2.2.0 · TIME HAND</h4>
+        <div class="glyph">
+          <span data-lang="cn">苦艾酒匙</span>
+          <span data-lang="en">Absinthe spoon</span>
+        </div>
+        <p>
+          <span data-lang="cn">叶片镂空 + 短柄, 有仪式感而非工具感。</span>
+          <span data-lang="en">Slotted leaf + short shaft — ritual, not utility.</span>
+        </p>
+      </article>
+      <article>
+        <h4>v2.2.1 · MINUTE HAND</h4>
+        <div class="glyph">
+          <span data-lang="cn">鸡尾酒签</span>
+          <span data-lang="en">Cocktail pick</span>
+        </div>
+        <p>
+          <span data-lang="cn">木签穿过深紫橄榄 — 整套钟终于像酒吧。</span>
+          <span data-lang="en">Wood pick through a deep-purple olive — finally a bar's clock.</span>
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 03 — V3 · THE FLOORPLAN
+       The full architectural floorplan
+       =========================================================== -->
+  <section class="ex-section floorplan-block reveal">
+    <div class="copy">
+      <p class="ex-label">
+        <span data-lang="cn">EXHIBIT 03 — V3 · 平面布局</span>
+        <span data-lang="en">EXHIBIT 03 — V3 · FLOOR PLAN</span>
+      </p>
+      <h2 class="brush">
+        <span data-lang="cn">这间屋子<br/>还不存在</span>
+        <span data-lang="en">This room<br/>does not exist yet</span>
+      </h2>
+
+      <p>
+        <span data-lang="cn">v3 阶段开始想做空间。在没有实体场地之前, 我需要先在脑子里把这间屋子走一遍 — 入口缓冲、酒柜+音乐总控、主厅、VIP、调酒区、卫生间。</span>
+        <span data-lang="en">v3 turned to space. Before any physical site existed, I needed to walk through the room in my head — entrance buffer, cellar + music control, main hall, VIP, bar, restrooms.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">所有的尺度、光照色温、声学吸音参数 (RT60 ≈ 0.4-0.6s), 都先在这张图上对齐。</span>
+        <span data-lang="en">All scale, color-temperature schedule and acoustic absorption (RT60 ≈ 0.4–0.6s) get aligned on this one drawing first.</span>
+      </p>
+
+      <p class="muted">
+        <span data-lang="cn">代号 "落日飛車 · Sunset Car" — 在建筑图层面用的项目名。"黑胶上的威士忌" 是对外的品牌名。</span>
+        <span data-lang="en">Codename "Sunset Car · 落日飛車" — the project name used on the architectural layer. "Whiskey on Vinyl" is the outward-facing brand.</span>
+      </p>
+    </div>
+
+    <div class="floorplan-wrap">
+      <img src="../assets/whiskey-on-vinyl/floorplan.jpg" alt="Sunset Car · Floor Plan" />
+    </div>
+    <p class="ex-caption">
+      <span data-lang="cn">AI 俯视 v1 · 包含 6 个分区 + 灯光色温时间表 + 音响三角图</span>
+      <span data-lang="en">AI top-down v1 · 6 zones + color-temperature schedule + speaker triangle</span>
+    </p>
+
+    <dl class="floorplan-meta">
+      <div>
+        <dt>9:00 PM</dt>
+        <dd>
+          <span data-lang="cn">2700K · 温暖舒适</span>
+          <span data-lang="en">2700K · warm</span>
+        </dd>
+      </div>
+      <div>
+        <dt>12:00 AM</dt>
+        <dd>
+          <span data-lang="cn">2200K · 更暗更沉漫</span>
+          <span data-lang="en">2200K · dimmer, heavier</span>
+        </dd>
+      </div>
+      <div>
+        <dt>2:00 AM</dt>
+        <dd>
+          <span data-lang="cn">1800K · 极暗 · 深夜氛围</span>
+          <span data-lang="en">1800K · deep night</span>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 04 — V3 · THREE MENUS (drinks / snacks / shisha)
+       =========================================================== -->
+  <section class="ex-section menus-block reveal">
+    <div class="menus-head">
+      <p class="ex-label">
+        <span data-lang="cn">EXHIBIT 04 — V3 · 三联菜单</span>
+        <span data-lang="en">EXHIBIT 04 — V3 · THREE MENUS</span>
+      </p>
+      <h2 class="brush">
+        <span data-lang="cn">这间屋子的语言<br/>写在三张纸上</span>
+        <span data-lang="en">The room's language<br/>lives on three sheets</span>
+      </h2>
+
+      <p>
+        <span data-lang="cn">酒单 · 小食单 · 水烟单 — 三份独立的视觉草案, 每一份都做成可印刷的完整页面, 而不是 UI 截图。它们是纸的产物 — 印出来, 摆在桌上。</span>
+        <span data-lang="en">Drinks · snacks · shisha — three separate visual drafts, each shipped as a complete printable page rather than a UI mockup. They are paper artefacts — printed, placed on the table.</span>
+      </p>
+
+      <p class="muted">
+        <span data-lang="cn">点开任意一张, 查看完整的菜单原稿。</span>
+        <span data-lang="en">Click any one to open the full menu draft.</span>
+      </p>
+    </div>
+
+    <div class="menus-grid">
+      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/drinks.jpg" target="_blank" rel="noopener">
+        <span class="menu-tag">01 · DRINKS</span>
+        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/drinks.jpg" alt="Whiskey on Vinyl · drinks menu" loading="lazy" />
+        <span class="menu-foot">
+          <span data-lang="cn">酒单<small>Drinks</small></span>
+          <span data-lang="en">Drinks<small>酒单</small></span>
+        </span>
+      </a>
+      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/snacks.jpg" target="_blank" rel="noopener">
+        <span class="menu-tag">02 · SNACKS</span>
+        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/snacks.jpg" alt="Whiskey on Vinyl · snacks menu" loading="lazy" />
+        <span class="menu-foot">
+          <span data-lang="cn">小食单<small>Snacks</small></span>
+          <span data-lang="en">Snacks<small>小食单</small></span>
+        </span>
+      </a>
+      <a class="menu-card" href="../assets/whiskey-on-vinyl/menus/shisha.jpg" target="_blank" rel="noopener">
+        <span class="menu-tag">03 · SHISHA</span>
+        <img class="menu-img" src="../assets/whiskey-on-vinyl/menus/shisha.jpg" alt="Whiskey on Vinyl · shisha menu" loading="lazy" />
+        <span class="menu-foot">
+          <span data-lang="cn">水烟单<small>Shisha</small></span>
+          <span data-lang="en">Shisha<small>水烟单</small></span>
+        </span>
+      </a>
+    </div>
+    <p class="ex-caption" style="text-align:center; margin-top: 28px;">
+      <span data-lang="cn">点击任意一张 · 查看完整成品图</span>
+      <span data-lang="en">Click any one for the full image</span>
+    </p>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 05 — V3 · 20 AI RENDERS
+       Horizontal scroll gallery of 20 AI scenes
+       =========================================================== -->
+  <section class="ex-section renders-gallery reveal">
+    <div class="renders-head">
+      <p class="ex-label">
+        <span data-lang="cn">EXHIBIT 05 — V3.4 · 20 间想象的房间</span>
+        <span data-lang="en">EXHIBIT 05 — V3.4 · 20 IMAGINED ROOMS</span>
+      </p>
+      <h2 class="brush">
+        <span data-lang="cn">在没有房子之前,<br/>先把光画出来</span>
+        <span data-lang="en">Before there's a house,<br/>paint the light first</span>
+      </h2>
+
+      <p>
+        <span data-lang="cn">用 Hugging Face Pro 上的 FLUX.1-merged 生成了 20 张实景渲染 — 从入口缓冲、吧台细节、单人扶手椅、VIP 半弧形, 到顶棚黑胶仰望、深夜 1800K 的酒墙特写。</span>
+        <span data-lang="en">Twenty photoreal renders generated with FLUX.1-merged on Hugging Face Pro — from the entrance buffer and bar details to the single armchair, the VIP semicircle, the vinyl ceiling looking up, and the 1800K bottle-wall close-up.</span>
+      </p>
+
+      <p class="muted">
+        <span data-lang="cn">最后三张 (18 / 19 / 20) 是同一空间在 9pm · 12am · 2am 的色温递进 — 整间屋子按时间会慢慢沉进夜里。</span>
+        <span data-lang="en">The last three (18 / 19 / 20) are the same space at 9pm · 12am · 2am — the whole room slowly settles into the night.</span>
+      </p>
+    </div>
+
+    <div class="renders-strip">
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/01-floorplan-master.jpg" alt="01 floorplan master" loading="lazy" /><span class="render-tag">01 · floor plan</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/02-hero-wide.jpg" alt="02 hero wide" loading="lazy" /><span class="render-tag">02 · hero wide</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/03-bar-straight.jpg" alt="03 bar straight" loading="lazy" /><span class="render-tag">03 · bar straight</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/04-bar-from-side.jpg" alt="04 bar from side" loading="lazy" /><span class="render-tag">04 · bar side</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/05-bar-tools-detail.jpg" alt="05 bar tools" loading="lazy" /><span class="render-tag">05 · bar tools</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/06-hall-dense-overview.jpg" alt="06 hall dense" loading="lazy" /><span class="render-tag">06 · hall dense</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/07-hall-clusters-pov.jpg" alt="07 hall clusters" loading="lazy" /><span class="render-tag">07 · hall clusters</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/08-armchair-pair-detail.jpg" alt="08 armchair pair" loading="lazy" /><span class="render-tag">08 · armchair pair</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/09-solo-armchair-corner.jpg" alt="09 solo armchair" loading="lazy" /><span class="render-tag">09 · solo corner</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/10-vip-semicircle.jpg" alt="10 vip semicircle" loading="lazy" /><span class="render-tag">10 · vip semicircle</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/11-vip-looking-at-bar.jpg" alt="11 vip pov" loading="lazy" /><span class="render-tag">11 · vip → bar</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/12-cellar-full-wall.jpg" alt="12 cellar full wall" loading="lazy" /><span class="render-tag">12 · cellar wall</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/13-bottle-wall-detail.jpg" alt="13 bottle wall" loading="lazy" /><span class="render-tag">13 · bottle wall</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/14-ceiling-vinyl-uplook.jpg" alt="14 ceiling vinyl" loading="lazy" /><span class="render-tag">14 · ceiling ↑</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/15-entrance-buffer.jpg" alt="15 entrance" loading="lazy" /><span class="render-tag">15 · entrance</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/16-bathroom-corridor.jpg" alt="16 bathroom" loading="lazy" /><span class="render-tag">16 · corridor</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/17-speaker-sweet-spot.jpg" alt="17 speaker sweet spot" loading="lazy" /><span class="render-tag">17 · sweet spot</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/18-9pm-2700K.jpg" alt="18 9pm 2700K" loading="lazy" /><span class="render-tag">18 · 9pm · 2700K</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/19-12am-2200K.jpg" alt="19 12am 2200K" loading="lazy" /><span class="render-tag">19 · 12am · 2200K</span></a>
+      <a class="render-card" href="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" target="_blank"><img src="../assets/whiskey-on-vinyl/scenes/20-2am-1800K.jpg" alt="20 2am 1800K" loading="lazy" /><span class="render-tag">20 · 2am · 1800K</span></a>
+    </div>
+    <p class="ex-caption" style="text-align:center;">点击单张图查看大图 · 横向拖动浏览 20 张</p>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 06 — V3 · 3D MODEL CENTREPIECE
+       =========================================================== -->
+  <section class="ex-section centerpiece reveal">
+    <div class="copy">
+      <p class="ex-label">
+        <span data-lang="cn">EXHIBIT 06 — V3.5 · 可走进的房间</span>
+        <span data-lang="en">EXHIBIT 06 — V3.5 · A WALKABLE ROOM</span>
+      </p>
+      <h2 class="brush">
+        <span data-lang="cn">137 MB → 3.49 MB<br/>压成可以加载的样子</span>
+        <span data-lang="en">137 MB → 3.49 MB<br/>compressed until it actually loads</span>
+      </h2>
+
+      <p>
+        <span data-lang="cn">v3.5 把所有 AI 实景图反过来喂给 Microsoft TRELLIS, multidiffusion 融合成一个完整的 GLB 场景。原始模型 137 MB, 浏览器加载到一半 Safari 就崩。用 gltf-transform 加 Draco 几何压缩之后 — <strong>3.49 MB</strong>, 网页可以即时加载。</span>
+        <span data-lang="en">v3.5 fed all the AI scene images back into Microsoft TRELLIS, with multidiffusion fusing them into one complete GLB scene. Raw model: 137 MB — Safari crashed mid-load. After gltf-transform with Draco geometry compression — <strong>3.49 MB</strong>, instant in-browser load.</span>
+      </p>
+
+      <p class="muted">
+        <span data-lang="cn">下方是其中一个分镜 (02 · hero wide), 拖动旋转, 滚轮缩放。整间屋子之后会以这种交互方式逐个 section 拼起来。</span>
+        <span data-lang="en">Below is one shot (02 · hero wide) — drag to rotate, scroll to zoom. The entire room will eventually be reassembled section by section through this interaction.</span>
+      </p>
+    </div>
+
+    <div class="model-frame">
+      <model-viewer
+        src="../assets/whiskey-on-vinyl/model-hero.glb"
+        alt="Whiskey on Vinyl · hero wide 3D 场景"
+        camera-controls
+        touch-action="pan-y"
+        auto-rotate
+        auto-rotate-delay="2000"
+        rotation-per-second="10deg"
+        interaction-prompt="auto"
+        shadow-intensity="0.85"
+        exposure="1.0"
+        environment-image="neutral"
+      ></model-viewer>
+      <div class="model-loading">LOADING SCENE ·</div>
+    </div>
+    <p class="ex-caption" style="text-align:center;">
+      <span data-lang="cn">02 · hero-wide · GLB / Draco compressed · 拖动旋转 · 滚轮缩放</span>
+      <span data-lang="en">02 · hero-wide · GLB / Draco compressed · drag to rotate · scroll to zoom</span>
+    </p>
+
+    <p class="platform-chain">
+      <span class="killed" data-lang="cn">Three.js 自建场景</span>
+      <span class="killed" data-lang="en">Three.js handbuilt scene</span>
+      <span class="arrow">→</span>
+      <span class="killed" data-lang="cn">Spline 导出 GLB</span>
+      <span class="killed" data-lang="en">Spline GLB export</span>
+      <span class="arrow">→</span>
+      <span class="killed" data-lang="cn">Hunyuan3D · 16 单件</span>
+      <span class="killed" data-lang="en">Hunyuan3D · 16 single objects</span>
+      <span class="arrow">→</span>
+      <span data-lang="cn">TRELLIS · 6 张图融合</span>
+      <span data-lang="en">TRELLIS · 6-image fusion</span>
+      <span class="arrow">→</span>
+      <span>gltf-transform · Draco</span>
+    </p>
+  </section>
+
+  <!-- ===========================================================
+       EXHIBIT 07 — V4 · THE DECISION
+       =========================================================== -->
+  <section class="ex-section decision reveal">
+    <p class="ex-label">
+      <span data-lang="cn">EXHIBIT 07 — V4 · 选择不做</span>
+      <span data-lang="en">EXHIBIT 07 — V4 · CHOOSING NOT TO</span>
+    </p>
+    <h2 class="brush">
+      <span data-lang="cn">3D 暂停。<br/>等真实的房子。</span>
+      <span data-lang="en">3D paused.<br/>Waiting for the real room.</span>
+    </h2>
+
+    <p>
+      <span data-lang="cn">v3.5 之后, 我把 3D 模块封存了。原因是 — 这间屋子终究是要建出来的, 一旦实体空间存在, 用 iPhone LiDAR 扫一次就能得到 100% 真实的模型, 任何"想象的渲染"都会被替代。</span>
+      <span data-lang="en">After v3.5, I shelved the 3D module. The reason — this room will eventually be built, and once a physical space exists, a single iPhone LiDAR scan returns a 100% truthful model. Any "imagined render" gets overwritten.</span>
+    </p>
+
+    <p>
+      <span data-lang="cn">继续在没有实体的阶段堆 AI 模型, 反而是在欺骗访客 "你看到的就是它的样子"。事实是: 还没有人看到。</span>
+      <span data-lang="en">Stacking more AI models without a real space lies to visitors — "this is what it looks like." Truth: no one has seen it yet.</span>
+    </p>
+
+    <p class="muted">
+      <span data-lang="cn">v4.1 把这一切写成 《Whiskey on Vinyl · 完整重建指南》— 一份给未来任何一位接手者 (包括我自己) 可以从零重建整个网站的文档。代码、文案、决策、踩过的坑, 全部记下。</span>
+      <span data-lang="en">v4.1 wrote all of this into <em>Whiskey on Vinyl · A Full Reconstruction Guide</em> — a document any future caretaker (myself included) could use to rebuild the whole site from zero. Code, copy, decisions, mistakes, all logged.</span>
+    </p>
+
+    <blockquote>The discipline isn't making more.<br/>It's knowing when to stop.</blockquote>
+  </section>
+
+  <!-- ===========================================================
+       CTA — step into the live site
+       =========================================================== -->
+  <section class="cta-block reveal">
+    <p class="cta-eyebrow">— Step inside</p>
+    <a class="cta-big" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
+      <span data-lang="cn">走进主站 →</span>
+      <span data-lang="en">Step into the room →</span>
+    </a>
+    <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
+  </section>
+
+</main>
+
+<footer class="proj-foot">
+  <p>Whiskey on Vinyl · a Yao Design Lab project</p>
+  <p>© 2026 Daniel Rong · <a href="../">
+    <span data-lang="cn">返回实验室</span>
+    <span data-lang="en">back to lab</span>
+  </a></p>
+</footer>
+
+<!-- floating "step inside" pill — appears after first scroll, sticks bottom-left -->
+<a class="cta-float" id="ctaFloat" href="https://dr-16.github.io/whiskey-on-vinyl/" target="_blank" rel="noopener">
+  <span data-lang="cn">走进主站</span>
+  <span data-lang="en">Step inside</span>
+  <span class="arrow">→</span>
+</a>
+
+<!-- language toggle — mirrors index.html, persists via localStorage 'ydl-lang' -->
+<div class="lang-switch" id="langSwitch" aria-label="Language switch">
+  <button type="button" data-set-lang="en">EN</button>
+  <span class="lang-divider">/</span>
+  <button type="button" data-set-lang="cn" class="active">中文</button>
+</div>
+
+<script>
+  /* scroll reveal */
+  (function () {
+    const targets = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      targets.forEach(el => el.classList.add('is-in'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -10% 0px' });
+    targets.forEach(el => io.observe(el));
+  })();
+
+  /* language toggle — synced with index.html via localStorage 'ydl-lang' */
+  (function () {
+    const LANG_KEY = 'ydl-lang';
+    function setLang(lang) {
+      if (lang !== 'en' && lang !== 'cn') lang = 'cn';
+      document.body.classList.remove('lang-en', 'lang-cn');
+      document.body.classList.add('lang-' + lang);
+      document.documentElement.lang = (lang === 'cn') ? 'zh-CN' : 'en';
+      document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.setLang === lang);
+      });
+      try { localStorage.setItem(LANG_KEY, lang); } catch {}
+    }
+    document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+      b.addEventListener('click', () => setLang(b.dataset.setLang));
+    });
+    try {
+      const saved = localStorage.getItem(LANG_KEY);
+      if (saved) setLang(saved);
+    } catch {}
+  })();
+
+  /* floating CTA pill: always visible — no scroll trigger */
+</script>
+
+</body>
+</html>

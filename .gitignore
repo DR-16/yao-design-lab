@@ -2,3 +2,7 @@
 node_modules/
 *.log
 .claude/
+# Large 3D models — host externally or use Git LFS before pushing.
+# Small Draco-compressed GLBs under ~5MB can be whitelisted below.
+*.glb
+!assets/whiskey-on-vinyl/model-hero.glb
