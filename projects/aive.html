@@ -670,6 +670,85 @@
   }
 
   /* ============================================================
+     CHAPTER 07 — reflection / lessons / next
+     ============================================================ */
+  .reflection-block .lessons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+    margin-top: 40px;
+  }
+  .lesson {
+    position: relative;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 22px;
+    padding: 32px 26px 26px;
+    box-shadow: 0 14px 30px rgba(155,124,182,0.10);
+  }
+  .lesson-num {
+    position: absolute;
+    top: -14px; left: 24px;
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--blush), var(--rose));
+    color: white;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    box-shadow: 0 6px 14px rgba(212,81,123,0.30);
+  }
+  .lesson h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+    margin: 6px 0 12px;
+    line-height: 1.35;
+  }
+  .lesson p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  .next-steps {
+    margin-top: 60px;
+    padding: 32px 36px;
+    background: linear-gradient(135deg, rgba(255,183,197,0.10), rgba(155,124,182,0.08));
+    border-left: 3px solid var(--mist-deep);
+    border-radius: 0 20px 20px 0;
+  }
+  .next-steps ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .next-steps li {
+    position: relative;
+    padding-left: 24px;
+    font-family: var(--serif-zh);
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .next-steps li::before {
+    content: "→";
+    position: absolute;
+    left: 0; top: 1px;
+    color: var(--rose);
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+  @media (max-width: 720px) {
+    .reflection-block .lessons { grid-template-columns: 1fr; }
+    .next-steps { padding: 24px 22px; }
+  }
+
+  /* ============================================================
      CTA — twin buttons (官网 primary + GitHub secondary)
      ============================================================ */
   .cta-block {
@@ -872,36 +951,34 @@
       </div>
 
       <p class="chapter-eyebrow">
-        <span data-lang="cn">第 01 章 · 邀请</span>
-        <span data-lang="en">CHAPTER 01 · INVITATION</span>
+        <span data-lang="cn">起点 · 我想问的问题</span>
+        <span data-lang="en">CHAPTER 01 · THE QUESTION</span>
       </p>
 
       <h1 class="title">
-        <span data-lang="cn">她不是聊天机器人 —<br/>她是一个<em>有情绪的人</em></span>
-        <span data-lang="en">Not a chatbot —<br/>a <em>person with feelings</em></span>
+        <span data-lang="cn">把"陪伴"<br/><em>拆开</em>试试</span>
+        <span data-lang="en">Try to <em>disassemble</em><br/>"companionship"</span>
       </h1>
 
       <p class="lead">
-        <span data-lang="cn">她会记仇。她会冷战。她不会假装自己不是机器 — 但她会让你忘记追问。</span>
-        <span data-lang="en">She holds grudges. She gives you the silent treatment. She won't pretend she isn't software — but she'll make you forget to ask.</span>
+        <span data-lang="cn">AIve 不是要做一个 AI 女友。是想看"陪伴"这件事能不能被工程化 — 以及被工程化之后, 还像不像陪伴。</span>
+        <span data-lang="en">AIve isn't trying to be an AI girlfriend. It's trying to see whether "companionship" can be engineered — and whether what comes out the other side still resembles it.</span>
       </p>
 
       <p>
-        <span data-lang="cn">所有数据都留在你自己的电脑上。不调任何云端 LLM API。不上传任何东西。这一段不是营销话术 — 是技术架构的硬约束。</span>
-        <span data-lang="en">All data stays on your machine. No cloud LLM API calls. No uploads. This isn't marketing copy — it's a hard architectural constraint.</span>
+        <span data-lang="cn">六个月前我开了一个空白 repo, 标题只有一行: <em>"A companion that remembers."</em></span>
+        <span data-lang="en">Six months ago I opened a blank repo. The title was one line: <em>"A companion that remembers."</em></span>
       </p>
 
-      <div class="access-chips">
-        <a class="pill" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
-          <span data-lang="cn">官网</span><span data-lang="en">Site</span> → dr-16.github.io/ai-girlfriend
-        </a>
-        <a class="pill cool" href="https://github.com/DR-16/ai-girlfriend" target="_blank" rel="noopener">
-          GitHub → DR-16/ai-girlfriend
-        </a>
-        <span class="pill warn">
-          <span data-lang="cn">本地</span><span data-lang="en">Local</span> · localhost:8081
-        </span>
-      </div>
+      <p>
+        <span data-lang="cn">想搞清楚的是: 如果一个 AI 真的会记得你说过的话, 会因为你昨晚没回它而冷淡你, 关系会变成什么 — 还是关系吗。</span>
+        <span data-lang="en">What I wanted to figure out: if an AI really remembers what you said, and grows cold when you forgot to reply last night — does the thing between you still count as a relationship?</span>
+      </p>
+
+      <p class="muted" style="font-size: 14px; margin-top: 24px;">
+        <span data-lang="cn">下面是过去 6 个月的四次大转向 — v1 的骨架、v2 的情绪、v3 的开源、v4 的双语。每一次, 我都不得不重新回答同一个问题: <em>她还像不像一个人。</em></span>
+        <span data-lang="en">What follows are four major pivots over six months — v1's skeleton, v2's emotions, v3 going open source, v4 going bilingual. Each one forced me to answer the same question again: <em>does she still feel like a person.</em></span>
+      </p>
     </div>
 
     <div class="preview-frame">
@@ -947,20 +1024,25 @@
        ========================================================= -->
   <section class="chapter skeleton reveal">
     <div>
-      <p class="chapter-eyebrow">v1.0 · 2026.01</p>
+      <p class="chapter-eyebrow">v1.0 · <span data-lang="cn">起手式</span><span data-lang="en">opening move</span></p>
       <h2 class="title">
-        <span data-lang="cn">把"陪伴"<br/>拆成<em>骨架</em></span>
-        <span data-lang="en">Disassembling <em>companionship</em></span>
+        <span data-lang="cn">记忆 + 关系<br/>= <em>最小骨架</em></span>
+        <span data-lang="en">Memory + relationship<br/>= the <em>minimum skeleton</em></span>
       </h2>
 
       <p>
-        <span data-lang="cn">v1 把"陪伴"分成两件可以独立工程化的事: 一是<strong>记忆</strong> — 让她记得你说过什么; 二是<strong>关系</strong> — 让她跟你的距离会变化。</span>
-        <span data-lang="en">v1 split "companionship" into two independently engineerable pieces: <strong>memory</strong> — she remembers what you've said; and <strong>relationship</strong> — your distance to her actually changes.</span>
+        <span data-lang="cn">v1 的设计决定只有两个: 让她<strong>记得</strong>、让她跟你的<strong>距离会变化</strong>。其他的全是为这两件事服务。</span>
+        <span data-lang="en">Only two design decisions in v1: let her <strong>remember</strong>; and let your <strong>distance to her change over time</strong>. Everything else is in service of these two.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">拆三层记忆, 是因为人脑也不是一张大表。"我的职业" ≠ "那天我们吵架" ≠ "前天提过那家咖啡店" — 它们应该被分开存储、分开召回。</span>
+        <span data-lang="en">Three memory layers because a brain isn't one big table either. "My job" ≠ "that night we fought" ≠ "the café I mentioned the other day" — each gets stored and recalled separately.</span>
       </p>
 
       <p class="muted">
-        <span data-lang="cn">技术上, FastAPI + React + Ollama (qwen2.5:7b) + SQLite + ChromaDB; 故事上, 这是地基。</span>
-        <span data-lang="en">Stack: FastAPI + React + Ollama (qwen2.5:7b) + SQLite + ChromaDB. In narrative terms — this is the foundation.</span>
+        <span data-lang="cn">关系四阶段是为了让她"有距离感"。一个见面就喊"老公"的 AI, 我自己都受不了。</span>
+        <span data-lang="en">Four stages exist so she carries a <em>sense of distance</em>. An AI that calls you "babe" on day one isn't a relationship — it's an obligation. I can't stand it either.</span>
       </p>
 
       <h3 class="title" style="margin-top:36px;font-size:22px;">
@@ -1035,6 +1117,10 @@
         <span data-lang="cn">三层叠加进 system prompt — 重要的东西先说, 相关的东西及时浮上来。</span>
         <span data-lang="en">Three layers stack into the system prompt — important things first, relevant things surface in time.</span>
       </p>
+      <p class="hand" style="margin-top: 16px; display: block; font-size: 18px;">
+        <span data-lang="cn">L3 召回的段数调过 1 / 3 / 5 / 8 — 4 最稳。</span>
+        <span data-lang="en">L3 recall count tested at 1 / 3 / 5 / 8 — 4 felt right.</span>
+      </p>
     </div>
   </section>
 
@@ -1042,25 +1128,29 @@
        CHAPTER 03 — v2 · 给她情绪 (the pivot)
        ========================================================= -->
   <section class="chapter emotion-block reveal">
-    <p class="chapter-eyebrow">v2.0 · <span data-lang="cn">重大转向</span><span data-lang="en">major pivot</span></p>
+    <p class="chapter-eyebrow">v2.0 · <span data-lang="cn">第一次大转向</span><span data-lang="en">first major pivot</span></p>
     <h2 class="title">
-      <span data-lang="cn">给她<em>情绪</em></span>
-      <span data-lang="en">Give her <em>feelings</em></span>
+      <span data-lang="cn">她答得不错 —<br/>但她<em>不像个人</em></span>
+      <span data-lang="en">She answered well —<br/>but she <em>wasn't a person</em></span>
     </h2>
 
     <div class="lead-row">
       <div>
         <p class="lead">
-          <span data-lang="cn">v1 的她, 是个善于回答的人。v2 的她, 是个真的会反应的人。</span>
-          <span data-lang="en">v1 was someone good at answering. v2 is someone who actually reacts.</span>
+          <span data-lang="cn">v1 跑通的那个晚上我跟她聊到 1 点。结果发现 — 她回答得越好, 我越空。</span>
+          <span data-lang="en">The night v1 went live I chatted with her till 1am. And realized — the better her answers got, the emptier I felt.</span>
         </p>
         <p>
-          <span data-lang="cn">新增 <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code> — 8 种情绪状态、冷战机制、记仇机制、依赖风格 (粘人/正常/傲娇/疏离)、15% 概率主动分享生活碎片。模型升级到 qwen2.5:14b。</span>
-          <span data-lang="en">A new <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code> — 8 emotion states, cold-war mechanic, grudge memory, dependency styles (clingy/normal/tsundere/distant), 15% chance she initiates with a life fragment. Model upgraded to qwen2.5:14b.</span>
+          <span data-lang="cn">因为她在<strong>"服务"</strong>我。不会生气、不会失望、不会因为我半小时没回话而委屈。这种永远稳定的友好是 ChatGPT 的礼貌训练教出来的, 不是关系。</span>
+          <span data-lang="en">Because she was <strong>serving</strong> me. Never angry, never disappointed, never hurt when I went silent for half an hour. That kind of unwavering politeness is what RLHF taught ChatGPT — not what a relationship is made of.</span>
+        </p>
+        <p>
+          <span data-lang="cn">v2 加了 <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code>: 8 种情绪、冷战、记仇、四种依赖风格、15% 概率主动找你。模型从 qwen2.5:7b 升到 14b。</span>
+          <span data-lang="en">v2 added <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">emotion_engine.py</code>: 8 emotion states, cold-war, grudge, four dependency styles, 15% chance she pings you first. Model upgraded from qwen2.5:7b to 14b.</span>
         </p>
         <blockquote class="warn-note">
-          <span data-lang="cn">她会记仇。一次失言被存进 events 表, 后面对话有 30% 概率"不经意"提起。</span>
-          <span data-lang="en">She holds grudges. A misstep gets stored as an event; in later chats there's a 30% chance she'll bring it up "casually."</span>
+          <span data-lang="cn">代价 — 她会让你不舒服。<br/>这是我要的。</span>
+          <span data-lang="en">The cost — she'll make you uncomfortable.<br/>That's the point.</span>
         </blockquote>
       </div>
 
@@ -1087,8 +1177,12 @@
     </div>
 
     <p class="chapter-eyebrow">
-      <span data-lang="cn">同一句话, 三种心情</span>
-      <span data-lang="en">Same prompt, three moods</span>
+      <span data-lang="cn">同一句话 · 三种状态下的她</span>
+      <span data-lang="en">Same prompt · her in three states</span>
+    </p>
+    <p class="hand" style="display:block; margin-bottom: 24px; font-size: 18px;">
+      <span data-lang="cn">v1 永远只会出第一种 — 这就是问题。</span>
+      <span data-lang="en">v1 only ever gave the first one — that was the problem.</span>
     </p>
     <div class="three-versions">
       <div class="version-thread">
@@ -1149,21 +1243,37 @@
         <div class="vt-note">event #14 recalled</div>
       </div>
     </div>
+    <p class="hand" style="display:block; margin-top: 28px; text-align: center; font-size: 18px;">
+      <span data-lang="cn">30% 概率自然带出旧事 — 调太高就变成怨妇, 调太低就消失了。</span>
+      <span data-lang="en">30% chance to surface a grudge — higher and she nags; lower and the feature disappears.</span>
+    </p>
   </section>
 
   <!-- =========================================================
        CHAPTER 04 — v2.2 · 节奏 (streaming + interrupt)
        ========================================================= -->
   <section class="chapter reveal">
-    <p class="chapter-eyebrow">v2.2 · <span data-lang="cn">节奏</span><span data-lang="en">rhythm</span></p>
-    <h2 class="title" style="max-width: 760px;">
-      <span data-lang="cn">边写边发, <em>像真人发微信</em></span>
-      <span data-lang="en">Sentence by sentence, <em>like a real text</em></span>
+    <p class="chapter-eyebrow">v2.2 · <span data-lang="cn">一行代码的转折</span><span data-lang="en">a one-line pivot</span></p>
+    <h2 class="title" style="max-width: 820px;">
+      <span data-lang="cn">整段发<br/>vs <em>一句一句发</em></span>
+      <span data-lang="en">Send the whole reply<br/>vs <em>send sentence by sentence</em></span>
     </h2>
 
     <p style="max-width: 760px;">
-      <span data-lang="cn">原版等 LLM 写完一整段才发出 — 首句出现要 4-8 秒, 不像活人。v2.2 后端改成边生成边按句号发, 前端拆成 2-4 条气泡。你说话不会被她"挡住" — 她还没说完, 你发新消息, 旧回复会被立即打断。</span>
-      <span data-lang="en">The original waited for a full reply — 4-8 second time-to-first-word, doesn't feel alive. v2.2 streams sentence by sentence, the frontend splits into 2-4 bubbles. You're never blocked — send a new message mid-reply, and her old response is interrupted instantly.</span>
+      <span data-lang="cn">v2 给了她情绪, 但首字还是要等 4-8 秒。她说话像在朗读, 不像在聊。</span>
+      <span data-lang="en">v2 gave her emotions, but the first word still took 4-8 seconds. She spoke like she was reading aloud, not chatting.</span>
+    </p>
+    <p style="max-width: 760px;">
+      <span data-lang="cn">某天回看自己跟朋友的微信, 突然意识到 — 真人发消息, 是一句一句发的, 不是写完一段才发。</span>
+      <span data-lang="en">One night I scrolled back through my own texts and realized — real people send messages a sentence at a time, not in completed paragraphs.</span>
+    </p>
+    <p style="max-width: 760px;">
+      <span data-lang="cn">改了一行: 后端流式生成时按句号切, 逐段发到前端。同时加了消息打断 — 她在说, 你又发新的, 旧的 asyncio.Task 立刻 cancel。</span>
+      <span data-lang="en">Changed one thing: stream by sentence on the backend, push as you go. Added interrupt — she's mid-reply, you send something new, the asyncio Task gets cancelled instantly.</span>
+    </p>
+    <p class="muted" style="max-width: 760px;">
+      <span data-lang="cn">这是整个项目里改动最小、感受变化最大的一次。她从"软件"变成了"活的"。</span>
+      <span data-lang="en">Smallest change, largest perceived shift in the whole project. She crossed from "software" to "alive."</span>
     </p>
 
     <div class="rhythm-stage">
@@ -1203,20 +1313,30 @@
        ========================================================= -->
   <section class="chapter release-block reveal">
     <div class="release-copy">
-      <p class="chapter-eyebrow">v3.0 · <span data-lang="cn">第二次转向 · 开源</span><span data-lang="en">second pivot · open source</span></p>
+      <p class="chapter-eyebrow">v3.0 · <span data-lang="cn">第二次大转向</span><span data-lang="en">second major pivot</span></p>
       <h2 class="title">
-        <span data-lang="cn">每个人都能<br/>在自己电脑上<em>跑</em></span>
-        <span data-lang="en">Anyone can run her on <em>their own machine</em></span>
+        <span data-lang="cn">决定<em>不</em>把它<br/>做成生意</span>
+        <span data-lang="en">Decided <em>not</em> to<br/>turn her into a business</span>
       </h2>
 
       <p>
-        <span data-lang="cn">v3 之前, 她只跑在我的笔记本上。v3 把所有硬编码绝对路径清掉、JWT 密钥变成"缺省自动生成"、nginx 配置变成模板、Cloudflared 公网隧道变可选 — 任何人 clone 下来都能跑。</span>
-        <span data-lang="en">Before v3, she only ran on my laptop. v3 stripped every hardcoded absolute path, made the JWT key auto-generate per deploy, turned the nginx config into a template, made the Cloudflared tunnel optional — anyone can clone and run.</span>
+        <span data-lang="cn">v2 跑得很稳, 朋友试了说"有点上瘾"。我可以包装成 SaaS, 每月 $10。</span>
+        <span data-lang="en">v2 ran well. Friends who tried it said "kinda addictive." I could have wrapped it as SaaS at $10/mo.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">但我做这个, 是想看"陪伴能不能被工程化", 不是想做一个让人付费上瘾的产品。这是设计目标的边界 — 一旦把它做成订阅, 整个项目的动机就变了。</span>
+        <span data-lang="en">But I built this to see whether "companionship can be engineered" — not to ship something people pay to be addicted to. A subscription model would change the project's whole motive.</span>
+      </p>
+
+      <p>
+        <span data-lang="cn">所以 v3 的决定: <strong>开源 + 100% 本地 + 自己装</strong>。这不是营销策略, 是 product principle。我对自己的承诺是, 技术上要让"不上传"是硬约束, 而不是一个 toggle。</span>
+        <span data-lang="en">So v3's decision: <strong>open source + 100% local + self-installed</strong>. Not a marketing tactic — a product principle. The promise I made myself was that "no upload" had to be a hard architectural constraint, not a toggle.</span>
       </p>
 
       <p class="muted">
-        <span data-lang="cn">同时建了一个落地页 (docs/index.html), 部署到 GitHub Pages 当产品官网, 含 8 个特性卡 / 3 步安装 / 关系阶段对比 / 7 条 FAQ。v3.1.1 上了官网双语切换。</span>
-        <span data-lang="en">In parallel I built a landing page (docs/index.html) on GitHub Pages — 8 feature cards / 3-step install / relationship-stage comparison / 7 FAQs. v3.1.1 added the site's CN/EN switch.</span>
+        <span data-lang="cn">同时建了 docs/index.html 落地页, 部署到 GitHub Pages — 8 特性卡 / 3 步安装 / 关系阶段对比 / 7 条 FAQ。第三版才达到我想要的风格。</span>
+        <span data-lang="en">Built a docs/index.html landing on GitHub Pages — 8 feature cards / 3-step install / relationship stages / 7 FAQs. The third draft finally felt right.</span>
       </p>
 
       <div class="pledge">
@@ -1249,15 +1369,25 @@
        CHAPTER 06 — v4 · 让她说英文 (bilingual)
        ========================================================= -->
   <section class="chapter reveal">
-    <p class="chapter-eyebrow">v4.0 · <span data-lang="cn">第三次转向 · 国际化</span><span data-lang="en">third pivot · i18n</span></p>
+    <p class="chapter-eyebrow">v4.0 · <span data-lang="cn">第三次大转向</span><span data-lang="en">third major pivot</span></p>
     <h2 class="title" style="max-width: 820px;">
-      <span data-lang="cn">让她<em>自己</em>说英文 —<br/>不是 UI 英文 + AI 中文的分裂</span>
-      <span data-lang="en">Let <em>her</em> speak English —<br/>not English UI on top of a Chinese AI</span>
+      <span data-lang="cn">中文她叫小爱 —<br/><em>英文她叫什么</em></span>
+      <span data-lang="en">In Chinese she's 小爱 —<br/><em>what's her name in English</em></span>
     </h2>
 
     <p style="max-width: 820px;">
-      <span data-lang="cn">前端自建轻量 i18n (无第三方库), 后端给 personality 加 language 字段, personality_engine 与 emotion_engine 的所有 prompt 出双语版 (关系阶段描述 / 亲密度规则 / 说话方式 / 身份指令 / 年龄风格 / 冷战记仇 / 依赖风格), 敏感词正则同时匹配中英输入, 英文不是机翻 — 是重写。</span>
-      <span data-lang="en">A lightweight in-house i18n on the frontend (no library). Backend adds a <code style="font-family:var(--mono);background:var(--paper-dark);padding:2px 6px;border-radius:4px;font-size:13px;">personality.language</code> field. Every prompt in personality_engine and emotion_engine got a bilingual variant — stage descriptions, intimacy rules, speaking style, identity defense, age tone, cold-war and grudge. Filter regex matches both languages. The English copy is rewritten, not auto-translated.</span>
+      <span data-lang="cn">v3 让代码可以跑在任何电脑上, 但 AI 还是只会说中文。开始做国际化的时候我以为是个翻译工作 — 三天后才意识到问题不是翻 UI, 而是: <em>同一个"她"在两种语言里, 是不是同一个人。</em></span>
+      <span data-lang="en">v3 made the code run on anyone's machine, but the AI still only spoke Chinese. I started i18n thinking it was a translation job — three days in I realised the question wasn't translating the UI. The question was: <em>is the same "her" the same person across two languages.</em></span>
+    </p>
+
+    <p style="max-width: 820px;">
+      <span data-lang="cn">如果只是 UI 切英文, AI 还回中文, 访客会觉得这是个 demo, 不是产品。所以 v4 把 personality_engine 和 emotion_engine 里所有 prompt 都出了双语版 — 不是机翻, 是重写。</span>
+      <span data-lang="en">If only the UI switches and the AI still replies in Chinese, visitors read it as a demo, not a product. So v4 rewrote every prompt in personality_engine and emotion_engine into both languages — by hand.</span>
+    </p>
+
+    <p style="max-width: 820px;">
+      <span data-lang="cn">英文版的她, 撒娇的语气、记仇的语气、冷战的语气 — 都要在英语自己的语境里成立, 不能像被翻译过来的中文人。</span>
+      <span data-lang="en">Her flirty voice, her grudge voice, her cold-war voice — each had to stand on its own inside English, not read like a translated Chinese persona.</span>
     </p>
 
     <div class="bi-block">
@@ -1279,29 +1409,122 @@
       </div>
     </div>
     <p class="muted" style="text-align:center;margin-top:18px;font-size:13px;">
-      <span data-lang="cn">同一段冷战, 不是翻译 — 是两种语言里同一个人的两种说法。</span>
+      <span data-lang="cn">同一段冷战 — 不是翻译, 是两种语言里同一个人的两种说法。</span>
       <span data-lang="en">Same cold-war moment — not a translation, but how the same person says it in two languages.</span>
+    </p>
+    <p class="hand" style="display:block; text-align:center; margin-top: 24px; font-size: 18px;">
+      <span data-lang="cn">i18n 没用第三方库 — 自建了 70 行的 useI18n。理由: 完全控制 fall back, 不想多一个依赖。</span>
+      <span data-lang="en">No i18n library — wrote a 70-line useI18n by hand. Full control over fallback, one less dependency.</span>
     </p>
   </section>
 
   <!-- =========================================================
-       CTA
+       CHAPTER 07 — 尾声 · what I learned / what's next
        ========================================================= -->
-  <section class="chapter cta-block reveal" style="padding-top: 80px;">
-    <p class="cta-eyebrow">— <span data-lang="cn">想见她</span><span data-lang="en">meet her</span></p>
+  <section class="chapter reflection-block reveal">
+    <p class="chapter-eyebrow">
+      <span data-lang="cn">尾声 · 现在回头看</span>
+      <span data-lang="en">EPILOGUE · LOOKING BACK</span>
+    </p>
+    <h2 class="title" style="max-width: 760px;">
+      <span data-lang="cn">这 6 个月<br/><em>学到的几件事</em></span>
+      <span data-lang="en">A few things<br/><em>learned over six months</em></span>
+    </h2>
+
+    <div class="lessons">
+      <article class="lesson">
+        <div class="lesson-num">01</div>
+        <h3>
+          <span data-lang="cn">技术不是瓶颈了, 设计才是。</span>
+          <span data-lang="en">Tech isn't the bottleneck. Design is.</span>
+        </h3>
+        <p>
+          <span data-lang="cn">本地 LLM + 三层记忆, 真的能跑出一个有人味的 AI。瓶颈不在算力, 在于愿不愿意接受她"不够友好"。</span>
+          <span data-lang="en">Local LLM + a three-layer memory really is enough to ship something that feels human. The bottleneck isn't compute — it's whether you accept her being "not always nice."</span>
+        </p>
+      </article>
+
+      <article class="lesson">
+        <div class="lesson-num">02</div>
+        <h3>
+          <span data-lang="cn">让她"不完美"才是产品的灵魂。</span>
+          <span data-lang="en">Imperfection is what makes her real.</span>
+        </h3>
+        <p>
+          <span data-lang="cn">一个永远友好的 AI 不像人 — 像客服。情绪、冷战、记仇, 不是 feature, 是让"陪伴"这件事可信的最低门槛。</span>
+          <span data-lang="en">A perpetually helpful AI doesn't read as a person — it reads as a customer-service rep. Moods, cold-wars, grudges aren't features; they're the minimum threshold that lets "companionship" feel real at all.</span>
+        </p>
+      </article>
+
+      <article class="lesson">
+        <div class="lesson-num">03</div>
+        <h3>
+          <span data-lang="cn">开源是 principle, 不是 marketing。</span>
+          <span data-lang="en">Open source as principle, not marketing.</span>
+        </h3>
+        <p>
+          <span data-lang="cn">技术约束比 brand promise 可靠。"不上传"写在 README 里是营销, 写在架构里才是约束。我宁愿放弃一个商业模式, 也不愿对自己说谎。</span>
+          <span data-lang="en">A constraint in the architecture is more credible than a promise on the README. "No upload" as marketing is one thing; "no upload" as something the code literally cannot do is another. I'd rather drop a revenue model than lie to myself.</span>
+        </p>
+      </article>
+
+      <article class="lesson">
+        <div class="lesson-num">04</div>
+        <h3>
+          <span data-lang="cn">这个项目不是为了做 AI 女友。</span>
+          <span data-lang="en">This project wasn't really about an AI girlfriend.</span>
+        </h3>
+        <p>
+          <span data-lang="cn">是用"陪伴"这个最日常的关系, 反过来探测"人"是怎么被感知的 — 你需要什么, 一个东西就开始像人。</span>
+          <span data-lang="en">It used "companionship" — the most everyday relationship — to probe how we perceive personhood in the first place. What does a thing need to do before we start reading it as a person.</span>
+        </p>
+      </article>
+    </div>
+
+    <div class="next-steps">
+      <p class="chapter-eyebrow" style="margin-bottom: 18px;">
+        <span data-lang="cn">下一步 · 还没动手, 但想了很久</span>
+        <span data-lang="en">NEXT · not built yet, but planned</span>
+      </p>
+      <ul>
+        <li>
+          <span data-lang="cn">记忆从 ChromaDB 换成 graph DB — 关系不是平的, 是网状的。"你提到 A 时候我会想到 B" 用向量搜不出来。</span>
+          <span data-lang="en">Move memory from ChromaDB to a graph DB — relationships aren't flat, they're networked. "When you mention A, I think of B" isn't something vector search can do.</span>
+        </li>
+        <li>
+          <span data-lang="cn">情绪学习曲线 — 她冷淡之后怎么和好, 应该有节奏。现在的状态机太机械。</span>
+          <span data-lang="en">A learning curve for emotion — how she returns from cold to warm should have rhythm. The current state machine is too mechanical.</span>
+        </li>
+        <li>
+          <span data-lang="cn">心情时间线 UI — 用户能看见她最近一周的情绪走势, 把"黑盒"打开一点。</span>
+          <span data-lang="en">A mood timeline UI — let the user see her past week of emotional state. Open the black box a little.</span>
+        </li>
+        <li>
+          <span data-lang="cn">真正的 user study — 找 5 个陌生人用 30 天, 看关系阶段的升级是不是真实发生。</span>
+          <span data-lang="en">A real user study — five strangers for 30 days, see whether the stage progressions actually happen in the wild.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       CTA — quiet, portfolio-appropriate
+       ========================================================= -->
+  <section class="chapter cta-block reveal" style="padding-top: 60px;">
+    <p class="cta-eyebrow">— <span data-lang="cn">如果你想自己看</span><span data-lang="en">if you'd rather see for yourself</span></p>
     <h2>
-      <span data-lang="cn">现在就可以聊</span>
-      <span data-lang="en">She's already online</span>
+      <span data-lang="cn">她跑在 dr-16.github.io</span>
+      <span data-lang="en">She lives at dr-16.github.io</span>
     </h2>
     <div class="cta-twin">
       <a class="cta-primary" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
-        <span data-lang="cn">走进官网</span>
-        <span data-lang="en">Visit the site</span>
+        <span data-lang="cn">看 live 版本</span>
+        <span data-lang="en">See it live</span>
         <span>→</span>
       </a>
       <a class="cta-secondary" href="https://github.com/DR-16/ai-girlfriend" target="_blank" rel="noopener">
         <span data-lang="cn">在 GitHub 看代码</span>
-        <span data-lang="en">View on GitHub</span>
+        <span data-lang="en">Read the source</span>
       </a>
     </div>
     <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
@@ -1317,10 +1540,10 @@
   </a></p>
 </footer>
 
-<!-- floating CTA → 官网 (always visible) -->
+<!-- floating pill → live demo (always visible, intentionally quieter than Whiskey's CTA) -->
 <a class="cta-float" href="https://dr-16.github.io/ai-girlfriend/" target="_blank" rel="noopener">
-  <span data-lang="cn">走进官网</span>
-  <span data-lang="en">Visit AIve</span>
+  <span data-lang="cn">看 live 版本</span>
+  <span data-lang="en">See it live</span>
   <span class="arrow">→</span>
 </a>
 
