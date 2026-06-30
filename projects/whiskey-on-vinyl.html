@@ -148,7 +148,11 @@
   .world {
     position: absolute; inset: 0;
     transform-style: preserve-3d;
-    transform: translate3d(0, 0, 0) rotateX(0deg);
+    /* pivot the camera AROUND the turntable position (60% down the viewport,
+       slightly forward in Z). When we rotate the world around this point,
+       the turntable stays put on screen while the bar swings down behind it. */
+    transform-origin: 50% 60% 60px;
+    transform: rotateX(0deg);
     will-change: transform;
   }
 
@@ -1406,14 +1410,16 @@
 
     /* phases:
        0.00–0.05  WIDE      · bar view, hold a moment
-       0.05–0.30  PUSH+TILT · camera pushes forward AND tilts down 70°
-                              ending directly above the turntable
-       0.30–0.94  ABOVE     · vinyl fills the view spinning; 7 cards reveal
+       0.05–0.30  PUSH+TILT · camera pivots AROUND the turntable, tilting
+                              down 72° (matching the counter's intrinsic
+                              -72° so the counter top ends up facing the
+                              camera = looking straight down at the vinyl).
+                              Also pushes in via translateZ.
+       0.30–0.94  ABOVE     · cards reveal in turn; vinyl keeps spinning
        0.94–1.00  HANDOFF   · stay until below content takes over           */
 
-    const TILT_END = 70;
-    const PUSH_Z_END = 280;
-    const LIFT_Y_END = 60;
+    const TILT_END = 72;
+    const PUSH_Z_END = 220;
 
     let lastIdx = -1;
 
@@ -1427,13 +1433,12 @@
       const total = rect.height - window.innerHeight;
       const t = Math.max(0, Math.min(1, -rect.top / total));
 
-      /* camera: push forward + tilt down in a single continuous move */
+      /* camera pivots AROUND the turntable (transform-origin set in CSS).
+         Push-in is on translateZ. No translateY — the pivot does the work. */
       const camT = smoothstep(0.05, 0.30, t);
       const tilt = TILT_END * camT;
-      const liftY = LIFT_Y_END * camT;
       const pushZ = PUSH_Z_END * camT;
-      world.style.transform =
-        `translate3d(0, ${liftY}px, ${pushZ}px) rotateX(${tilt}deg)`;
+      world.style.transform = `translateZ(${pushZ}px) rotateX(${tilt}deg)`;
 
       /* vinyl spin (continuous, faster while inside-above phase) */
       if (vinyl) {
