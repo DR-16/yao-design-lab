@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>DR Gesture Core · 让手掌抓住光 — Yao Design Lab</title>
+<meta name="theme-color" content="#02060c" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+
+<style>
+  /* =================================================================
+     DR Gesture Core · behind — Yao Design Lab
+     Sci-fi HUD aesthetic. Cyan #00f0ff + orange #ff8a1a on deep space.
+     Central visual is a Fibonacci particle sphere (pure SVG dots) that
+     spins + breathes with scroll. Cards on the right cycle per SPIN
+     phase, matching the Whiskey on Vinyl layout the user preferred.
+     ================================================================= */
+  :root {
+    --cyan:       #00f0ff;
+    --cyan-dim:   #008ba3;
+    --cyan-glow:  rgba(0, 240, 255, 0.6);
+    --orange:     #ff8a1a;
+    --orange-dim: #a05010;
+    --orange-glow:rgba(255, 138, 26, 0.7);
+    --red:        #ff3344;
+    --ink-1:      #02060c;
+    --ink-2:      #060f1e;
+    --ink-3:      #0a1830;
+    --paper:      #d9f4fb;
+    --paper-dim:  #7ea9b8;
+    --panel-bg:   rgba(0, 30, 45, 0.28);
+    --panel-line: rgba(0, 240, 255, 0.35);
+    --rule:       rgba(0, 240, 255, 0.20);
+
+    --display:    "Orbitron", "Share Tech Mono", monospace;
+    --mono:       "Share Tech Mono", "Orbitron", monospace;
+    --serif-zh:   "Noto Sans SC", "PingFang SC", sans-serif;
+    --serif-en:   "Cormorant Garamond", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--ink-1);
+    color: var(--paper);
+    font-family: var(--serif-zh);
+    font-weight: 300;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body { overflow-x: clip; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  ::selection { background: var(--cyan-dim); color: var(--ink-1); }
+
+  /* ---------- deep space ambient (fixed layer) ---------- */
+  .space-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 85% 55% at 18% 85%, rgba(0, 55, 140, 0.55) 0%, transparent 52%),
+      radial-gradient(ellipse 60% 80% at 80% 14%, rgba(0, 100, 72, 0.42) 0%, transparent 50%),
+      radial-gradient(ellipse 45% 45% at 64% 58%, rgba(40, 0, 75, 0.30) 0%, transparent 44%),
+      radial-gradient(ellipse 30% 30% at 35% 25%, rgba(0, 30, 80, 0.25) 0%, transparent 40%),
+      radial-gradient(ellipse at center, #060f1e 0%, #020709 65%, #000105 100%);
+  }
+  /* scanlines overlay */
+  .scanlines {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0 2px,
+      rgba(0, 240, 255, 0.025) 2px 3px
+    );
+    mix-blend-mode: overlay;
+  }
+  /* vignette */
+  .vignette {
+    position: fixed; inset: 0; z-index: 3;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%);
+  }
+  /* subtle background stars — CSS box-shadow trick */
+  .stars {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, var(--cyan-glow), transparent),
+      radial-gradient(1px 1px at 80% 70%, var(--cyan-glow), transparent),
+      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 65% 20%, var(--cyan-glow), transparent),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 10% 60%, var(--cyan-glow), transparent),
+      radial-gradient(2px 2px at 50% 50%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 30% 45%, var(--cyan-glow), transparent);
+    opacity: 0.6;
+    animation: twinkle 6s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 0.85; }
+  }
+
+  /* ---------- nav ---------- */
+  .proj-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 32px;
+    background: linear-gradient(180deg, rgba(2,6,12,0.82), rgba(2,6,12,0));
+    backdrop-filter: blur(10px);
+  }
+  .back-link, .nav-brand {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    transition: color 0.25s, text-shadow 0.25s;
+  }
+  .back-link:hover { color: var(--paper); text-shadow: 0 0 12px var(--cyan-glow); }
+  .nav-brand { color: var(--paper-dim); }
+
+  /* ---------- intro section ---------- */
+  .intro-section {
+    position: relative; z-index: 5;
+    max-width: 960px; margin: 0 auto;
+    padding: 140px 6vw 60px;
+    text-align: center;
+  }
+  .intro-section .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: var(--orange);
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--orange-glow);
+  }
+  .intro-section h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(46px, 6.4vw, 80px);
+    color: var(--paper);
+    line-height: 1.05;
+    letter-spacing: 0.04em;
+    margin-top: 20px;
+    text-transform: uppercase;
+    text-shadow: 0 0 32px rgba(0, 240, 255, 0.35);
+  }
+  .intro-section h1 em {
+    font-style: normal;
+    color: var(--cyan);
+    text-shadow: 0 0 24px var(--cyan-glow);
+  }
+  .intro-section .tagline {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.4vw, 16px);
+    letter-spacing: 0.24em;
+    color: var(--cyan-dim);
+    text-transform: uppercase;
+  }
+  .intro-section p.lead {
+    margin: 30px auto 0;
+    font-family: var(--serif-zh);
+    font-size: clamp(15px, 1.7vw, 18px);
+    color: var(--paper);
+    max-width: 580px; line-height: 1.8;
+  }
+  .intro-section .stack-tags {
+    margin-top: 32px;
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 6px 12px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: var(--paper-dim);
+    text-transform: uppercase;
+  }
+  .intro-section .stack-tags span {
+    padding: 3px 10px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    border-radius: 2px;
+  }
+  .intro-section .hint {
+    margin-top: 40px;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.32em;
+    color: var(--cyan-dim); text-transform: uppercase;
+  }
+  .intro-section .hint .arr { display: inline-block; margin-left: 10px; animation: nudge 1.8s ease-in-out infinite; }
+  @keyframes nudge { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+  /* ============================================================
+     SCROLL TRACK · sticky stage
+     ============================================================ */
+  .scroll-track { position: relative; height: 850vh; }
+  .scene-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ---------- particle sphere (SVG · Fibonacci distribution) ---------- */
+  .sphere-wrap {
+    position: absolute;
+    left: 30%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(70vh, 45vw);
+    aspect-ratio: 1;
+    z-index: 4;
+  }
+  .sphere-wrap svg {
+    width: 100%; height: 100%;
+    overflow: visible;
+    display: block;
+    animation: sphereSpin 26s linear infinite, sphereBreathe 5s ease-in-out infinite;
+    filter: drop-shadow(0 0 22px var(--cyan-glow));
+  }
+  @keyframes sphereSpin {
+    from { transform: rotateY(0deg); }
+    to   { transform: rotateY(360deg); }
+  }
+  @keyframes sphereBreathe {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+  }
+  .sphere-wrap svg circle {
+    fill: var(--cyan);
+  }
+
+  /* HUD rings around the sphere */
+  .hud-rings {
+    position: absolute;
+    left: 30%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(85vh, 55vw);
+    aspect-ratio: 1;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .hud-rings .ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--panel-line);
+    border-radius: 50%;
+    animation: ringSpin 40s linear infinite;
+  }
+  .hud-rings .ring.r1 { width: 100%; height: 100%; border-color: rgba(0,240,255,0.30); }
+  .hud-rings .ring.r2 { width: 78%; height: 78%; border-color: rgba(0,240,255,0.18); border-style: dashed; animation-duration: 60s; animation-direction: reverse; }
+  .hud-rings .ring.r3 { width: 108%; height: 108%; border-color: rgba(255,138,26,0.24); border-style: dashed; animation-duration: 90s; }
+  .hud-rings .ring.r1::before, .hud-rings .ring.r1::after {
+    content: ""; position: absolute;
+    width: 8px; height: 8px;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan-glow);
+    border-radius: 50%;
+  }
+  .hud-rings .ring.r1::before { left: -4px; top: 50%; margin-top: -4px; }
+  .hud-rings .ring.r1::after  { right: -4px; top: 50%; margin-top: -4px; }
+  @keyframes ringSpin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  /* crosshair */
+  .crosshair {
+    position: absolute;
+    left: 30%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 40px;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.35;
+  }
+  .crosshair::before, .crosshair::after {
+    content: ""; position: absolute;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan-glow);
+  }
+  .crosshair::before { left: 50%; top: -8px; bottom: -8px; width: 1px; margin-left: -0.5px; }
+  .crosshair::after  { top: 50%; left: -8px; right: -8px; height: 1px; margin-top: -0.5px; }
+
+  /* corner brackets on the sphere area */
+  .sphere-brackets {
+    position: absolute;
+    left: 30%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(85vh, 55vw);
+    aspect-ratio: 1;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .sphere-brackets .b {
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--cyan);
+    border-style: solid;
+    border-width: 0;
+  }
+  .sphere-brackets .b.tl { top: -8px; left: -8px; border-top-width: 1px; border-left-width: 1px; }
+  .sphere-brackets .b.tr { top: -8px; right: -8px; border-top-width: 1px; border-right-width: 1px; }
+  .sphere-brackets .b.bl { bottom: -8px; left: -8px; border-bottom-width: 1px; border-left-width: 1px; }
+  .sphere-brackets .b.br { bottom: -8px; right: -8px; border-bottom-width: 1px; border-right-width: 1px; }
+
+  /* mode readout — floats near the sphere */
+  .mode-readout {
+    position: absolute;
+    left: 30%; top: 50%;
+    transform: translate(-50%, calc(-50% + min(45vh, 30vw)));
+    z-index: 6;
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 14px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+    pointer-events: none;
+  }
+  .mode-readout .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan-glow);
+    animation: pulseDot 1.4s ease-in-out infinite;
+  }
+  @keyframes pulseDot { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* ---------- chapter cards ---------- */
+  .cards-layer {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .card {
+    position: absolute;
+    right: 4vw; top: 50%;
+    transform: translateY(-50%) translateX(20px);
+    width: clamp(380px, 42vw, 560px);
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 26px 30px 24px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    border-radius: 2px;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow:
+      0 30px 60px rgba(0,0,0,0.7),
+      inset 0 0 0 1px rgba(0, 240, 255, 0.05);
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    pointer-events: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--cyan-dim) transparent;
+  }
+  .card::-webkit-scrollbar { width: 4px; }
+  .card::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+  .card.is-in { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+  /* corner brackets on cards */
+  .card::before, .card::after {
+    content: ""; position: absolute;
+    width: 12px; height: 12px;
+    border-color: var(--cyan);
+    border-style: solid;
+    border-width: 0;
+  }
+  .card::before { top: -1px; left: -1px; border-top-width: 1px; border-left-width: 1px; }
+  .card::after  { bottom: -1px; right: -1px; border-bottom-width: 1px; border-right-width: 1px; }
+
+  .card .ver {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: var(--orange);
+    text-shadow: 0 0 8px var(--orange-glow);
+    margin-bottom: 4px;
+  }
+  .card .ev {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.36em;
+    color: var(--cyan-dim);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .card h3 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(24px, 2.4vw, 32px);
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    color: var(--paper);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0, 240, 255, 0.28);
+  }
+  .card h3 em {
+    font-style: normal;
+    color: var(--cyan);
+  }
+  .card p {
+    font-family: var(--serif-zh);
+    font-size: 14.5px;
+    color: var(--paper);
+    line-height: 1.8;
+    margin-bottom: 10px;
+  }
+  .card p.muted { color: var(--paper-dim); font-size: 13.5px; }
+  .card code, .card .kbd {
+    font-family: var(--mono);
+    background: rgba(0, 240, 255, 0.10);
+    color: var(--cyan);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 12.5px;
+    letter-spacing: 0.05em;
+  }
+  .card blockquote {
+    margin: 14px 0 4px;
+    padding: 6px 0 6px 14px;
+    border-left: 1px solid var(--orange);
+    font-family: var(--serif-en);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--orange);
+    line-height: 1.55;
+    text-shadow: 0 0 12px var(--orange-glow);
+  }
+  .card .metrics {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .card .metric {
+    text-align: left;
+  }
+  .card .metric .val {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan-glow);
+    line-height: 1.1;
+  }
+  .card .metric .lbl {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    color: var(--paper-dim);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* progress dots at bottom center */
+  .card-progress {
+    position: absolute;
+    left: 30%; bottom: 6%;
+    transform: translateX(-50%);
+    z-index: 11;
+    display: flex; gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card-progress.show { opacity: 1; }
+  .card-progress .pd {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(0, 240, 255, 0.2);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    transition: all 0.3s;
+  }
+  .card-progress .pd.active {
+    background: var(--cyan);
+    transform: scale(1.4);
+    box-shadow: 0 0 14px var(--cyan-glow);
+  }
+
+  /* ============================================================
+     BELOW STAGE · lessons + cta
+     ============================================================ */
+  .lessons-section {
+    position: relative; z-index: 4;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 100px 6vw 60px;
+  }
+  .l-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.4em;
+    color: var(--orange); text-transform: uppercase;
+    text-shadow: 0 0 8px var(--orange-glow);
+    margin-bottom: 18px;
+  }
+  .l-title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(34px, 4.4vw, 56px);
+    color: var(--paper);
+    margin-bottom: 36px;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 24px rgba(0, 240, 255, 0.28);
+  }
+  .l-title em { font-style: normal; color: var(--cyan); text-shadow: 0 0 24px var(--cyan-glow); }
+  .lessons {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
+    margin-top: 36px;
+  }
+  .lesson {
+    position: relative;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    border-radius: 2px;
+    padding: 32px 28px 26px;
+  }
+  .lesson::before, .lesson::after {
+    content: ""; position: absolute;
+    width: 10px; height: 10px;
+    border-color: var(--cyan);
+    border-style: solid;
+    border-width: 0;
+  }
+  .lesson::before { top: -1px; left: -1px; border-top-width: 1px; border-left-width: 1px; }
+  .lesson::after  { bottom: -1px; right: -1px; border-bottom-width: 1px; border-right-width: 1px; }
+  .lesson .num {
+    position: absolute;
+    top: -14px; left: 22px;
+    background: var(--ink-1);
+    color: var(--orange);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 11px; letter-spacing: 0.28em;
+    padding: 4px 12px;
+    border: 1px solid var(--orange);
+    box-shadow: 0 0 12px var(--orange-glow);
+  }
+  .lesson h4 {
+    font-family: var(--display); font-weight: 700;
+    font-size: 16px; color: var(--paper);
+    margin: 8px 0 12px; line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .lesson p {
+    font-family: var(--serif-zh); font-size: 14px;
+    color: var(--paper-dim); line-height: 1.7; margin: 0;
+  }
+  .next-block {
+    margin-top: 60px;
+    padding: 32px 36px;
+    background: var(--panel-bg);
+    border-left: 2px solid var(--orange);
+  }
+  .next-block ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  .next-block li {
+    position: relative; padding-left: 26px;
+    font-family: var(--serif-zh); font-size: 15px;
+    color: var(--paper); line-height: 1.7;
+  }
+  .next-block li::before {
+    content: "→";
+    position: absolute; left: 0; top: 1px;
+    color: var(--orange); font-family: var(--mono); font-weight: 500;
+  }
+
+  .cta-block {
+    position: relative; z-index: 4;
+    max-width: 880px; margin: 0 auto;
+    padding: 80px 6vw 80px;
+    text-align: center;
+  }
+  .cta-eyebrow {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.32em;
+    color: var(--cyan-dim); text-transform: uppercase;
+    margin-bottom: 26px;
+  }
+  .cta-block h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(26px, 3.6vw, 40px);
+    color: var(--paper);
+    margin-bottom: 32px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 24px rgba(0, 240, 255, 0.30);
+  }
+  .cta-twin { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .cta-primary, .cta-secondary {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 18px 34px;
+    font-family: var(--display);
+    font-weight: 700; font-size: 14px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    border: 1px solid;
+  }
+  .cta-primary {
+    background: var(--cyan);
+    color: var(--ink-1);
+    border-color: var(--cyan);
+    box-shadow: 0 0 24px var(--cyan-glow);
+  }
+  .cta-primary:hover { transform: translateY(-3px); box-shadow: 0 0 40px var(--cyan-glow); }
+  .cta-secondary {
+    background: transparent;
+    color: var(--cyan);
+    border-color: var(--cyan);
+  }
+  .cta-secondary:hover { background: rgba(0, 240, 255, 0.08); transform: translateY(-3px); }
+  .cta-meta {
+    margin-top: 28px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.22em;
+    color: var(--paper-dim);
+    text-transform: uppercase;
+  }
+
+  .proj-foot {
+    position: relative; z-index: 4;
+    text-align: center;
+    padding: 60px 5vw 50px;
+    border-top: 1px solid var(--rule);
+  }
+  .proj-foot p {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.3em;
+    color: var(--paper-dim); margin: 4px 0;
+    text-transform: uppercase;
+  }
+  .proj-foot a { color: var(--cyan); border-bottom: 1px solid var(--rule); transition: color 0.2s; }
+  .proj-foot a:hover { color: var(--paper); }
+
+  /* ---------- lang switch + floating CTA ---------- */
+  body.lang-en [data-lang="cn"] { display: none !important; }
+  body.lang-cn [data-lang="en"] { display: none !important; }
+
+  .lang-switch {
+    position: fixed;
+    right: 28px; bottom: 28px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 14px;
+    padding: 12px 22px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-line);
+    backdrop-filter: blur(12px);
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.24em; line-height: 1;
+    box-shadow: 0 0 24px rgba(0, 240, 255, 0.15);
+    text-transform: uppercase;
+  }
+  .lang-switch button {
+    background: transparent; border: 0;
+    color: var(--paper-dim);
+    font: inherit; letter-spacing: inherit;
+    padding: 4px 6px; cursor: pointer;
+    transition: color 0.2s;
+  }
+  .lang-switch button:hover { color: var(--paper); }
+  .lang-switch button.active { color: var(--cyan); text-shadow: 0 0 10px var(--cyan-glow); }
+  .lang-switch .lang-divider { color: rgba(0, 240, 255, 0.25); }
+
+  .cta-float {
+    position: fixed;
+    left: 28px; bottom: 28px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 24px;
+    background: var(--cyan);
+    color: var(--ink-1);
+    font-family: var(--display); font-weight: 700;
+    font-size: 12px; letter-spacing: 0.24em;
+    border: 1px solid var(--cyan);
+    box-shadow: 0 0 24px var(--cyan-glow);
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+  .cta-float:hover { transform: translateY(-3px); box-shadow: 0 0 40px var(--cyan-glow); }
+  .cta-float .arrow { transition: transform 0.3s; }
+  .cta-float:hover .arrow { transform: translateX(4px); }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.9s, transform 0.9s; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 720px) {
+    .scroll-track { height: auto; }
+    .scene-stage { position: relative; height: auto; padding: 60px 0; min-height: 60vh; }
+    .sphere-wrap, .hud-rings, .sphere-brackets, .crosshair, .mode-readout {
+      position: relative; left: auto; top: auto; transform: none; margin: 20px auto;
+    }
+    .cards-layer { position: relative; padding: 30px 5vw; }
+    .card {
+      position: relative !important; opacity: 1;
+      top: auto; right: auto !important; left: auto !important;
+      transform: none !important; width: 100%; margin: 16px 0;
+      max-height: none;
+    }
+    .card-progress { display: none; }
+    .lessons { grid-template-columns: 1fr; }
+    .lang-switch { right: 14px; bottom: 14px; padding: 9px 16px; font-size: 11px; gap: 10px; }
+    .cta-float   { left:  14px; bottom: 14px; padding: 11px 18px; font-size: 11px; }
+  }
+</style>
+</head>
+
+<body class="lang-cn">
+
+<div class="space-bg"></div>
+<div class="stars"></div>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<header class="proj-nav">
+  <a href="../" class="back-link">← BACK TO LAB</a>
+  <span class="nav-brand">DR · Gesture Core · behind</span>
+</header>
+
+<section class="intro-section">
+  <p class="eyebrow"><span data-lang="cn">起点 · 让手掌抓住光</span><span data-lang="en">CHAPTER 01 · HANDS ON LIGHT</span></p>
+  <h1>
+    <span data-lang="cn">让手掌<br/><em>抓住光</em></span>
+    <span data-lang="en">Let hands<br/><em>catch the light</em></span>
+  </h1>
+  <p class="tagline">browser-local · webcam-driven · zero backend</p>
+  <p class="lead">
+    <span data-lang="cn">想做的是: 不装 APP, 不上传数据, 不需要任何硬件 — 打开浏览器摄像头, 就能"用手就能成为钢铁侠"。</span>
+    <span data-lang="en">The goal: no app to install, no data upload, no hardware to buy — open your browser, aim your webcam, and "become Iron Man with your hands."</span>
+  </p>
+  <div class="stack-tags">
+    <span>Three.js r160</span>
+    <span>MediaPipe</span>
+    <span>GLSL</span>
+    <span>WebGL</span>
+    <span>One-Euro Filter</span>
+    <span>UnrealBloom</span>
+  </div>
+</section>
+
+
+<!-- ===================== sticky stage ===================== -->
+<div class="scroll-track" id="scrollTrack">
+  <div class="scene-stage">
+
+    <!-- HUD rings surround the sphere -->
+    <div class="hud-rings">
+      <div class="ring r3"></div>
+      <div class="ring r1"></div>
+      <div class="ring r2"></div>
+    </div>
+    <div class="sphere-brackets">
+      <div class="b tl"></div><div class="b tr"></div>
+      <div class="b bl"></div><div class="b br"></div>
+    </div>
+    <div class="crosshair"></div>
+
+    <!-- particle sphere · Fibonacci distribution generated by JS at load -->
+    <div class="sphere-wrap">
+      <svg id="sphereSvg" viewBox="-1 -1 2 2" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <!-- mode readout (like the real product's HUD) -->
+    <div class="mode-readout">
+      <span class="dot"></span>
+      <span id="modeName">SPHERE</span>
+    </div>
+
+    <!-- chapter cards (overlay on the right) -->
+    <div class="cards-layer">
+
+      <article class="card" data-i="0">
+        <p class="ver">v1.0.0 · 2026.02</p>
+        <p class="ev">01 · <span data-lang="cn">起点 · 手势 + 粒子的第一次相遇</span><span data-lang="en">01 · hands meet particles</span></p>
+        <h3>
+          <span data-lang="cn"><em>9000</em> 颗粒子<br/>Fibonacci 球面</span>
+          <span data-lang="en"><em>9000</em> particles on<br/>a Fibonacci sphere</span>
+        </h3>
+        <p>
+          <span data-lang="cn">浏览器里能不能一边跑 MediaPipe 实时手部识别, 一边渲染 9000 颗粒子, 而且不掉帧?</span>
+          <span data-lang="en">Can a browser run MediaPipe hand tracking in one thread and render 9,000 particles in another — without dropping frames?</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">粒子用 Fibonacci 球面分布 (最均匀的球面点集), <code>THREE.Points</code> + 自定义 GLSL. MediaPipe HandLandmarker VIDEO 模式, 最多 2 手. 结果 — 稳定 60fps。</span>
+          <span data-lang="en">Fibonacci sphere distribution (most-uniform point set on a sphere), <code>THREE.Points</code> + custom GLSL. MediaPipe HandLandmarker in VIDEO mode, max 2 hands. Result — steady 60fps.</span>
+        </p>
+        <div class="metrics">
+          <div class="metric"><span class="val">9K</span><span class="lbl">particles</span></div>
+          <div class="metric"><span class="val">60</span><span class="lbl">fps target</span></div>
+          <div class="metric"><span class="val">2</span><span class="lbl">hands max</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="1">
+        <p class="ver">v1.1.0</p>
+        <p class="ev">02 · <span data-lang="cn">从单形态到多几何</span><span data-lang="en">02 · one shape to six</span></p>
+        <h3>
+          <span data-lang="cn">六种形态<br/><em>SPHERE → NOVA</em></span>
+          <span data-lang="en">Six modes:<br/><em>SPHERE → NOVA</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">单一球形太安静. 加了 5 种 GLSL 几何函数: <code>DORMANT / VORTEX / PULSE / STORM / NOVA</code>, 每种对应一个手势. 用链式 <code>smoothstep</code> 在几何之间连续插值。</span>
+          <span data-lang="en">A single sphere was too quiet. Added five GLSL geometry functions — <code>DORMANT / VORTEX / PULSE / STORM / NOVA</code> — one per gesture. Chained <code>smoothstep</code> blends between them.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">颜色也随 <code>vMode</code> 走 6 段渐变. 每种形态有自己的色相 — SPHERE 冷蓝, NOVA 灼橙.</span>
+          <span data-lang="en">Colour follows <code>vMode</code> across a 6-stop gradient — cold blue for SPHERE, blazing orange for NOVA.</span>
+        </p>
+        <div class="metrics">
+          <div class="metric"><span class="val">6</span><span class="lbl">modes</span></div>
+          <div class="metric"><span class="val">GLSL</span><span class="lbl">on GPU</span></div>
+          <div class="metric"><span class="val">1:1</span><span class="lbl">gesture map</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="2">
+        <p class="ver">v1.2.0</p>
+        <p class="ev">03 · <span data-lang="cn">全息视觉系统</span><span data-lang="en">03 · the visual system</span></p>
+        <h3>
+          <span data-lang="cn">把它<br/>放进<em>深空</em></span>
+          <span data-lang="en">Put it<br/>in <em>deep space</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">粒子球单独漂着太薄. 加了背景层: FBM 星云天空球 (4 层噪声), 1200 颗独立闪烁的背景星 (色温 蓝白→暖白), 3 条缓慢公转的轨道弧, 6500 颗独立自转的外壳粒子.</span>
+          <span data-lang="en">The core sphere alone read as thin. Layered in a backdrop: an FBM nebula skysphere (4 octaves of noise), 1,200 independent-twinkle background stars (blue-white → warm-white temperature range), 3 slowly-orbiting arcs, 6,500 outer-shell particles with their own spin.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">后处理管线: EffectComposer → UnrealBloomPass → 径向色差 ShaderPass → OutputPass. 亮部有光晕, 边缘有 RGB 分离, 像素级的电影感。</span>
+          <span data-lang="en">Post-processing stack: EffectComposer → UnrealBloomPass → radial-chromatic-aberration ShaderPass → OutputPass. Highlights bloom, edges get an RGB split — pixel-level cinematic.</span>
+        </p>
+        <div class="metrics">
+          <div class="metric"><span class="val">1200</span><span class="lbl">bg stars</span></div>
+          <div class="metric"><span class="val">6500</span><span class="lbl">shell dots</span></div>
+          <div class="metric"><span class="val">4</span><span class="lbl">post passes</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="3">
+        <p class="ver">v1.3 → v1.5</p>
+        <p class="ev">04 · <span data-lang="cn">最难的一段 · 让识别不抖</span><span data-lang="en">04 · the hard part · stop the jitter</span></p>
+        <h3>
+          <span data-lang="cn">敌人不是准确率<br/>是<em>"抖"</em></span>
+          <span data-lang="en">The enemy isn't accuracy —<br/>it's <em>jitter</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">MediaPipe 原始 landmarks 每帧都在轻微抖动. 直接映射到粒子上, 球看起来像帕金森. 花了三个版本处理这个:</span>
+          <span data-lang="en">Raw MediaPipe landmarks jitter every frame. Piping them straight into the particles made the sphere look like it had Parkinson's. Three versions of work went into fixing this:</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">One-Euro Filter (<code>minCutoff=2.5</code>, <code>β=0.15</code>) per landmark, 左右手独立滤波状态; 三关节卷曲分数 (MCP+PIP+DIP 加权); per-finger 迟滞状态机; 防抖手势状态机 (candidate → stable 需要 <code>GESTURE_ENTER_MS</code>); 速度守卫 (手速 &gt; 0.65 时追加 180ms 惩罚延迟)。</span>
+          <span data-lang="en">One-Euro Filter (<code>minCutoff=2.5</code>, <code>β=0.15</code>) per landmark, separate filter banks per handedness; three-joint curl score (MCP + PIP + DIP weighted); per-finger hysteresis state machine; debouncing gesture state machine (candidate → stable requires <code>GESTURE_ENTER_MS</code>); speed guard (an extra 180ms penalty when hand speed &gt; 0.65).</span>
+        </p>
+        <blockquote>Every layer I added made the sphere feel more like a real object.</blockquote>
+        <div class="metrics">
+          <div class="metric"><span class="val">2.5</span><span class="lbl">minCutoff</span></div>
+          <div class="metric"><span class="val">0.15</span><span class="lbl">β</span></div>
+          <div class="metric"><span class="val">180ms</span><span class="lbl">speed guard</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="4">
+        <p class="ver">v2.0.0</p>
+        <p class="ev">05 · <span data-lang="cn">LOCK 模式 · 定格再调</span><span data-lang="en">05 · LOCK · freeze &amp; tune</span></p>
+        <h3>
+          <span data-lang="cn">冻结形态<br/><em>拿在手上转</em></span>
+          <span data-lang="en">Freeze the form,<br/><em>hold it in your hand</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">测试的时候发现一个问题: 想仔细观察某个形态, 但手一动它就变了. 加了 LOCK 模式 — 双手全开 130ms 触发, 冻结形态和 openness. 锁定后 scale 仍然响应 (单手张合或双手距离), 方位继续跟随. 想看清楚就锁一下。</span>
+          <span data-lang="en">Testing revealed a problem: I wanted to inspect a specific mode, but every hand movement kept transforming it. Added LOCK mode — trigger with both hands fully open for 130ms. It freezes mode + openness, but scale still responds (single-hand pinch or two-hand distance), and rotation keeps following. Lock it when you want a proper look.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn"><code>lockFlash</code> 2 秒 UI 提示 (LOCK: ON / OFF), <code>.mode-tag.locked</code> CSS 动画 (青蓝脉冲边框)。</span>
+          <span data-lang="en"><code>lockFlash</code> shows a 2-second UI hint (LOCK: ON / OFF); <code>.mode-tag.locked</code> gets a pulsing cyan border.</span>
+        </p>
+        <div class="metrics">
+          <div class="metric"><span class="val">130ms</span><span class="lbl">trigger</span></div>
+          <div class="metric"><span class="val">TWO_OPEN</span><span class="lbl">gesture</span></div>
+          <div class="metric"><span class="val">2s</span><span class="lbl">ui hint</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="5">
+        <p class="ver">v2.1.0</p>
+        <p class="ev">06 · <span data-lang="cn">从"硬切"到"涌动"</span><span data-lang="en">06 · from switch to swell</span></p>
+        <h3>
+          <span data-lang="cn">K=<em>55</em> · D=<em>14</em><br/>弹簧阻尼</span>
+          <span data-lang="en">K=<em>55</em> · D=<em>14</em><br/>spring dampers</span>
+        </h3>
+        <p>
+          <span data-lang="cn">最初形态切换用 <code>lerp</code>, 匀速插值 — 生硬得像 PPT 过场. 改成 K=55 / D=14 弹簧阻尼 (ζ≈0.94, 轻微欠阻尼), 加上 per-particle stagger (<code>aRandom.z</code> 偏移 ±0.15 mode 单位) 让粒子波浪式过渡. 视觉上, 从"切换"变成了"涌动"。</span>
+          <span data-lang="en">Originally mode transitions used <code>lerp</code> — constant-velocity, felt like a slide transition. Replaced with K=55 / D=14 spring dampers (ζ≈0.94, slightly under-damped), plus per-particle stagger (<code>aRandom.z</code> offset ±0.15 in mode units) so particles surge through the transition in waves. Visually: no longer a "switch," now a "swell."</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn"><code>uModeVel</code> uniform 透传到 vertex shader, 转场期间叠加 churn noise displacement. 湍流量 <code>transBoost</code> 也跟弹簧速度挂钩 — 越快切换越剧烈。</span>
+          <span data-lang="en"><code>uModeVel</code> uniform is piped into the vertex shader; a churn-noise displacement kicks in during transitions. Turbulence <code>transBoost</code> is tied to spring velocity — faster switches, wilder churn.</span>
+        </p>
+        <blockquote>Springs feel physical. Lerps feel like PowerPoint.</blockquote>
+      </article>
+
+      <article class="card" data-i="6">
+        <p class="ver">v2.2.0</p>
+        <p class="ev">07 · <span data-lang="cn">手指识别重构</span><span data-lang="en">07 · finger recognition v2</span></p>
+        <h3>
+          <span data-lang="cn">双重确认<br/>消除<em>假阳性</em></span>
+          <span data-lang="en">Dual-check<br/>kills <em>false positives</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">最初用手腕做基点算手指角度 — 透视变形让假阳性满天飞: 手一转, 明明没伸的手指也判成"伸出". 重构:</span>
+          <span data-lang="en">First implementation used the wrist as a base point for finger-angle calculation — perspective distortion produced false-positives everywhere: rotate the hand and closed fingers registered as "extended." Refactored:</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">移除 MCP 角度. 新增 <code>fingerExtendedProj</code>: 指尖投影到手掌轴 (旋转无关, 尺度归一化). 伸出判定: <code>角度 ≥ 2.40</code> 且 <code>投影 ≥ 0.30</code> (双重确认); 收回: <code>角度 &lt; 1.65</code> 或 <code>投影 &lt; 0.02</code> (任一触发). FIST 阈值收紧 <code>openness &lt; 0.22</code>。</span>
+          <span data-lang="en">Dropped MCP angle entirely. Added <code>fingerExtendedProj</code> — fingertip projected onto the palm axis (rotation-invariant, scale-normalized). Extended = <code>angle ≥ 2.40</code> AND <code>projection ≥ 0.30</code> (both required); retracted = <code>angle &lt; 1.65</code> OR <code>projection &lt; 0.02</code> (either fires). FIST threshold tightened to <code>openness &lt; 0.22</code>.</span>
+        </p>
+        <div class="metrics">
+          <div class="metric"><span class="val">2.40</span><span class="lbl">angle in</span></div>
+          <div class="metric"><span class="val">0.30</span><span class="lbl">proj in</span></div>
+          <div class="metric"><span class="val">0.22</span><span class="lbl">fist ε</span></div>
+        </div>
+      </article>
+
+      <article class="card" data-i="7">
+        <p class="ver">v2.3.0</p>
+        <p class="ev">08 · <span data-lang="cn">部署 · 零算力全球可用</span><span data-lang="en">08 · shipped · zero-cost global</span></p>
+        <h3>
+          <span data-lang="cn">让访客的显卡<br/><em>付账</em></span>
+          <span data-lang="en">Let the visitor's GPU<br/><em>foot the bill</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">部署到 GitHub Pages. 所有推理 (MediaPipe + Three.js + 后处理) 在访客设备本地跑 — 服务器只发静态文件, 计算成本 = 0. 想让多少人用就让多少人用。</span>
+          <span data-lang="en">Deployed to GitHub Pages. All inference (MediaPipe + Three.js + post-processing) runs on the visitor's device — the server ships static files only, compute cost = 0. Scales to any number of users.</span>
+        </p>
+        <p class="muted">
+          <span data-lang="cn">本地开发用 LaunchAgent 自动启 Python http.server (登录即运行, KeepAlive). 我的 Mac 一开机就是一台开发机。</span>
+          <span data-lang="en">Local dev is auto-managed by a LaunchAgent running Python's http.server (login-triggered, KeepAlive). My Mac boots straight into a dev environment.</span>
+        </p>
+        <blockquote>Zero-cost + open-source + no login = the way the browser was supposed to work.</blockquote>
+      </article>
+
+    </div>
+
+    <div class="card-progress" id="cardProgress">
+      <div class="pd active"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+      <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ===================== below-stage flow ===================== -->
+<section class="lessons-section reveal">
+  <h2 class="l-title">
+    <span data-lang="cn"><em>得到了</em>什么?</span>
+    <span data-lang="en">What was <em>gained</em>?</span>
+  </h2>
+
+  <div class="lessons">
+    <article class="lesson">
+      <span class="num">01</span>
+      <h4>
+        <span data-lang="cn">手势识别的敌人是"抖", 不是准确率</span>
+        <span data-lang="en">Gesture recognition's real enemy is jitter, not accuracy</span>
+      </h4>
+      <p>
+        <span data-lang="cn">MediaPipe 单帧准确率已经很高. 问题是相邻帧之间的抖动放大到粒子上, 整个球看起来像帕金森. One-Euro Filter + 滞后状态机, 才是让它"看起来在正常工作"的关键。</span>
+        <span data-lang="en">MediaPipe's per-frame accuracy is fine. The problem is frame-to-frame noise amplified into the particles — makes the whole sphere look diseased. One-Euro Filter + hysteresis state machines are what makes it look "normal."</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">02</span>
+      <h4>
+        <span data-lang="cn">浏览器 + 摄像头 = 世界上最便宜的 AR</span>
+        <span data-lang="en">Browser + webcam = the world's cheapest AR</span>
+      </h4>
+      <p>
+        <span data-lang="cn">不装 APP, 不买眼镜, 不上传数据. 一切依赖都 CDN 加载, 一切计算都本地跑. 唯一硬件门槛 = 一台有摄像头的电脑。</span>
+        <span data-lang="en">No app install, no headset, no cloud upload. Every dependency loads from CDN, every computation runs locally. Hardware floor = one webcam-equipped device.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">03</span>
+      <h4>
+        <span data-lang="cn">弹簧比 lerp 更接近"物理直觉"</span>
+        <span data-lang="en">Springs read as physical, lerps read as PowerPoint</span>
+      </h4>
+      <p>
+        <span data-lang="cn">K=55 D=14 (ζ≈0.94) 就那么一小段过冲, 让形态切换从"UI 动画"变成"有质量的物体在动". per-particle stagger 是免费的波浪效果。</span>
+        <span data-lang="en">K=55 D=14 (ζ≈0.94) gives that little overshoot that makes a mode transition read as "a mass in motion" instead of "an interpolation." The per-particle stagger is a free wave.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">04</span>
+      <h4>
+        <span data-lang="cn">零算力 = 无限访问</span>
+        <span data-lang="en">Zero server compute = unlimited reach</span>
+      </h4>
+      <p>
+        <span data-lang="cn">让访客的显卡付账, 我不需要担心访问量. 这是浏览器本来就该做到的事 — 只是大部分产品选择了云端推理是因为好收费。</span>
+        <span data-lang="en">When the visitor's GPU pays for compute, traffic is free. This is what the browser was designed for — most products just chose cloud inference because it's easier to monetise.</span>
+      </p>
+    </article>
+  </div>
+
+  <div class="next-block">
+    <p class="l-eyebrow" style="margin-bottom: 16px;">
+      <span data-lang="cn">下一步</span>
+      <span data-lang="en">NEXT</span>
+    </p>
+    <ul>
+      <li><span data-lang="cn">自定义手势训练界面: 让用户录 3 个样本就能加一个自己的手势。</span><span data-lang="en">Custom-gesture trainer: record 3 samples to add your own gesture.</span></li>
+      <li><span data-lang="cn">声音反馈: 每种形态对应一个音色, 粒子速度驱动包络。</span><span data-lang="en">Audio feedback: each mode gets a timbre, particle velocity drives the envelope.</span></li>
+      <li><span data-lang="cn">WebXR / AR 模式: 手机上通过后置摄像头把球投射到桌面。</span><span data-lang="en">WebXR / AR mode: phone rear-cam projects the sphere onto a table.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="cta-block">
+  <p class="cta-eyebrow">— <span data-lang="cn">用你的摄像头亲手玩一次</span><span data-lang="en">try it with your own webcam</span></p>
+  <h2><span data-lang="cn">现在就可以打开</span><span data-lang="en">It's live right now</span></h2>
+  <div class="cta-twin">
+    <a class="cta-primary" href="https://dr-16.github.io/gesture-particles/" target="_blank" rel="noopener">
+      <span data-lang="cn">运行 →</span>
+      <span data-lang="en">launch →</span>
+    </a>
+    <a class="cta-secondary" href="https://github.com/DR-16/gesture-particles" target="_blank" rel="noopener">
+      <span data-lang="cn">看源代码</span>
+      <span data-lang="en">source</span>
+    </a>
+  </div>
+  <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
+</section>
+
+<footer class="proj-foot">
+  <p>DR Gesture Core · a Yao Design Lab project</p>
+  <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
+</footer>
+
+<a class="cta-float" href="https://dr-16.github.io/gesture-particles/" target="_blank" rel="noopener">
+  <span data-lang="cn">运行</span>
+  <span data-lang="en">launch</span>
+  <span class="arrow">→</span>
+</a>
+
+<div class="lang-switch" id="langSwitch" aria-label="Language switch">
+  <button type="button" data-set-lang="en">EN</button>
+  <span class="lang-divider">/</span>
+  <button type="button" data-set-lang="cn" class="active">中文</button>
+</div>
+
+<script>
+  /* --------- draw the Fibonacci sphere ONCE at load --------- */
+  (function () {
+    const svg = document.getElementById('sphereSvg');
+    if (!svg) return;
+    const N = 320;              // dots — kept modest for CSS-only render
+    const PHI = Math.PI * (3 - Math.sqrt(5));
+    const nsUri = 'http://www.w3.org/2000/svg';
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2;
+      const r = Math.sqrt(1 - y * y);
+      const theta = PHI * i;
+      const x = Math.cos(theta) * r;
+      const z = Math.sin(theta) * r;
+      /* project to 2D (skip Z, but use it for depth-based size + opacity) */
+      const depth = (z + 1) / 2;                     // 0 (far) → 1 (near)
+      const dot = document.createElementNS(nsUri, 'circle');
+      dot.setAttribute('cx', x.toFixed(4));
+      dot.setAttribute('cy', y.toFixed(4));
+      dot.setAttribute('r',  (0.010 + depth * 0.014).toFixed(4));
+      dot.setAttribute('opacity', (0.28 + depth * 0.62).toFixed(3));
+      svg.appendChild(dot);
+    }
+  })();
+
+  /* --------- language toggle (shared ydl-lang) --------- */
+  (function () {
+    const LANG_KEY = 'ydl-lang';
+    function setLang(lang) {
+      if (lang !== 'en' && lang !== 'cn') lang = 'cn';
+      document.body.classList.remove('lang-en', 'lang-cn');
+      document.body.classList.add('lang-' + lang);
+      document.documentElement.lang = (lang === 'cn') ? 'zh-CN' : 'en';
+      document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.setLang === lang);
+      });
+      try { localStorage.setItem(LANG_KEY, lang); } catch {}
+    }
+    document.querySelectorAll('.lang-switch button[data-set-lang]').forEach((b) => {
+      b.addEventListener('click', () => setLang(b.dataset.setLang));
+    });
+    try { const s = localStorage.getItem(LANG_KEY); if (s) setLang(s); } catch {}
+  })();
+
+  /* --------- reveal observer --------- */
+  (function () {
+    const ts = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { ts.forEach(el => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }});
+    }, { threshold: 0.02, rootMargin: '0px 0px 20% 0px' });
+    ts.forEach(el => io.observe(el));
+  })();
+
+  /* --------- scroll-driven card cycling · progress dots · mode readout --------- */
+  (function () {
+    const track    = document.getElementById('scrollTrack');
+    const cards    = document.querySelectorAll('.card');
+    const progress = document.getElementById('cardProgress');
+    const dots     = progress.querySelectorAll('.pd');
+    const modeName = document.getElementById('modeName');
+    if (!track) return;
+
+    const MODE_LABELS = [
+      'DORMANT', 'SPHERE', 'VORTEX', 'PULSE',
+      'STORM',   'NOVA',   'LOCK',   'READY'
+    ];
+    const SPIN_START = 0.05, SPIN_END = 0.94;
+    let lastIdx = -1;
+
+    function onScroll() {
+      const rect = track.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      const t = Math.max(0, Math.min(1, -rect.top / total));
+
+      if (t >= SPIN_START && t <= SPIN_END) {
+        progress.classList.add('show');
+        const inT = (t - SPIN_START) / (SPIN_END - SPIN_START);
+        const idx = Math.min(cards.length - 1, Math.floor(inT * cards.length));
+        if (idx !== lastIdx) {
+          cards.forEach((c, i) => c.classList.toggle('is-in', i === idx));
+          dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+          if (modeName) modeName.textContent = MODE_LABELS[idx] || 'SPHERE';
+          lastIdx = idx;
+        }
+      } else {
+        progress.classList.remove('show');
+        if (t < SPIN_START) {
+          cards.forEach(c => c.classList.remove('is-in'));
+          lastIdx = -1;
+          if (modeName) modeName.textContent = 'SPHERE';
+        }
+        if (t > SPIN_END) {
+          cards.forEach((c, i) => c.classList.toggle('is-in', i === cards.length - 1));
+        }
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
