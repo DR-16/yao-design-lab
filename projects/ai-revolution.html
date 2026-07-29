@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The AI Revolution — Yao Design Lab</title>
+<meta name="description" content="An Econ 12 final assignment that grew into an interactive Choose-Your-Own-Adventure website — the AI Revolution's economic impact on Canada, playable in 14 minutes." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Instrument+Sans:wght@400;500;600&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* palette · school notebook meets pastel game */
+    --paper:      #FDF7ED;   /* cream page */
+    --paper-2:    #F6ECDA;   /* aged margin */
+    --ink:        #2D3047;   /* deep navy — from the game */
+    --ink-soft:   #4a4f6b;
+    --red-pen:    #E63946;   /* teacher's mark */
+    --peach:      #FFB88C;
+    --peach-soft: #FFE5B4;
+    --mint:       #B5EAD7;
+    --lavender:   #C7CEEA;
+    --pink:       #FFE5EC;
+    --yellow:     #FFE066;
+    --rule:       rgba(45, 48, 71, 0.14);
+    --rule-2:     rgba(45, 48, 71, 0.28);
+
+    --serif:  "Fraunces", "Noto Serif SC", Georgia, serif;
+    --sans:   "Instrument Sans", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    --hand:   "Caveat", "Marker Felt", cursive;
+    --mono:   "JetBrains Mono", ui-monospace, monospace;
+    --game:   "Comic Sans MS", "Marker Felt", "Chalkboard SE", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: clip; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--yellow); color: var(--ink); }
+
+  /* ---------- soft paper backdrop (fixed) ---------- */
+  .paper-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 12% 88%, rgba(197, 226, 219, 0.55) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 60% at 88% 18%, rgba(255, 219, 194, 0.60) 0%, transparent 50%),
+      radial-gradient(ellipse 45% 45% at 62% 62%, rgba(199, 206, 234, 0.42) 0%, transparent 50%),
+      var(--paper);
+  }
+  /* graph-paper grid overlay */
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(45, 48, 71, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45, 48, 71, 0.045) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 30%, transparent 90%);
+    -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 30%, transparent 90%);
+  }
+
+  /* ---------- nav ---------- */
+  .nav-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    background: rgba(253, 247, 237, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .back-link {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--red-pen); }
+  .nav-brand {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  /* ---------- shared layout ---------- */
+  .proj-intro {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 140px 5vw 90px;
+    text-align: center;
+  }
+  .proj-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--red-pen);
+    padding: 6px 14px;
+    border: 1.5px solid var(--red-pen);
+    border-radius: 999px;
+    margin-bottom: 26px;
+  }
+  .proj-h1 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(38px, 6.4vw, 78px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin-bottom: 36px;
+  }
+  .proj-h1 em {
+    font-style: italic;
+    color: var(--red-pen);
+    background: linear-gradient(180deg, transparent 68%, rgba(255, 224, 102, 0.7) 68%);
+    padding: 0 6px;
+  }
+  .proj-lead {
+    max-width: 720px; margin: 0 auto 32px;
+    font-size: 18px; line-height: 1.7;
+    color: var(--ink-soft);
+  }
+  .essential-q {
+    position: relative;
+    max-width: 780px; margin: 44px auto 20px;
+    padding: 32px 40px 32px 42px;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: 8px 8px 0 var(--peach);
+    text-align: left;
+  }
+  .essential-q::before {
+    content: "ESSENTIAL QUESTION";
+    position: absolute; top: -11px; left: 24px;
+    background: var(--paper);
+    padding: 0 10px;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.28em;
+    color: var(--red-pen);
+  }
+  .essential-q p {
+    font-family: var(--serif);
+    font-weight: 400; font-style: italic;
+    font-size: clamp(18px, 2.2vw, 24px);
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .essential-q .en {
+    display: block;
+    margin-top: 12px;
+    font-size: clamp(14px, 1.6vw, 17px);
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .stack-tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-top: 30px;
+  }
+  .stack-tags span {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 5px 11px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule-2);
+    border-radius: 3px;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- scroll-track (sticky stage) ---------- */
+  .scroll-track { position: relative; z-index: 5; height: 900vh; }
+  .scene-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+
+  /* ---------- LEFT: fake game scene card ---------- */
+  .game-shell {
+    position: relative;
+    justify-self: center;
+    width: min(92%, 460px);
+    max-height: 82vh;
+  }
+  .game-scene {
+    position: relative;
+    background: white;
+    border: 4px solid var(--ink);
+    border-radius: 28px;
+    padding: 30px 28px 26px;
+    box-shadow: 10px 10px 0 var(--ink);
+    font-family: var(--game);
+    color: var(--ink);
+    transition: opacity 0.3s;
+  }
+  .game-scene .character {
+    font-size: 62px;
+    text-align: center;
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .game-scene .year-badge {
+    display: block; width: fit-content; margin: 0 auto 14px;
+    background: var(--peach);
+    color: white;
+    padding: 5px 16px;
+    border-radius: 20px;
+    border: 3px solid var(--ink);
+    font-weight: bold;
+    font-size: 12px;
+  }
+  .game-scene .g-narrative {
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 16px;
+    color: var(--ink);
+    text-align: center;
+    min-height: 78px;
+  }
+  .game-scene .g-headline {
+    display: block;
+    background: var(--ink);
+    color: var(--yellow);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: bold;
+    text-align: center;
+    box-shadow: 3px 3px 0 var(--lavender);
+    margin: 10px 0 14px;
+  }
+  .game-scene .g-choices {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .g-choice {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    text-align: left;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: all 0.25s;
+    line-height: 1.4;
+  }
+  .g-choice[data-color="blue"]   { background: var(--lavender); }
+  .g-choice[data-color="pink"]   { background: var(--pink); }
+  .g-choice[data-color="mint"]   { background: var(--mint); }
+  .g-choice[data-color="yellow"] { background: var(--peach-soft); }
+  .g-choice.is-picked {
+    border: 4px solid #06A77D;
+    box-shadow: 4px 4px 0 #06A77D;
+    position: relative;
+  }
+  .g-choice.is-picked::after {
+    content: "✅ YOUR CHOICE";
+    display: inline-block;
+    background: #06A77D;
+    color: white;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 10px; font-weight: bold;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+  .g-choice.is-faded {
+    opacity: 0.35;
+  }
+  .g-choice .g-label {
+    font-weight: bold;
+    color: var(--red-pen);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 13px;
+  }
+
+  /* ending state variant */
+  .game-scene.is-ending {
+    text-align: center;
+    background: var(--paper);
+  }
+  .game-scene.is-ending .character { font-size: 92px; }
+  .game-scene.is-ending .ending-title {
+    font-family: var(--game);
+    font-size: 22px; font-weight: bold;
+    color: var(--ink);
+    margin: 6px 0 8px;
+  }
+  .game-scene.is-ending .ending-tag {
+    display: inline-block;
+    background: #F4A261;
+    color: white;
+    padding: 4px 14px;
+    border-radius: 14px;
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+  .game-scene.is-ending .ending-summary {
+    background: #F4F1ED;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: left;
+    margin: 10px 0;
+  }
+  .game-scene.is-ending .ending-econ {
+    background: var(--ink);
+    color: white;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 12px; line-height: 1.5;
+    text-align: left;
+  }
+  .game-scene.is-ending .ending-econ strong { color: var(--yellow); }
+
+  /* red-pen annotation floating on the game card */
+  .pen-note {
+    position: absolute;
+    font-family: var(--hand);
+    color: var(--red-pen);
+    font-size: 22px;
+    line-height: 1.1;
+    transform: rotate(-6deg);
+    pointer-events: none;
+    max-width: 200px;
+  }
+  .pen-note .arrow {
+    display: block;
+    font-size: 30px;
+    line-height: 0.6;
+    margin-top: 4px;
+  }
+  .pen-note.top-right { top: -18px; right: -60px; transform: rotate(6deg); }
+  .pen-note.left      { top: 34%; left: -140px; }
+  .pen-note.bottom    { bottom: -40px; left: 30px; transform: rotate(-4deg); }
+
+  /* chapter progress pips under game card */
+  .chapter-pips {
+    display: flex; gap: 6px;
+    justify-content: center;
+    margin-top: 22px;
+  }
+  .chapter-pips .pip {
+    width: 22px; height: 4px;
+    background: var(--rule-2);
+    border-radius: 2px;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .chapter-pips .pip.is-on {
+    background: var(--red-pen);
+    transform: scaleY(1.6);
+  }
+
+  /* ---------- RIGHT: cards column ---------- */
+  .cards-col {
+    position: relative;
+    justify-self: center;
+    width: min(92%, 480px);
+    height: 76vh;
+  }
+  .card {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: var(--paper);
+    border: 1.5px solid var(--rule-2);
+    border-left: 5px solid var(--red-pen);
+    border-radius: 4px;
+    padding: 30px 34px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+    pointer-events: none;
+    box-shadow: 6px 6px 0 rgba(45,48,71,0.08);
+  }
+  .card.is-active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .card.is-turn { border-left-color: var(--peach); background: linear-gradient(180deg, #FFF8ED 0%, var(--paper) 100%); }
+  .card .c-version {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--red-pen);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card.is-turn .c-version { color: #b25c00; }
+  .card .c-version .turn-badge {
+    background: var(--yellow);
+    color: var(--ink);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+  }
+  .card h3 {
+    font-family: var(--serif);
+    font-size: 26px; font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  .card h3 em { font-style: italic; color: var(--red-pen); }
+  .card p {
+    font-size: 15px;
+    line-height: 1.68;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .card p:last-child { margin-bottom: 0; }
+  .card code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--paper-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+  .card .aside {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.06em;
+  }
+
+  /* progress dots (bottom of stage) */
+  .card-progress {
+    position: absolute;
+    bottom: 26px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    z-index: 10;
+  }
+  .card-progress .pd {
+    width: 22px; height: 3px;
+    background: var(--rule-2);
+    border-radius: 2px;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .card-progress .pd.active {
+    background: var(--red-pen);
+    transform: scaleY(1.8);
+  }
+
+  /* ---------- lessons ---------- */
+  .lessons-section {
+    position: relative; z-index: 5;
+    max-width: 1080px; margin: 0 auto;
+    padding: 120px 6vw 60px;
+  }
+  .l-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.4em;
+    color: var(--red-pen); text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .l-title {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(36px, 5vw, 60px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 50px;
+  }
+  .l-title em {
+    font-style: italic;
+    color: var(--red-pen);
+    background: linear-gradient(180deg, transparent 68%, rgba(255, 224, 102, 0.7) 68%);
+    padding: 0 6px;
+  }
+  .lessons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+  .lesson {
+    padding: 26px 28px;
+    background: var(--paper);
+    border: 1.5px solid var(--rule-2);
+    border-radius: 4px;
+    box-shadow: 4px 4px 0 rgba(45,48,71,0.08);
+  }
+  .lesson .num {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--red-pen);
+    display: block; margin-bottom: 8px;
+  }
+  .lesson h4 {
+    font-family: var(--serif);
+    font-size: 21px; font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .lesson p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+  }
+
+  .next-block {
+    margin-top: 60px;
+    padding: 32px;
+    background: var(--paper-2);
+    border-left: 4px solid var(--peach);
+    border-radius: 4px;
+  }
+  .next-block h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .next-block ul { list-style: none; padding: 0; }
+  .next-block li {
+    padding-left: 24px; position: relative;
+    margin: 10px 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+  .next-block li::before {
+    content: "→";
+    position: absolute; left: 0;
+    color: var(--peach);
+    font-weight: bold;
+  }
+
+  /* ---------- replay strip ---------- */
+  .replay-strip {
+    position: relative; z-index: 5;
+    max-width: 1080px; margin: 0 auto;
+    padding: 40px 6vw 40px;
+  }
+  .replay-strip h3 {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--red-pen);
+    margin-bottom: 20px;
+  }
+  .replay-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .replay-cell {
+    display: block;
+    padding: 16px 12px;
+    background: var(--paper);
+    border: 1.5px solid var(--rule-2);
+    border-radius: 4px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .replay-cell:hover {
+    transform: translateY(-3px);
+    box-shadow: 4px 4px 0 var(--peach);
+    border-color: var(--red-pen);
+  }
+  .replay-cell .r-emoji { font-size: 32px; display: block; margin-bottom: 6px; }
+  .replay-cell .r-title {
+    display: block;
+    font-family: var(--serif);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+  .replay-cell .r-path {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+    letter-spacing: 0.1em;
+  }
+
+  /* ---------- CTA ---------- */
+  .cta-block {
+    position: relative; z-index: 5;
+    max-width: 880px; margin: 0 auto;
+    padding: 80px 6vw 60px;
+    text-align: center;
+  }
+  .cta-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--red-pen); text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .cta-block h2 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 52px);
+    line-height: 1.05;
+    color: var(--ink);
+    margin-bottom: 32px;
+  }
+  .cta-twin { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .cta-primary, .cta-secondary {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 30px;
+    font-family: var(--sans);
+    font-weight: 600; font-size: 15px;
+    letter-spacing: 0.02em;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cta-primary {
+    background: var(--peach);
+    color: var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .cta-primary:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+  .cta-secondary {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .cta-secondary:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+  .cta-meta {
+    margin-top: 26px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.2em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  .proj-foot {
+    position: relative; z-index: 5;
+    text-align: center;
+    padding: 50px 5vw 40px;
+    border-top: 1px solid var(--rule);
+    margin-top: 20px;
+  }
+  .proj-foot p {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--ink-soft); margin: 4px 0;
+    text-transform: uppercase;
+  }
+  .proj-foot a { color: var(--red-pen); border-bottom: 1px solid var(--rule); }
+  .proj-foot a:hover { color: var(--ink); }
+
+  /* ---------- lang switch + floating CTA ---------- */
+  .lang-switch {
+    position: fixed;
+    right: 22px; bottom: 22px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: rgba(253, 247, 237, 0.92);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .lang-switch button {
+    background: none; border: none; padding: 2px 4px;
+    color: var(--ink-soft); cursor: pointer;
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.18em;
+    transition: color 0.2s;
+  }
+  .lang-switch button.active { color: var(--red-pen); font-weight: 600; }
+  .lang-switch button:hover { color: var(--ink); }
+  .lang-switch .lang-divider { color: var(--rule-2); }
+
+  .cta-float {
+    position: fixed;
+    left: 22px; bottom: 22px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px;
+    background: var(--peach);
+    color: var(--ink);
+    font-family: var(--sans); font-weight: 600;
+    font-size: 13px;
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: 4px 4px 0 var(--ink);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cta-float:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.8s, transform 0.8s; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* ---------- lang toggle ---------- */
+  [data-lang="en"] { display: none; }
+  body.lang-en [data-lang="cn"] { display: none; }
+  body.lang-en [data-lang="en"] { display: inline; }
+  body.lang-en [data-lang="en"].block { display: block; }
+
+  @media (max-width: 900px) {
+    .scene-stage { grid-template-columns: 1fr; align-items: start; padding-top: 60px; }
+    .game-shell { display: none; }
+    .cards-col { height: auto; width: min(94%, 480px); }
+    .card { position: relative; margin-bottom: 16px; }
+    .lessons { grid-template-columns: 1fr; }
+    .replay-grid { grid-template-columns: repeat(2, 1fr); }
+    .pen-note { display: none; }
+    .lang-switch { right: 12px; bottom: 12px; padding: 6px 10px; font-size: 10px; }
+    .cta-float  { left: 12px;  bottom: 12px; padding: 10px 16px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="paper-bg"></div>
+<div class="grid-bg"></div>
+
+<nav class="nav-bar">
+  <a href="../" class="back-link">← <span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a>
+  <span class="nav-brand">DR · AI Revolution · A CASE STUDY</span>
+</nav>
+
+<!-- ===================== intro ===================== -->
+<section class="proj-intro">
+  <span class="proj-tag"><span data-lang="cn">经济 · Econ 12 期末</span><span data-lang="en">Economy · Econ 12 Final</span></span>
+  <h1 class="proj-h1">
+    <span data-lang="cn">一份经济作业, 我把它做成了<em>能玩的游戏</em></span>
+    <span data-lang="en">An econ homework — I turned it <em>into a game</em></span>
+  </h1>
+  <p class="proj-lead">
+    <span data-lang="cn">Econ 12 期末给了 10 个选题, 我挑了第 10 个: AI 对加拿大经济的冲击. 老师给的形式是 "choose your own adventure". 大多数同学交 slides. 我把这句话当真了 — 做成了一个 14 分钟能玩完的分支游戏, 挂在永久 URL 上, 任何人打开链接就能玩。</span>
+    <span data-lang="en">Econ 12's final gave us 10 topics — I picked #10: AI's impact on Canada's economy. The brief literally said "choose your own adventure." Most classmates delivered slide decks. I took the wording seriously and built a 14-minute branching game, deployed to a permanent URL that any classmate or teacher can open.</span>
+  </p>
+
+  <div class="essential-q">
+    <p>
+      <span data-lang="cn">"AI 在加拿大创造的新经济机会, 足够弥补它取代的工作数量吗?"</span>
+      <span data-lang="en">"Are the new economic opportunities created by AI in Canada enough to compensate for the number of jobs it replaces?"</span>
+      <span class="en"><span data-lang="cn">Answer (from the game): Yes — but ONLY if Canada (and you) act deliberately and quickly.</span><span data-lang="en">Answer from the game: Yes — but ONLY if Canada (and you) act deliberately and quickly.</span></span>
+    </p>
+  </div>
+
+  <div class="stack-tags">
+    <span>Vanilla HTML/CSS/JS</span>
+    <span>Single file · zero deps</span>
+    <span>GitHub Pages</span>
+    <span>Playwright</span>
+    <span>APA 7th bibliography</span>
+    <span>$0 hosting</span>
+  </div>
+</section>
+
+
+<!-- ===================== sticky stage ===================== -->
+<div class="scroll-track" id="scrollTrack">
+  <div class="scene-stage">
+
+    <!-- LEFT: fake game scene card that mimics the actual game -->
+    <div class="game-shell">
+      <div id="gameScene" class="game-scene">
+        <!-- populated by JS from GAME_STATES -->
+      </div>
+
+      <div class="pen-note top-right">
+        <span data-lang="cn">医院里那个学姐<br/>说她见过这个!</span>
+        <span data-lang="en">a nurse told me she<br/>saw this play out irl!</span>
+        <span class="arrow">↙</span>
+      </div>
+
+      <div class="chapter-pips" id="chapterPips">
+        <div class="pip is-on"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: version cards -->
+    <div class="cards-col">
+
+      <article class="card is-active" data-card="0">
+        <p class="c-version">v1.0 · <span data-lang="cn">收到题目</span><span data-lang="en">the brief</span></p>
+        <h3>
+          <span data-lang="cn">十选一, 挑最难的一道</span>
+          <span data-lang="en">Ten topics — picked the hardest</span>
+        </h3>
+        <p>
+          <span data-lang="cn">Econ 12 期末给了 10 道命题作文, 我挑了第 10 号: The "AI Revolution" Economic Forecast. 别人都在挑通胀 / 供需 / 汇率这种课堂常客, 但这题的数据是活的 — 每周都有新报告出来。</span>
+          <span data-lang="en">Ten prompts on the sheet. I picked #10: The "AI Revolution" Economic Forecast. Most classmates went for classic topics — inflation, supply-demand, exchange rates. Mine had the freshest data: new reports drop every week.</span>
+        </p>
+        <p>
+          <span data-lang="cn">Essential Question 初稿写得太抽象, 后来加了"加拿大 + 2026 → 2035 + 数字"三个约束才立住。</span>
+          <span data-lang="en">First draft of the essential question was too abstract. Only landed after clamping it with three constraints: <em>Canada</em>, <em>2026–2035</em>, and <em>a number.</em></span>
+        </p>
+      </article>
+
+      <article class="card" data-card="1">
+        <p class="c-version">v1.1 · <span data-lang="cn">数据锁到真实来源</span><span data-lang="en">every number, cited</span></p>
+        <h3>
+          <span data-lang="cn">Bibliography 全部转成 APA 7th</span>
+          <span data-lang="en">Full bibliography, APA 7th</span>
+        </h3>
+        <p>
+          <span data-lang="cn">Statistics Canada, Bank of Canada, WEF Future of Jobs 2025, Vector Institute, BDC, Brookfield Institute, IRPP, ILO, OECD — 每条数据都对得回一个真实报告。游戏里所有"新闻标题"和"数据卡"引用的数字, 都在参考文献里能找到。</span>
+          <span data-lang="en">Statistics Canada, Bank of Canada, WEF Future of Jobs 2025, Vector Institute, BDC, Brookfield, IRPP, ILO, OECD. Every stat quoted in-game — every "breaking news" headline, every knowledge card figure — traces back to a real report in the bibliography.</span>
+        </p>
+        <div class="aside">
+          <span data-lang="cn">"$195,000/yr per AI job" → Vector Institute · "42% of Canadian jobs at automation risk" → Brookfield · "92M eliminated, 170M created" → WEF 2025</span>
+          <span data-lang="en">"$195K/yr per AI job" → Vector · "42% jobs at risk" → Brookfield · "92M lost, 170M created" → WEF 2025</span>
+        </div>
+      </article>
+
+      <article class="card is-turn" data-card="2">
+        <p class="c-version">v2.0 · <span class="turn-badge"><span data-lang="cn">转折</span><span data-lang="en">pivot</span></span> <span data-lang="cn">PPT → 能玩的网站</span><span data-lang="en">deck → playable site</span></p>
+        <h3>
+          <span data-lang="cn">题目里明明写了 "choose <em>your own</em> adventure"</span>
+          <span data-lang="en">The prompt literally said "choose <em>your own</em> adventure"</span>
+        </h3>
+        <p>
+          <span data-lang="cn">已经在写 slides 了, 突然反应过来: 老师给的主题词就是这个. 那"用媒介本身回答问题"比用文字总结好一百倍。停掉 PPT, 改做互动网站 — 让玩家亲自做 4 个人生选择, 走完 2026 → 2035 十年时间线。</span>
+          <span data-lang="en">Was halfway into slides when it hit me — that phrase in the prompt was the whole point. Answering it with the <em>medium itself</em> beats answering it with a summary. Ditched the deck. Rebuilt as an interactive site where the player makes 4 real life-choices across 2026 → 2035.</span>
+        </p>
+      </article>
+
+      <article class="card" data-card="3">
+        <p class="c-version">v2.1 · <span data-lang="cn">单文件卡通游戏</span><span data-lang="en">single-file cartoon game</span></p>
+        <h3>
+          <span data-lang="cn">一个 <em>index.html</em>, 954 行, 零依赖</span>
+          <span data-lang="en">One <em>index.html</em>, 954 lines, zero deps</span>
+        </h3>
+        <p>
+          <span data-lang="cn">9 个场景 + 4 张知识卡 + 5 种结局. Comic Sans + 4px 粗黑描边 + 8px 硬阴影, 故意做成学校小报的手感 — 因为它就是。三轴评分 (<code>humanCapital</code> / <code>adaptability</code> / <code>safetyNet</code>) 驱动结局, 同样的选择永远得到同样的结局, 可以复现给老师看。</span>
+          <span data-lang="en">9 scenes + 4 knowledge cards + 5 endings. Comic Sans + 4px black borders + 8px hard shadows — on purpose. It's a school project, look like one. Three-axis scoring (<code>humanCapital</code> / <code>adaptability</code> / <code>safetyNet</code>) drives the ending deterministically, so the same choices always land the same outcome — repeatable for demo.</span>
+        </p>
+      </article>
+
+      <article class="card" data-card="4">
+        <p class="c-version">v2.2 · <span data-lang="cn">全文英译</span><span data-lang="en">full english pass</span></p>
+        <h3>
+          <span data-lang="cn">给加拿大老师看的版本</span>
+          <span data-lang="en">The version for a Canadian teacher</span>
+        </h3>
+        <p>
+          <span data-lang="cn">逻辑 / 评分 / UI 结构一点没动, 只把叙事和选项翻译成英文. HTML <code>lang="en"</code>. 全流程点穿一遍: A → A1 → ① → ① 触发 Winner, C → C2 → ④ → ④ 触发 Permanent Underclass — 5 个结局的判定逻辑全跑通。</span>
+          <span data-lang="en">Kept logic, scoring, and layout untouched. Only narrative + choices + UI copy translated. <code>lang="en"</code>. Verified end-to-end by clicking through: A → A1 → ① → ① lands Winner, C → C2 → ④ → ④ lands Permanent Underclass. All 5 ending branches confirmed.</span>
+        </p>
+      </article>
+
+      <article class="card is-turn" data-card="5">
+        <p class="c-version">v3.0 · <span class="turn-badge"><span data-lang="cn">转折</span><span data-lang="en">pivot</span></span> <span data-lang="cn">本地文件 → 永久 URL</span><span data-lang="en">local file → permanent url</span></p>
+        <h3>
+          <span data-lang="cn">让全班都能点开的<em>一条链接</em></span>
+          <span data-lang="en">A <em>single link</em> the whole class can open</span>
+        </h3>
+        <p>
+          <span data-lang="cn">交一个 .html 文件, 老师看得到, 同学看不到. 挪到 GitHub Pages 之后, 任何人 (老师 / 同学 / 家人 / 陌生人) 打开就能玩. 静态 HTML 无后端, 一年 $0. 这个决定后来变成整个作品集的默认动作 — 所有项目都必须能被链接点开。</span>
+          <span data-lang="en">A local .html file only reaches the teacher. GitHub Pages means anyone with the link plays instantly — teachers, classmates, family, strangers. Static HTML, no backend, $0/year. This move became the default for every subsequent Yao Design Lab project: <em>everything must be a link, not a file.</em></span>
+        </p>
+        <div class="aside">
+          <span data-lang="cn">→ https://dr-16.github.io/ai-revolution-game/</span>
+          <span data-lang="en">→ https://dr-16.github.io/ai-revolution-game/</span>
+        </div>
+      </article>
+
+      <article class="card" data-card="6">
+        <p class="c-version">v3.1 · <span data-lang="cn">路线回放模式 + 长图</span><span data-lang="en">replay mode + long screenshots</span></p>
+        <h3>
+          <span data-lang="cn"><code>?stack=A,A1,1,1</code> — <em>一条路一张长图</em></span>
+          <span data-lang="en"><code>?stack=A,A1,1,1</code> — <em>one path, one long image</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">想让老师看"每条路完整走一遍"是什么样, 但让老师现场点 5 遍不现实。加了 URL 参数 <code>?stack=</code> — 直接把 9 个场景垂直堆叠, 玩家选过的按钮标绿框 "✅ YOUR CHOICE", 其它选项透明度 0.4. 本地起 Playwright + Chromium (headless), 视网膜清晰度自动截 5 张 ~3.8MB 的 PNG。</span>
+          <span data-lang="en">The teacher needs to see each full path — but making them click through 5 times isn't realistic. Added <code>?stack=</code> URL param that renders all 9 scenes stacked vertically, with the picked button green-bordered "✅ YOUR CHOICE" and the rest at 0.4 opacity. Local Playwright + headless Chromium spits out 5 retina PNGs, ~3.8MB each, automated.</span>
+        </p>
+      </article>
+
+      <article class="card is-turn" data-card="7">
+        <p class="c-version">v4.0 · <span class="turn-badge"><span data-lang="cn">转折</span><span data-lang="en">pivot</span></span> <span data-lang="cn">从"作品"到"作品集"</span><span data-lang="en">product → package</span></p>
+        <h3>
+          <span data-lang="cn">一份能玩的链接<em>还不够</em></span>
+          <span data-lang="en">A playable link <em>isn't enough</em></span>
+        </h3>
+        <p>
+          <span data-lang="cn">Personal presentation 那天要讲 2.5 分钟, 还得应对 Q&amp;A. 于是加了 2.5 分钟长版 + 1 分钟短版讲稿, 6 条讲台建议, 一份完整的提交清单 (研究报告 / 游戏链接 / 5 张路径截图 / 讲稿 / 复现指南). 老师不用猜怎么打分, 每个 rubric 点都能对齐到一个 artifact。</span>
+          <span data-lang="en">The personal presentation slot needed a 2.5-min talk + Q&amp;A. Wrote a 2.5-min speech + a 1-min short version + 6 stage tips + a full delivery manifest (research report, game URL, 5 path screenshots, speech scripts, rebuild guide). Every rubric line maps to an artifact — no guessing required.</span>
+        </p>
+      </article>
+
+    </div>
+
+    <div class="card-progress" id="cardProgress">
+      <div class="pd active"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+      <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ===================== lessons ===================== -->
+<section class="lessons-section reveal">
+  <p class="l-eyebrow">
+    <span data-lang="cn">交完之后 · 学到的几件事</span>
+    <span data-lang="en">POST-SUBMISSION · WHAT I ACTUALLY LEARNED</span>
+  </p>
+  <h2 class="l-title">
+    <span data-lang="cn">一份作业教<em>我</em>的事</span>
+    <span data-lang="en">What one <em>homework</em> taught me</span>
+  </h2>
+
+  <div class="lessons">
+    <article class="lesson">
+      <span class="num">01</span>
+      <h4>
+        <span data-lang="cn">题目里的关键词, 就是它想让你用的形式</span>
+        <span data-lang="en">The prompt's own words are usually the answer format</span>
+      </h4>
+      <p>
+        <span data-lang="cn">"Choose Your Own Adventure" 是题目主题, 我却差点交 PPT. 后来才反应过来: 老师写这句话不是文学修辞, 是暗示 — 用这个形式回答, 分数封顶更高。读题的时候要把题目当 spec, 不是当 vibe。</span>
+        <span data-lang="en">"Choose Your Own Adventure" was in the prompt. I almost delivered slides anyway. When you finally notice, you realise the prompt wasn't decoration — it was a spec. The teacher named the medium; using it lifts the ceiling on your grade. Read prompts like specs, not vibes.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">02</span>
+      <h4>
+        <span data-lang="cn">免费的 URL 比昂贵的 demo 更值钱</span>
+        <span data-lang="en">A free URL beats an expensive demo</span>
+      </h4>
+      <p>
+        <span data-lang="cn">GitHub Pages + 静态 HTML = 一年 $0, 老师同学家人陌生人都能点开就玩. 这个成本结构改变了所有后续项目的默认动作 — "能不能挂到 URL 上" 是 v0 的一部分, 不是 v2 才想的事。</span>
+        <span data-lang="en">GitHub Pages + static HTML = $0/year, and teachers, classmates, family, strangers all just click and play. That cost structure changed how every later Yao Design Lab project starts: "does it have a URL?" is a v0 question now, not a v2 afterthought.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">03</span>
+      <h4>
+        <span data-lang="cn">一份产品 + 一份使用说明 = 交付</span>
+        <span data-lang="en">A product plus how-to-use-it equals a delivery</span>
+      </h4>
+      <p>
+        <span data-lang="cn">游戏链接是"作品", 5 张路径截图 + 讲稿 + 提交清单 是"说明"。老师不用现场点 5 遍就能看到"所有可能路径的完整走法". 这一步的差别就是"作品"和"作品集"的差别。</span>
+        <span data-lang="en">The game link is the artifact. The 5 path screenshots + speech scripts + delivery manifest are the manual. The teacher doesn't have to click through 5 times to see what every path feels like. That step is the difference between a <em>product</em> and a <em>portfolio</em>.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">04</span>
+      <h4>
+        <span data-lang="cn">学校作业, 本来就可以被做到超出范围</span>
+        <span data-lang="en">School work can — and probably should — be over-delivered</span>
+      </h4>
+      <p>
+        <span data-lang="cn">大家默认交 10 页 Word 文档, 我交了一个能玩 14 分钟的网站 + 一份复现指南. 花的时间没多多少, 但这才是 16 岁的我唯一能不被 AI 替代的地方 — <em>做到超出被期待的形状</em>。这份作业本身, 也回答了它自己的 essential question。</span>
+        <span data-lang="en">Everyone submits a 10-page Word doc. I submitted a 14-minute playable website plus a rebuild guide. Not that much more effort — but this is the one thing a 16-year-old can do that AI still can't: <em>deliver in a shape no one was expecting.</em> The homework, in doing so, answered its own essential question.</span>
+      </p>
+    </article>
+  </div>
+
+  <div class="next-block">
+    <h3>
+      <span data-lang="cn">下一步</span>
+      <span data-lang="en">NEXT</span>
+    </h3>
+    <ul>
+      <li><span data-lang="cn">用同样的架构做加拿大版"报税模拟" — 让 18 岁的加拿大人第一次报税前先玩一遍。</span><span data-lang="en">Same architecture, applied to a Canadian tax-filing sim — for 18-year-olds about to file for the first time.</span></li>
+      <li><span data-lang="cn">给这个游戏加课堂教师模式: 老师可以出题, 全班同时玩, 后台看分布。</span><span data-lang="en">Add a classroom-teacher mode: the teacher poses the scenario, the class plays live, teacher sees the response distribution in real time.</span></li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ===================== 5 replay paths ===================== -->
+<section class="replay-strip reveal">
+  <h3>
+    <span data-lang="cn">— 5 条完整路径 · 每条一个结局 · 点击直接看</span>
+    <span data-lang="en">— 5 complete paths · one ending each · click to view</span>
+  </h3>
+  <div class="replay-grid">
+    <a class="replay-cell" href="https://dr-16.github.io/ai-revolution-game/?stack=A,A1,1,1" target="_blank" rel="noopener">
+      <span class="r-emoji">🏆</span>
+      <span class="r-title"><span data-lang="cn">The Winner</span><span data-lang="en">The Winner</span></span>
+      <span class="r-path">A · A1 · 1 · 1</span>
+    </a>
+    <a class="replay-cell" href="https://dr-16.github.io/ai-revolution-game/?stack=B,B1,1,2" target="_blank" rel="noopener">
+      <span class="r-emoji">🌱</span>
+      <span class="r-title"><span data-lang="cn">Successful Pivot</span><span data-lang="en">Successful Pivot</span></span>
+      <span class="r-path">B · B1 · 1 · 2</span>
+    </a>
+    <a class="replay-cell" href="https://dr-16.github.io/ai-revolution-game/?stack=C,C2,3,3" target="_blank" rel="noopener">
+      <span class="r-emoji">🚶</span>
+      <span class="r-title"><span data-lang="cn">Hanging On</span><span data-lang="en">Hanging On</span></span>
+      <span class="r-path">C · C2 · 3 · 3</span>
+    </a>
+    <a class="replay-cell" href="https://dr-16.github.io/ai-revolution-game/?stack=A,A1,2,4" target="_blank" rel="noopener">
+      <span class="r-emoji">😞</span>
+      <span class="r-title"><span data-lang="cn">Structurally Unemployed</span><span data-lang="en">Structurally Unemployed</span></span>
+      <span class="r-path">A · A1 · 2 · 4</span>
+    </a>
+    <a class="replay-cell" href="https://dr-16.github.io/ai-revolution-game/?stack=C,C2,4,4" target="_blank" rel="noopener">
+      <span class="r-emoji">💀</span>
+      <span class="r-title"><span data-lang="cn">Permanent Underclass</span><span data-lang="en">Permanent Underclass</span></span>
+      <span class="r-path">C · C2 · 4 · 4</span>
+    </a>
+  </div>
+</section>
+
+
+<!-- ===================== CTA ===================== -->
+<section class="cta-block">
+  <p class="cta-eyebrow">— <span data-lang="cn">现在就可以玩</span><span data-lang="en">it's live · click and play</span></p>
+  <h2><span data-lang="cn">14 分钟, 4 个选择, 5 种结局</span><span data-lang="en">14 minutes · 4 choices · 5 endings</span></h2>
+  <div class="cta-twin">
+    <a class="cta-primary" href="https://dr-16.github.io/ai-revolution-game/" target="_blank" rel="noopener">
+      <span data-lang="cn">开始游戏 →</span>
+      <span data-lang="en">play the game →</span>
+    </a>
+    <a class="cta-secondary" href="https://github.com/DR-16/ai-revolution-game" target="_blank" rel="noopener">
+      <span data-lang="cn">看源代码</span>
+      <span data-lang="en">source</span>
+    </a>
+  </div>
+  <p class="cta-meta">danielrong16@gmail.com · WeChat yj0919jy</p>
+</section>
+
+<footer class="proj-foot">
+  <p>The AI Revolution · a Yao Design Lab project</p>
+  <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
+</footer>
+
+<a class="cta-float" href="https://dr-16.github.io/ai-revolution-game/" target="_blank" rel="noopener">
+  <span data-lang="cn">开始游戏</span>
+  <span data-lang="en">play</span>
+  →
+</a>
+
+<div class="lang-switch" id="langSwitch" aria-label="Language switch">
+  <button type="button" data-set-lang="en">EN</button>
+  <span class="lang-divider">/</span>
+  <button type="button" data-set-lang="cn" class="active">中文</button>
+</div>
+
+
+<script>
+  /* ================================================================
+     Game-scene states — mirrors the actual game, one canonical "Winner"
+     path (A → A1 → ① → ①). As the user scrolls through 8 dev cards on
+     the right, the central card cycles through 7 game states.
+     ================================================================ */
+  const GAME_STATES = [
+    /* 0 — Opening */
+    {
+      character: '🎓',
+      yearBadge: { cn: 'June 2026 · Vancouver', en: 'June 2026 · Vancouver' },
+      narrative: {
+        cn: '你刚拿到高中毕业证. 外面在下雨 — 经典 BC 天气。',
+        en: "You just got your diploma. It's raining outside — classic BC weather."
+      },
+      headline: {
+        cn: '📺 BREAKING · Statistics Canada: 加拿大企业 AI 采用率 从 3% 跳到 12%',
+        en: '📺 BREAKING · StatCan: Canadian business AI adoption jumps 3% → 12%'
+      },
+      choices: []
+    },
+
+    /* 1 — Chapter 1: choose major */
+    {
+      character: '🤔',
+      yearBadge: { cn: 'Chapter 1 · 2026 · 投资你的人力资本', en: 'Chapter 1 · 2026 · Invest your human capital' },
+      narrative: {
+        cn: '接下来 4 年做什么? 这是你人生第一个真正的经济决定。',
+        en: 'What do you do for the next 4 years? Your first real economic decision.'
+      },
+      choices: [
+        { color: 'blue',   picked: true,  label_cn: 'A. UBC · 计算机科学, 主攻 AI / ML',   label_en: 'A. UBC — Computer Science / AI' },
+        { color: 'pink',   picked: false, label_cn: 'B. SFU · 英语文学 / 创意写作',       label_en: 'B. SFU — English Lit / Creative Writing' },
+        { color: 'mint',   picked: false, label_cn: 'C. 不上大学, Uber Eats + 零工',       label_en: 'C. Skip uni — Uber Eats + gigs' }
+      ]
+    },
+
+    /* 2 — Knowledge card 1 (Human Capital) — abbreviated */
+    {
+      character: '💡',
+      yearBadge: { cn: 'Knowledge Card · Human Capital', en: 'Knowledge Card · Human Capital' },
+      narrative: {
+        cn: '人力资本 = 通过教育 / 培训 / 经验积累的技能与知识, 决定未来生产力和工资。',
+        en: 'Human Capital = skills and knowledge accumulated via education / training / experience — determines future productivity and wages.'
+      },
+      headline: {
+        cn: '📊 2025 加拿大 AI 采用: 12% · 金融业 30%+ · 餐饮 1.5%',
+        en: '📊 2025 CA AI adoption: 12% · finance 30%+ · food services 1.5%'
+      },
+      choices: []
+    },
+
+    /* 3 — Chapter 2 A path: fintech offer */
+    {
+      character: '💻',
+      yearBadge: { cn: 'Chapter 2 · 2029 · Age 21', en: 'Chapter 2 · 2029 · Age 21' },
+      narrative: {
+        cn: '大三暑期. 你的 AI 建模课程项目被多伦多一家 fintech 看上了 — full-time offer, $95,000/yr.',
+        en: 'Summer before senior year. Your AI project catches a Toronto fintech firm — $95K/yr full-time offer.'
+      },
+      choices: [
+        { color: 'blue',   picked: true,  label_cn: 'A1. 接下 fintech offer — 稳妥路线',     label_en: 'A1. Take the fintech offer — safe path' },
+        { color: 'yellow', picked: false, label_cn: 'A2. 拒绝 offer, 和同学做 AI ed-tech',  label_en: 'A2. Decline — build an AI ed-tech startup' }
+      ]
+    },
+
+    /* 4 — Knowledge card 2 (Structural Unemployment) */
+    {
+      character: '📉',
+      yearBadge: { cn: 'Knowledge Card · Structural Unemployment', en: 'Knowledge Card · Structural Unemployment' },
+      narrative: {
+        cn: '结构性失业 = 技能与市场需求错位。工资极化 = 高技能上涨, 中低技能被压平。',
+        en: 'Structural unemployment = skills stop matching demand. Wage polarization = high-skill up, mid/low-skill flattened.'
+      },
+      headline: {
+        cn: '📊 WEF 2025: AI 全球消灭 92M 岗位, 创造 170M, 净 +78M',
+        en: '📊 WEF 2025: AI eliminates 92M jobs, creates 170M — net +78M'
+      },
+      choices: []
+    },
+
+    /* 5 — Chapter 3: 2032 economic shock */
+    {
+      character: '😨',
+      yearBadge: { cn: 'Chapter 3 · 2032 · Age 24', en: 'Chapter 3 · 2032 · Age 24' },
+      narrative: {
+        cn: '加拿大青年失业率飙到 18%. 每 3 个朋友就有 1 个失业。政府出台紧急方案:',
+        en: 'Canadian youth unemployment hits 18%. 1 in 3 friends is out of work. Emergency federal package:'
+      },
+      choices: [
+        { color: 'mint',   picked: true,  label_cn: '① 申请 "AI Transition Subsidy" (2 年免费培训 + $1,400/月)', label_en: '① Apply for AI Transition Subsidy (2 yrs retraining + $1,400/mo)' },
+        { color: 'blue',   picked: false, label_cn: '② 自费学新技能',    label_en: '② Self-fund new skills' },
+        { color: 'yellow', picked: false, label_cn: '③ 上街抗议',        label_en: '③ Join the protests' },
+        { color: 'pink',   picked: false, label_cn: '④ 什么都不做',      label_en: '④ Do nothing — ride it out' }
+      ]
+    },
+
+    /* 6 — Chapter 4 final */
+    {
+      character: '🌅',
+      yearBadge: { cn: 'Chapter 4 · 2035 · Age 27', en: 'Chapter 4 · 2035 · Age 27' },
+      narrative: {
+        cn: '十年过去了. 加拿大 GDP 因 AI 多了 $298B, 但财富分布从没这么不均。最后一个决定:',
+        en: 'Ten years in. Canada gained $298B GDP from AI — but wealth has never been so unequal. One last decision:'
+      },
+      choices: [
+        { color: 'blue',   picked: true,  label_cn: '① 用这 10 年经验创业 / 冲管理层',   label_en: '① Launch a company / climb to management' },
+        { color: 'mint',   picked: false, label_cn: '② 转 "AI + 人类技能" 混合岗',       label_en: '② Pivot into a hybrid role' },
+        { color: 'yellow', picked: false, label_cn: '③ 躺平, 靠零工 + 福利',              label_en: '③ Gig work + benefits' },
+        { color: 'pink',   picked: false, label_cn: '④ 完全退出主流劳动力市场',          label_en: '④ Drop out of the labour market' }
+      ]
+    },
+
+    /* 7 — Ending: Winner */
+    {
+      isEnding: true,
+      character: '🏆',
+      endingTitle: { cn: '结局 · The AI Revolution Winner', en: 'Ending · The AI Revolution Winner' },
+      endingTag:   { cn: '🥇 最佳结局 · 强势胜出',           en: '🥇 Best Ending · Strong Gains' },
+      summary: {
+        cn: '你现在是多伦多一家 AI fintech 的 CTO, 年薪 $400,000. IPO 让你上了 Vector Institute 的 "下一代加拿大 AI 领袖" 名单. 你是拿到 $298B GDP 增益 top 10% 的一员。',
+        en: "You're now CTO of a Toronto AI fintech, salary $400K. Your IPO put you on the Vector Institute's \"Next Generation of Canadian AI Leaders\" list. Part of the top 10% capturing the $298B GDP boost."
+      },
+      econ: {
+        cn: '<strong>经济学 takeaway:</strong> 你抓到了 AI 革命的"生产率红利"。你的人力资本正好匹配新市场需求, 所以 PPC 向外扩张的大部分被像你这样的人吸收 — 这正是<b>不平等扩大的原因</b>。',
+        en: '<strong>Econ takeaway:</strong> You captured the "productivity dividend." Your human capital matched new market demand, so most of the PPC\'s outward shift was absorbed by people like you — which is exactly <b>why inequality widens</b>.'
+      }
+    }
+  ];
+
+  /* ================================================================
+     Render game scene from a state
+     ================================================================ */
+  function renderGameScene(state, lang) {
+    const el = document.getElementById('gameScene');
+    if (!el) return;
+
+    if (state.isEnding) {
+      el.classList.add('is-ending');
+      el.innerHTML = `
+        <div class="character">${state.character}</div>
+        <div class="ending-title">${lang === 'en' ? state.endingTitle.en : state.endingTitle.cn}</div>
+        <div class="ending-tag">${lang === 'en' ? state.endingTag.en : state.endingTag.cn}</div>
+        <div class="ending-summary">${lang === 'en' ? state.summary.en : state.summary.cn}</div>
+        <div class="ending-econ">${lang === 'en' ? state.econ.en : state.econ.cn}</div>
+      `;
+      return;
+    }
+
+    el.classList.remove('is-ending');
+    const narrative = lang === 'en' ? state.narrative.en : state.narrative.cn;
+    const year      = lang === 'en' ? state.yearBadge.en : state.yearBadge.cn;
+    const headline  = state.headline
+      ? `<div class="g-headline">${lang === 'en' ? state.headline.en : state.headline.cn}</div>`
+      : '';
+
+    let choicesHtml = '';
+    if (state.choices && state.choices.length) {
+      const hasAnyPick = state.choices.some(c => c.picked);
+      choicesHtml = '<div class="g-choices">' +
+        state.choices.map(c => {
+          const cls = c.picked ? 'g-choice is-picked' : (hasAnyPick ? 'g-choice is-faded' : 'g-choice');
+          const label = lang === 'en' ? c.label_en : c.label_cn;
+          return `<div class="${cls}" data-color="${c.color}"><span class="g-label">${label}</span></div>`;
+        }).join('') +
+        '</div>';
+    }
+
+    el.innerHTML = `
+      <div class="character">${state.character}</div>
+      <div class="year-badge">${year}</div>
+      <div class="g-narrative">${narrative}</div>
+      ${headline}
+      ${choicesHtml}
+    `;
+  }
+
+  function currentLang() {
+    return document.body.classList.contains('lang-en') ? 'en' : 'cn';
+  }
+
+  /* Draw initial state */
+  renderGameScene(GAME_STATES[0], currentLang());
+
+  /* ================================================================
+     Scroll-driven card cycling + game-scene sync
+     ================================================================ */
+  (function () {
+    const track  = document.getElementById('scrollTrack');
+    const cards  = document.querySelectorAll('.card');
+    const dots   = document.querySelectorAll('#cardProgress .pd');
+    const pips   = document.querySelectorAll('#chapterPips .pip');
+    if (!track || !cards.length) return;
+
+    const N = cards.length;               // 8 dev cards
+    const G = GAME_STATES.length;         // 8 game states (0..7)
+    let lastSceneIdx = -1;
+    let lastCardIdx  = -1;
+
+    function onScroll() {
+      const rect = track.getBoundingClientRect();
+      const vh   = window.innerHeight;
+      const total = rect.height - vh;
+      const scrolled = Math.max(0, Math.min(total, -rect.top));
+      const t = total > 0 ? scrolled / total : 0;      // 0..1
+
+      /* choose active card — divide 0..1 into N equal windows */
+      let idx = Math.floor(t * N);
+      if (idx >= N) idx = N - 1;
+      if (idx < 0)  idx = 0;
+
+      if (idx !== lastCardIdx) {
+        cards.forEach((c, i) => c.classList.toggle('is-active', i === idx));
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+        lastCardIdx = idx;
+      }
+
+      /* map card idx → game scene idx (they happen to be same count here) */
+      const sceneIdx = Math.min(G - 1, idx);
+      if (sceneIdx !== lastSceneIdx) {
+        renderGameScene(GAME_STATES[sceneIdx], currentLang());
+        pips.forEach((p, i) => p.classList.toggle('is-on', i === sceneIdx));
+        lastSceneIdx = sceneIdx;
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* re-render game scene when language flips */
+    window.__reRenderGameScene = () => {
+      if (lastSceneIdx >= 0) renderGameScene(GAME_STATES[lastSceneIdx], currentLang());
+    };
+  })();
+
+  /* ================================================================
+     Reveal observer (below-stage sections)
+     ================================================================ */
+  (function () {
+    const ts = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { ts.forEach(el => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }});
+    }, { threshold: 0.02, rootMargin: '0px 0px 20% 0px' });
+    ts.forEach(el => io.observe(el));
+  })();
+
+  /* ================================================================
+     Bilingual toggle — shared across yao-design-lab pages
+     ================================================================ */
+  (function () {
+    const saved = localStorage.getItem('ydl-lang');
+    if (saved === 'en') document.body.classList.add('lang-en');
+
+    const buttons = document.querySelectorAll('#langSwitch [data-set-lang]');
+    function refresh() {
+      const isEn = document.body.classList.contains('lang-en');
+      buttons.forEach(b => {
+        b.classList.toggle('active', (b.dataset.setLang === 'en') === isEn);
+      });
+    }
+    refresh();
+
+    buttons.forEach(b => {
+      b.addEventListener('click', () => {
+        const lang = b.dataset.setLang;
+        document.body.classList.toggle('lang-en', lang === 'en');
+        localStorage.setItem('ydl-lang', lang);
+        refresh();
+        if (window.__reRenderGameScene) window.__reRenderGameScene();
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
