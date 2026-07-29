@@ -688,15 +688,17 @@ document.querySelectorAll('.ex-stack').forEach((stack) => {
       if (t < -1.6) t = -1.6;
       if (t >  1.6) t =  1.6;
       const abs = Math.abs(t);
-      const ry  = -t * 38;                  // tilt out toward viewer
-      const tz  = -abs * 220;               // push back as it leaves centre
-      const tx  = -t * 30;                  // pull side cards slightly outward
+      /* No rotateY — the perspective foreshortening made side cards look
+         like tall portraits (cos 60° ≈ 0.5 so squares became 1:2). Now
+         cards stay square at every scroll position; only scale + z-push +
+         opacity separate the focused card from its neighbours. */
+      const tz  = -abs * 200;
+      const tx  = -t * 20;
       const sc  = 1 - abs * 0.22;
       const op  = Math.max(0.22, 1 - abs * 0.5);
       c.style.transform =
-        `translate3d(${tx}px, 0, ${tz}px) rotateY(${ry}deg) scale(${sc})`;
+        `translate3d(${tx}px, 0, ${tz}px) scale(${sc})`;
       c.style.opacity = String(op);
-      // z-index so the focused card actually paints over its neighbours
       c.style.zIndex = String(100 - Math.round(abs * 50));
     });
   }
