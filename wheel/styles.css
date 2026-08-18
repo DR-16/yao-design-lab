@@ -160,7 +160,7 @@ body {
 }
 
 /* 停下后：中奖的那一格保持高亮，其余淡出 */
-.wheel.is-settled .seg { opacity: 0.28; transition: opacity 0.5s ease 0.1s; }
+.wheel.is-settled .seg { opacity: 0.34; transition: opacity 0.5s ease 0.1s; }
 .wheel.is-settled .seg.is-won { opacity: 1; }
 
 .seg {

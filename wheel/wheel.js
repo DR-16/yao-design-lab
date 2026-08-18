@@ -9,7 +9,11 @@
    name  : 礼物名。转停之前不会出现在转盘上。
    copy  : 礼物名下面那句话。默认不写 —— 东西就是东西，不用配文案。
            只有「信」用了它，因为得告诉她来找你拿。不写就整行不出现。
-   color : 转盘上这一格的颜色，各自呼应这件礼物的调性。
+   color : 转盘上这一格的底色。填了 face 之后它是兜底 —— 照片没加载出来时才露脸。
+   face  : 铺在转盘这一格上的她的照片。
+   focus : 照片里要对准扇形重心的那一点，[横, 竖]，都是 0~1 的比例。
+           照片已经预先裁成对准脸的方形了，所以基本都是 [0.5, 0.5] 附近。
+   zoom  : 照片放大倍数，默认 1.05。想让脸更满就调大。
    photo : 揭晓时显示的实物图。没有实物图的两格用 svg / glyph 代替。
    svg   : 没有照片时画的图形，画在这一格颜色的卡片上。
    glyph : 没有照片也没有图形时，退回到写一个字。
@@ -18,30 +22,42 @@ const SEGMENTS = [
   {
     brand: 'Dior',
     name:  'Addict Lip Glow',
-    color: '#E0728B',          // 唇膏的玫瑰粉
+    color: '#E0728B',
+    face:  'img/her/1.jpg',    // 餐厅
+    focus: [0.50, 0.50],
     photo: 'img/dior-lip-glow.jpg',
   },
   {
     brand: 'YSL',
     name:  'Loveshine',
-    color: '#D9A441',          // 圣罗兰的金
+    color: '#D9A441',
+    face:  'img/her/5.jpg',    // 暖光自拍
+    focus: [0.50, 0.50],
     photo: 'img/ysl-loveshine.png',
   },
   {
     brand: 'Jo Malone London',
     name:  '30 mL 香水',
-    color: '#EBE3D5',          // 祖玛珑的象牙白
+    color: '#EBE3D5',
+    face:  'img/her/3.jpg',    // 湖边
+    focus: [0.50, 0.50],
     photo: 'img/jo-malone.png',
   },
   {
     brand: '',
     name:  'Jellycat',
-    color: '#B98A62',          // 玩偶的焦糖棕
+    color: '#B98A62',
+    face:  'img/her/4.jpg',    // 草地
+    focus: [0.50, 0.50],
     photo: 'img/jellycat.jpg',
   },
   {
     brand: '',
     name:  '信',
+    // 这张车里自拍的脸偏左，所以放在转盘左半边的格子上 ——
+    // 照片和礼物的对应关系本来就不给人看，哪张放哪格可以纯按取景挑
+    face:  'img/her/2.jpg',    // 车里自拍
+    focus: [0.40, 0.50],
     copy:  '联系我领取',
     color: '#7E9BB8',          // 信纸的雾蓝
     photo: null,
@@ -54,17 +70,16 @@ const SEGMENTS = [
   {
     brand: '',
     name:  '520 红包',
-    color: '#CE3A32',          // 红包的正红
+    color: '#CE3A32',          // 第六张照片还没来，先留正红
+    face:  null,
     photo: null,
     glyph: '福',
   },
 ];
 
-/* 实物图放在哪 ——
-   false（默认）：转盘上只有颜色，照片只在转停揭晓时出现，六份礼物在转之前是保密的。
-   true：把照片直接铺进对应的扇形。转盘会好看，但转之前就能看到六份礼物分别是什么。
-   想换成后者，把这里改成 true 就行，别的都不用动。 */
-const SHOW_PHOTOS_ON_WHEEL = false;
+/* 照片放大倍数的默认值。扇形是窄三角，1.0 会显得人很小很远，
+   稍微推近一点脸才占得住这一格。 */
+const DEFAULT_ZOOM = 1.05;
 
 /* 至少转几圈再停（数字越大转越久，转的时长在 styles.css 的 --spin-duration） */
 const MIN_TURNS = 5;
@@ -115,9 +130,8 @@ function buildWheel() {
     path.dataset.index = i;
     wheel.appendChild(path);
 
-    // 开了 SHOW_PHOTOS_ON_WHEEL 才把照片铺进扇形，
-    // 铺不上的（没照片的两格）仍然是纯色
-    if (SHOW_PHOTOS_ON_WHEEL && seg.photo) fillWithImage(path, seg.photo, i, defs);
+    // 底色先画上，照片加载完再盖上去。图挂了就停在底色，不会开天窗。
+    if (seg.face) fillWithFace(path, seg, i, defs);
   });
 }
 
@@ -126,29 +140,57 @@ function preloadPhotos() {
   SEGMENTS.forEach(seg => { if (seg.photo) new Image().src = seg.photo; });
 }
 
-function fillWithImage(path, src, i, defs) {
-  const box = path.getBBox();
-
-  const pattern = document.createElementNS(SVG_NS, 'pattern');
-  pattern.setAttribute('id', `seg-img-${i}`);
-  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-  pattern.setAttribute('x', box.x);
-  pattern.setAttribute('y', box.y);
-  pattern.setAttribute('width', box.width);
-  pattern.setAttribute('height', box.height);
-
-  const img = document.createElementNS(SVG_NS, 'image');
-  img.setAttribute('href', src);
-  img.setAttribute('x', 0);
-  img.setAttribute('y', 0);
-  img.setAttribute('width', box.width);
-  img.setAttribute('height', box.height);
-  img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-
-  pattern.appendChild(img);
-  defs.appendChild(pattern);
-  path.setAttribute('fill', `url(#seg-img-${i})`);
+/* 扇形的重心 —— 不是外接矩形的中心。
+   扇形是个窄三角，肉最厚的地方在从圆心往外约 2/3 半径处，
+   脸要对到这里才不会被切在尖角上。 */
+function sectorCentroid(i) {
+  const half = (STEP / 2) * Math.PI / 180;
+  const d = (2 / 3) * R * Math.sin(half) / half;
+  const bisect = (i * STEP + STEP / 2 - 90) * Math.PI / 180;
+  return [CX + d * Math.cos(bisect), CY + d * Math.sin(bisect)];
 }
+
+function fillWithFace(path, seg, i, defs) {
+  const box = path.getBBox();
+  const [tx, ty] = sectorCentroid(i);
+
+  const im = new Image();
+  im.onload = () => {
+    // 先把照片放大到至少盖住外接矩形，再按 zoom 多推近一点
+    const cover = Math.max(box.width / im.naturalWidth, box.height / im.naturalHeight);
+    const scale = cover * (seg.zoom || DEFAULT_ZOOM);
+    const w = im.naturalWidth * scale;
+    const h = im.naturalHeight * scale;
+
+    // 把 focus 那一点挪到扇形重心上
+    const [fx, fy] = seg.focus || [0.5, 0.5];
+    // 再夹回来，保证照片始终盖满外接矩形，不会在边上漏出底色
+    const x = clamp(tx - w * fx, box.x + box.width - w, box.x);
+    const y = clamp(ty - h * fy, box.y + box.height - h, box.y);
+
+    const pattern = document.createElementNS(SVG_NS, 'pattern');
+    pattern.setAttribute('id', `seg-face-${i}`);
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('x', box.x);
+    pattern.setAttribute('y', box.y);
+    pattern.setAttribute('width', box.width);
+    pattern.setAttribute('height', box.height);
+
+    const img = document.createElementNS(SVG_NS, 'image');
+    img.setAttribute('href', seg.face);
+    img.setAttribute('x', x - box.x);      // pattern 内部坐标以 tile 左上角为原点
+    img.setAttribute('y', y - box.y);
+    img.setAttribute('width', w);
+    img.setAttribute('height', h);
+
+    pattern.appendChild(img);
+    defs.appendChild(pattern);
+    path.setAttribute('fill', `url(#seg-face-${i})`);
+  };
+  im.src = seg.face;
+}
+
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
 /* 从 CSS 里读转动时长，保证 JS 和 CSS 不会各说各话 */
 function spinDurationMs() {
