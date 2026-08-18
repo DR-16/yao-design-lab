@@ -17,28 +17,28 @@ const SEGMENTS = [
   {
     brand: 'Dior',
     name:  'Addict Lip Glow',
-    copy:  '这一格的文案写这里',
+    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#E0728B',          // 唇膏的玫瑰粉
     photo: 'img/dior-lip-glow.jpg',
   },
   {
     brand: 'YSL',
     name:  'Loveshine',
-    copy:  '这一格的文案写这里',
+    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#D9A441',          // 圣罗兰的金
     photo: 'img/ysl-loveshine.png',
   },
   {
     brand: 'Jo Malone London',
     name:  '30 mL 香水',
-    copy:  '这一格的文案写这里',
+    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#EBE3D5',          // 祖玛珑的象牙白
     photo: 'img/jo-malone.png',
   },
   {
     brand: '',
     name:  'Jellycat',
-    copy:  '这一格的文案写这里',
+    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#B98A62',          // 玩偶的焦糖棕
     photo: 'img/jellycat.jpg',
   },
@@ -57,7 +57,7 @@ const SEGMENTS = [
   {
     brand: '',
     name:  '520 红包',
-    copy:  '这一格的文案写这里',
+    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#CE3A32',          // 红包的正红
     photo: null,
     glyph: '福',

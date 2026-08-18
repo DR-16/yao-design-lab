@@ -69,16 +69,13 @@ body {
   max-width: 46ch;
 }
 
-/* 文案位：平时看不见框，鼠标移上去才显示虚线，方便你定位要改哪一块。
-   交付时如果不想要这个提示，把下面这条 :hover 规则删掉即可。 */
+/* 文案位。之前 hover 会显示一圈虚线方便定位，现在真文案已经写进去了，
+   那个提示对收到链接的人来说只会像 bug，所以撤掉了。 */
 .slot {
-  border: 1px dashed transparent;
   border-radius: 6px;
   margin: -6px -10px;
   padding: 6px 10px;
-  transition: border-color 0.2s ease;
 }
-.slot:hover { border-color: rgba(243, 238, 233, 0.16); }
 
 .eyebrow {
   font-size: 12px;
@@ -101,11 +98,14 @@ body {
   color: var(--ink-soft);
 }
 
+/* 正文承的是真正想说的那几句话，之前那档灰太淡了，提到和副标题同一档 */
 .body {
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--ink-faint);
+  font-size: 15.5px;
+  line-height: 1.95;
+  color: var(--ink-soft);
 }
+
+.nb { white-space: nowrap; }
 
 .note {
   margin-top: 8px;
