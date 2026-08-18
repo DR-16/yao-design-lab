@@ -217,7 +217,7 @@ function settle(winner) {
   resultCopy.textContent = seg.copy || '';
   result.classList.add('is-visible');
 
-  hubLabel.textContent = '再转';
+  hubLabel.textContent = '转';
   spinBtn.disabled = false;
 }
 
