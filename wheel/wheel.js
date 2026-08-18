@@ -78,6 +78,21 @@ const SEGMENTS = [
   },
 ];
 
+/* ── 抽中的概率 ──────────────────────────────────────────────
+   六格在转盘上还是均分的，只是被抽中的机会不一样 —— 看不出来。
+   下面是相对权重，代码会按总和归一化，不用凑成 100。
+
+     520 红包        6.7%
+     其余五格   各   18.7%
+
+   六格等概率的话每格是 16.7%，红包让出 10 个百分点，平均分给了其余五格。
+   想改回等概率，把这里全设成一样的数（或者整段删掉）就行。
+   ────────────────────────────────────────────────────────── */
+const WEIGHTS = {
+  '520 红包': 6.6667,
+  default:    18.6667,
+};
+
 /* 照片放大倍数的默认值。扇形是窄三角，1.0 会显得人很小很远，
    稍微推近一点脸才占得住这一格。 */
 const DEFAULT_ZOOM = 1.05;
@@ -193,6 +208,22 @@ function fillWithFace(path, seg, i, defs) {
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+/* 按权重抽一格 */
+function weightOf(seg) {
+  return WEIGHTS[seg.name] !== undefined ? WEIGHTS[seg.name] : WEIGHTS.default;
+}
+
+function pickWinner() {
+  const w = SEGMENTS.map(weightOf);
+  const total = w.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < w.length; i++) {
+    r -= w[i];
+    if (r < 0) return i;
+  }
+  return w.length - 1;   // 浮点误差的兜底，正常走不到
+}
+
 /* 从 CSS 里读转动时长，保证 JS 和 CSS 不会各说各话 */
 function spinDurationMs() {
   const raw = getComputedStyle(document.documentElement)
@@ -211,7 +242,7 @@ function spin() {
   wheel.querySelectorAll('.seg').forEach(p => p.classList.remove('is-won'));
   result.classList.remove('is-visible');
 
-  const winner = Math.floor(Math.random() * COUNT);
+  const winner = pickWinner();
 
   // 让这一格的中心正好停在 12 点的指针下
   const centerAt = (360 - (winner * STEP + STEP / 2)) % 360;
