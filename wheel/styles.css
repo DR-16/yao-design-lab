@@ -1,0 +1,339 @@
+/* ═══════════════════════════════════════════════════════════════
+   转盘 · 样式
+   扇形的颜色不在这里 —— 在 wheel.js 顶部的 SEGMENTS 里改。
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg:        #0d0a12;
+  --bg-lift:   #16111d;
+  --ink:       #f3eee9;
+  --ink-soft:  rgba(243, 238, 233, 0.62);
+  --ink-faint: rgba(243, 238, 233, 0.34);
+  --gold:      #f0c26a;
+  --rim:       rgba(243, 238, 233, 0.14);
+
+  --spin-duration: 5s;
+  --spin-ease: cubic-bezier(0.13, 0.87, 0.17, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Helvetica Neue", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  /* 一层很淡的光晕，让转盘所在的一侧显得有光打过来 */
+  background:
+    radial-gradient(120vh 90vh at 78% 42%, rgba(240, 194, 106, 0.10), transparent 62%),
+    radial-gradient(90vh 70vh at 12% 8%, rgba(120, 90, 200, 0.14), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* 极淡的颗粒，压住大面积纯色的塑料感 */
+.grain {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+
+/* ── 布局 ────────────────────────────────────────────────── */
+
+.layout {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 88px) clamp(22px, 5vw, 56px);
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.86fr) minmax(320px, 1fr);
+  gap: clamp(32px, 6vw, 76px);
+  align-items: center;
+}
+
+
+/* ── 文案区 ──────────────────────────────────────────────── */
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 46ch;
+}
+
+/* 文案位：平时看不见框，鼠标移上去才显示虚线，方便你定位要改哪一块。
+   交付时如果不想要这个提示，把下面这条 :hover 规则删掉即可。 */
+.slot {
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  margin: -6px -10px;
+  padding: 6px 10px;
+  transition: border-color 0.2s ease;
+}
+.slot:hover { border-color: rgba(243, 238, 233, 0.16); }
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.title {
+  font-size: clamp(34px, 5.4vw, 60px);
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  font-size: clamp(16px, 1.6vw, 19px);
+  line-height: 1.72;
+  color: var(--ink-soft);
+}
+
+.body {
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--ink-faint);
+}
+
+.note {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+
+/* ── 转盘 ────────────────────────────────────────────────── */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(22px, 3.4vw, 38px);
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(78vw, 440px);
+  aspect-ratio: 1;
+}
+
+/* 转盘底座：外圈金边 + 投影，让盘子看着有厚度 */
+.wheel-plate {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 10px;
+  background: linear-gradient(150deg, rgba(240, 194, 106, 0.85), rgba(240, 194, 106, 0.22) 45%, rgba(240, 194, 106, 0.7));
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
+    0 0 70px rgba(240, 194, 106, 0.12);
+}
+
+.wheel {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  background: var(--bg-lift);
+  transform: rotate(0deg);
+  will-change: transform;
+}
+
+/* 转动 —— 只在这个 class 挂上时才有过渡，复位时才能瞬间跳回 */
+.wheel.is-spinning {
+  transition: transform var(--spin-duration) var(--spin-ease);
+}
+
+/* 停下后：中奖的那一格保持高亮，其余淡出 */
+.wheel.is-settled .seg { opacity: 0.28; transition: opacity 0.5s ease 0.1s; }
+.wheel.is-settled .seg.is-won { opacity: 1; }
+
+.seg {
+  stroke: rgba(13, 10, 18, 0.55);
+  stroke-width: 1.5;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+/* 指针：盘子正上方，尖端朝下 */
+.pointer {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  translate: -50% 0;
+  width: 26px;
+  height: 34px;
+  z-index: 2;
+  background: linear-gradient(180deg, #fff6e2, var(--gold));
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.6));
+  transform-origin: 50% 0;
+}
+.wheel-wrap.is-running .pointer { animation: tick 0.09s linear infinite; }
+
+@keyframes tick {
+  0%, 100% { rotate: 0deg; }
+  50%      { rotate: -7deg; }
+}
+
+/* 中心按钮 */
+.hub {
+  position: absolute;
+  top: 50%; left: 50%;
+  translate: -50% -50%;
+  width: 27%;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 50%;
+  z-index: 2;
+  cursor: pointer;
+  color: #22190c;
+  background: radial-gradient(circle at 38% 30%, #fff8ea, var(--gold) 62%, #d9a44c);
+  box-shadow:
+    0 0 0 6px rgba(13, 10, 18, 0.85),
+    0 0 0 7px rgba(240, 194, 106, 0.4),
+    0 12px 26px rgba(0, 0, 0, 0.5);
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  transition: scale 0.18s ease, filter 0.18s ease;
+}
+.hub:hover:not(:disabled) { scale: 1.05; }
+.hub:active:not(:disabled) { scale: 0.97; }
+.hub:disabled { cursor: default; filter: saturate(0.5) brightness(0.8); }
+
+.hub-label {
+  font-size: clamp(14px, 2.6vw, 17px);
+  /* 按钮跟着盘子一起在视觉中心，但文字不能被 SVG 的旋转带走 */
+  display: block;
+}
+
+
+/* ── 结果区 ──────────────────────────────────────────────── */
+
+/* 高度预留好，转之前是空的，揭晓时不会把页面顶动 */
+.result {
+  min-height: 168px;
+  width: min(92vw, 460px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-inner {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  text-align: left;
+  opacity: 0;
+  translate: 0 14px;
+  transition: opacity 0.5s ease, translate 0.5s ease;
+}
+.result.is-visible .result-inner { opacity: 1; translate: 0 0; }
+
+/* 实物图。产品图都是白底的，所以给它一张白卡片托住 ——
+   与其把白底抠掉（祖玛珑那瓶是透明玻璃，抠了就废了），
+   不如让它看起来本来就是一张礼物卡。 */
+.result-photo {
+  flex: none;
+  width: 108px;
+  height: 108px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(240, 194, 106, 0.28);
+}
+.result-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* 产品要完整，不能被裁掉 */
+}
+
+/* 信 和 红包 没有实物图，用这一格的颜色配个图形或一个字 */
+.result-photo.is-drawn {
+  font-family: "Songti SC", "STSong", serif;
+  font-size: 46px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+}
+.result-photo.is-drawn svg {
+  width: 56%;
+  height: 56%;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
+}
+
+.result-text { min-width: 0; }
+
+/* 品牌小字：礼物名上面那行 */
+.result-brand {
+  font-size: 11.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+  min-height: 1em;   /* 没有品牌的格子也占住这行，揭晓时礼物名不会上下跳 */
+}
+
+/* 礼物名。整页都是无衬线，只有揭晓这一下用衬线 ——
+   让它读起来像礼物卡上的字，而不是系统提示。
+   不用 Google Fonts：国内网络下常加载不出来，宁可用系统里就有的宋体/Georgia。 */
+.result-value {
+  font-family: "Songti SC", "STSong", Georgia, "Times New Roman", serif;
+  font-size: clamp(26px, 3.6vw, 36px);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  color: var(--gold);
+  text-shadow: 0 0 42px rgba(240, 194, 106, 0.35);
+  text-wrap: balance;
+}
+
+.result-copy {
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  min-height: 1.7em;
+}
+
+
+/* ── 窄屏 ────────────────────────────────────────────────── */
+
+@media (max-width: 880px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: start;
+    padding-top: 46px;
+    padding-bottom: 56px;
+  }
+  .copy { max-width: none; }
+  .stage { order: 2; }
+  .wheel-wrap { width: min(84vw, 400px); margin: 0 auto; }
+  .result { min-height: 156px; }
+  .result-photo { width: 92px; height: 92px; border-radius: 14px; }
+  .result-photo.is-drawn { font-size: 40px; }
+  .result-inner { gap: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --spin-duration: 1.2s; }
+  .pointer { animation: none !important; }
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>转盘</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<main class="layout">
+
+  <!-- ══════════════════════════════════════════════════════════
+       文案区 ── 左半边整块都留给文字，直接改下面的内容即可。
+       每个 .slot 是一个独立文案位，鼠标移上去会显示虚线框。
+       不需要的那一行，整段删掉就行，布局不会塌。
+       ══════════════════════════════════════════════════════════ -->
+  <section class="copy">
+
+    <!-- 文案位 1：小标 / eyebrow -->
+    <p class="slot eyebrow" data-slot="eyebrow">小标题写这里</p>
+
+    <!-- 文案位 2：主标题 -->
+    <h1 class="slot title" data-slot="title">
+      主标题写这里
+    </h1>
+
+    <!-- 文案位 3：副标题 / 一句话说明 -->
+    <p class="slot lead" data-slot="lead">
+      副标题写这里，一两句话，说清楚这个转盘是干嘛的。
+    </p>
+
+    <!-- 文案位 4：正文段落（可以多段，复制这一行就行） -->
+    <p class="slot body" data-slot="body">
+      正文写这里。可以放规则说明、活动背景、或者任何你想说的话。
+      这一块高度是自适应的，写多写少都不会顶到转盘。
+    </p>
+
+    <!-- 文案位 5：底部小字 / 注释 -->
+    <p class="slot note" data-slot="note">底部小字写这里</p>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       转盘区 ── 六等分，初始只有颜色，转停后才揭晓礼物。
+       礼物、颜色、图片都在 wheel.js 顶部的 SEGMENTS 里配置。
+       ══════════════════════════════════════════════════════════ -->
+  <section class="stage">
+
+    <div class="wheel-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+
+      <div class="wheel-plate">
+        <!-- 六个扇形由 wheel.js 生成并注入 -->
+        <svg class="wheel" id="wheel" viewBox="0 0 400 400" role="img" aria-label="六等分转盘"></svg>
+      </div>
+
+      <button class="hub" id="spin" type="button">
+        <span class="hub-label" id="hub-label">开始</span>
+      </button>
+    </div>
+
+    <!-- 结果区：转停后揭晓。高度是预留好的，不会让页面跳动。 -->
+    <div class="result" id="result" aria-live="polite">
+      <div class="result-inner">
+        <div class="result-photo" id="result-photo"></div>
+        <div class="result-text">
+          <div class="result-brand" id="result-brand"></div>
+          <div class="result-value" id="result-value"></div>
+          <!-- 文案位 6：礼物下面那句话（每件礼物一句，见 wheel.js 里每格的 copy 字段） -->
+          <div class="slot result-copy" id="result-copy" data-slot="result"></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<script src="wheel.js"></script>
+</body>
+</html>
