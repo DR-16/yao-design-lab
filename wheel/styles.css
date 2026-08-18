@@ -69,13 +69,9 @@ body {
   max-width: 46ch;
 }
 
-/* 文案位。之前 hover 会显示一圈虚线方便定位，现在真文案已经写进去了，
-   那个提示对收到链接的人来说只会像 bug，所以撤掉了。 */
-.slot {
-  border-radius: 6px;
-  margin: -6px -10px;
-  padding: 6px 10px;
-}
+/* .slot 现在只是个标记，用来在 HTML 里认出哪几块是文案位，不带样式。
+   （原本它有一圈负 margin，是给 hover 虚线框留的边距；虚线框删掉之后
+   那圈负 margin 就成了纯粹的溢出源 —— 窄屏上会把文字顶出屏幕 10px。） */
 
 .eyebrow {
   font-size: 12px;
@@ -137,6 +133,10 @@ body {
   inset: 0;
   border-radius: 50%;
   padding: 10px;
+  /* 必须裁掉：里面那个 SVG 是正方形，转起来之后它的外接框最多会胀到 √2 倍，
+     虽然不影响布局，但会把可滚动区域撑大 —— 手机上转完一次页面就能横着滑。
+     SVG 本身已经是个圆，裁掉的部分本来就看不见。 */
+  overflow: hidden;
   background: linear-gradient(150deg, rgba(240, 194, 106, 0.85), rgba(240, 194, 106, 0.22) 45%, rgba(240, 194, 106, 0.7));
   box-shadow:
     0 28px 70px rgba(0, 0, 0, 0.55),

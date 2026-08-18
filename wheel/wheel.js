@@ -57,7 +57,7 @@ const SEGMENTS = [
     // 这张车里自拍的脸偏左，所以放在转盘左半边的格子上 ——
     // 照片和礼物的对应关系本来就不给人看，哪张放哪格可以纯按取景挑
     face:  'img/her/2.jpg',    // 车里自拍
-    focus: [0.40, 0.50],
+    focus: [0.30, 0.50],
     copy:  '联系我领取',
     color: '#7E9BB8',          // 信纸的雾蓝
     photo: null,
@@ -70,8 +70,9 @@ const SEGMENTS = [
   {
     brand: '',
     name:  '520 红包',
-    color: '#CE3A32',          // 第六张照片还没来，先留正红
-    face:  null,
+    color: '#CE3A32',
+    face:  'img/her/6.jpg',    // 生日那顿饭
+    focus: [0.50, 0.50],
     photo: null,
     glyph: '福',
   },
