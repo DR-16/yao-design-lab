@@ -7,7 +7,8 @@
    顺序 = 从 12 点方向开始，顺时针。
    brand : 揭晓时显示在礼物名上面的小字，没有品牌就留空 ''。
    name  : 礼物名。转停之前不会出现在转盘上。
-   copy  : 揭晓时礼物名下面那句话 —— 这是留给你写的，现在是占位。
+   copy  : 礼物名下面那句话。默认不写 —— 东西就是东西，不用配文案。
+           只有「信」用了它，因为得告诉她来找你拿。不写就整行不出现。
    color : 转盘上这一格的颜色，各自呼应这件礼物的调性。
    photo : 揭晓时显示的实物图。没有实物图的两格用 svg / glyph 代替。
    svg   : 没有照片时画的图形，画在这一格颜色的卡片上。
@@ -17,28 +18,24 @@ const SEGMENTS = [
   {
     brand: 'Dior',
     name:  'Addict Lip Glow',
-    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#E0728B',          // 唇膏的玫瑰粉
     photo: 'img/dior-lip-glow.jpg',
   },
   {
     brand: 'YSL',
     name:  'Loveshine',
-    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#D9A441',          // 圣罗兰的金
     photo: 'img/ysl-loveshine.png',
   },
   {
     brand: 'Jo Malone London',
     name:  '30 mL 香水',
-    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#EBE3D5',          // 祖玛珑的象牙白
     photo: 'img/jo-malone.png',
   },
   {
     brand: '',
     name:  'Jellycat',
-    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#B98A62',          // 玩偶的焦糖棕
     photo: 'img/jellycat.jpg',
   },
@@ -57,7 +54,6 @@ const SEGMENTS = [
   {
     brand: '',
     name:  '520 红包',
-    copy:  '',   // 想写点什么就填这里，留空就不显示
     color: '#CE3A32',          // 红包的正红
     photo: null,
     glyph: '福',

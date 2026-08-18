@@ -305,13 +305,15 @@ body {
   text-wrap: balance;
 }
 
+/* 只有「信」那格用得上。其余五格没有这行，:empty 让它整行消失，
+   不占位、不留空档 —— 东西就是东西，不配文案。 */
 .result-copy {
   margin-top: 14px;
   font-size: 15px;
   line-height: 1.7;
   color: var(--ink-soft);
-  min-height: 1.7em;
 }
+.result-copy:empty { display: none; }
 
 
 /* ── 窄屏 ────────────────────────────────────────────────── */
