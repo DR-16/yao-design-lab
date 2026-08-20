@@ -100,6 +100,10 @@ const DEFAULT_ZOOM = 1.05;
 /* 至少转几圈再停（数字越大转越久，转的时长在 styles.css 的 --spin-duration） */
 const MIN_TURNS = 5;
 
+/* 音乐的音量（0~1）和淡入时长（毫秒）。别设成 1 —— 突然满音量会吓到人。 */
+const MUSIC_VOLUME = 0.55;
+const MUSIC_FADE_MS = 1600;
+
 
 /* ═══════════════════════════════════════════════════════════════
    下面一般不用动
@@ -119,6 +123,8 @@ const resultPhoto= document.getElementById('result-photo');
 const resultBrand= document.getElementById('result-brand');
 const resultVal  = document.getElementById('result-value');
 const resultCopy = document.getElementById('result-copy');
+const bgm       = document.getElementById('bgm');
+const soundBtn  = document.getElementById('sound');
 
 let rotation = 0;      // 累计角度，只增不减
 let spinning = false;
@@ -208,6 +214,60 @@ function fillWithFace(path, seg, i, defs) {
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+/* ── 音乐 ──────────────────────────────────────────────────
+   浏览器一律禁止带声音的自动播放，必须先有一次用户交互 ——
+   这页刚好有个天然的触发点：她点「开始」的那一下。
+   她要是自己关掉了，后面再转就不该又自作主张放起来。
+   ────────────────────────────────────────────────────────── */
+let mutedByHer = false;   // 她手动关过没有
+let fadeTimer = null;
+
+function fadeTo(target, ms) {
+  clearInterval(fadeTimer);
+  const from = bgm.volume;
+  const t0 = performance.now();
+  fadeTimer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    bgm.volume = from + (target - from) * k;
+    if (k === 1) {
+      clearInterval(fadeTimer);
+      if (target === 0) bgm.pause();
+    }
+  }, 40);
+}
+
+function playMusic() {
+  bgm.volume = 0;
+  // play() 返回 Promise，被浏览器拦下时会 reject —— 不能让它变成未捕获异常
+  const p = bgm.play();
+  if (p) p.then(() => {
+    soundBtn.classList.add('is-on');
+    soundBtn.setAttribute('aria-pressed', 'true');
+    fadeTo(MUSIC_VOLUME, MUSIC_FADE_MS);
+  }).catch(() => {
+    // 播不了就保持「关」的样子，她可以自己点右上角那个按钮
+    soundBtn.classList.remove('is-on');
+    soundBtn.setAttribute('aria-pressed', 'false');
+  });
+}
+
+function stopMusic() {
+  soundBtn.classList.remove('is-on');
+  soundBtn.setAttribute('aria-pressed', 'false');
+  fadeTo(0, 400);
+}
+
+/* 转盘转起来时顺带把音乐带起来（她没主动关过的话） */
+function startMusicIfWanted() {
+  if (mutedByHer || !bgm.paused) return;
+  playMusic();
+}
+
+soundBtn.addEventListener('click', () => {
+  if (bgm.paused) { mutedByHer = false; playMusic(); }
+  else { mutedByHer = true; stopMusic(); }
+});
+
 /* 按权重抽一格 */
 function weightOf(seg) {
   return WEIGHTS[seg.name] !== undefined ? WEIGHTS[seg.name] : WEIGHTS.default;
@@ -234,6 +294,7 @@ function spinDurationMs() {
 function spin() {
   if (spinning) return;
   spinning = true;
+  startMusicIfWanted();   // 这一下点击就是浏览器要的那次交互
 
   // 复位上一轮的结果
   spinBtn.disabled = true;

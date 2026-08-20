@@ -46,6 +46,40 @@ body {
 }
 
 
+/* ── 音乐开关 ────────────────────────────────────────────── */
+
+/* 右上角。默认是「关」的样子（带斜杠），因为音乐还没响 ——
+   别让她以为在放歌却听不见。 */
+.sound {
+  position: fixed;
+  top: clamp(14px, 2.4vw, 22px);
+  right: clamp(14px, 2.4vw, 22px);
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(240, 194, 106, 0.28);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--gold);
+  background: rgba(13, 10, 18, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0.62;
+  transition: opacity 0.2s ease, scale 0.18s ease;
+}
+.sound:hover { opacity: 1; }
+.sound:active { scale: 0.94; }
+.sound:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.sound svg { width: 19px; height: 19px; }
+
+/* 音乐响着的时候把斜杠收掉，并且不再压暗 */
+.sound.is-on { opacity: 0.9; }
+.sound.is-on .slash { opacity: 0; }
+.slash { transition: opacity 0.2s ease; }
+
+
 /* ── 布局 ────────────────────────────────────────────────── */
 
 .layout {
