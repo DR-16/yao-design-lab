@@ -48,8 +48,8 @@ body {
 
 /* ── 音乐开关 ────────────────────────────────────────────── */
 
-/* 右上角。默认是「关」的样子（带斜杠），因为音乐还没响 ——
-   别让她以为在放歌却听不见。 */
+/* 右上角。默认就是「开」（.is-on，不带斜杠）—— 显示的是她的意愿，
+   不是「此刻是不是真的在响」。只有她手动点了才变成带斜杠的关。 */
 .sound {
   position: fixed;
   top: clamp(14px, 2.4vw, 22px);
@@ -74,7 +74,7 @@ body {
 .sound:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .sound svg { width: 19px; height: 19px; }
 
-/* 音乐响着的时候把斜杠收掉，并且不再压暗 */
+/* 开着的时候把斜杠收掉，并且不再压暗 */
 .sound.is-on { opacity: 0.9; }
 .sound.is-on .slash { opacity: 0; }
 .slash { transition: opacity 0.2s ease; }

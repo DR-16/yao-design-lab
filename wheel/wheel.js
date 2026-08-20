@@ -215,11 +215,13 @@ function fillWithFace(path, seg, i, defs) {
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
 /* ── 音乐 ──────────────────────────────────────────────────
-   浏览器一律禁止带声音的自动播放，必须先有一次用户交互 ——
-   这页刚好有个天然的触发点：她点「开始」的那一下。
-   她要是自己关掉了，后面再转就不该又自作主张放起来。
+   默认是开的：按钮一进来就显示「开」，只有她手动点才变关。
+
+   但浏览器一律禁止带声音的自动播放，必须先有一次用户交互。
+   所以「开」是**意愿**，不是「此刻正在响」—— 页面上第一次任何
+   点击/触摸都会把音乐接上，不用她专门去点哪个按钮。
    ────────────────────────────────────────────────────────── */
-let mutedByHer = false;   // 她手动关过没有
+let wantsMusic = true;    // 她想不想听 —— 按钮显示的是这个，不是 bgm.paused
 let fadeTimer = null;
 
 function fadeTo(target, ms) {
@@ -236,37 +238,54 @@ function fadeTo(target, ms) {
   }, 40);
 }
 
+/* 按钮永远只反映 wantsMusic */
+function syncSoundButton() {
+  soundBtn.classList.toggle('is-on', wantsMusic);
+  soundBtn.setAttribute('aria-pressed', String(wantsMusic));
+}
+
 function playMusic() {
+  if (!bgm.paused) return;
   bgm.volume = 0;
-  // play() 返回 Promise，被浏览器拦下时会 reject —— 不能让它变成未捕获异常
+  // play() 返回 Promise，被浏览器拦下时会 reject —— 不能让它变成未捕获异常。
+  // 拦下了也不改按钮：她的意愿还是「开」，下一次交互会把它接上。
   const p = bgm.play();
   if (p) p.then(() => {
-    soundBtn.classList.add('is-on');
-    soundBtn.setAttribute('aria-pressed', 'true');
+    // play() 是异步的，回执到达时她可能已经把音乐关掉了 ——
+    // 比如她进来第一下点的就是右上角的静音按钮：pointerdown 先起播，
+    // click 再关掉，然后这个回执才到。不重新确认一次就会把她的关掉覆盖掉。
+    if (!wantsMusic) { hardStop(); return; }
     fadeTo(MUSIC_VOLUME, MUSIC_FADE_MS);
-  }).catch(() => {
-    // 播不了就保持「关」的样子，她可以自己点右上角那个按钮
-    soundBtn.classList.remove('is-on');
-    soundBtn.setAttribute('aria-pressed', 'false');
-  });
+  }).catch(() => {});
 }
 
-function stopMusic() {
-  soundBtn.classList.remove('is-on');
-  soundBtn.setAttribute('aria-pressed', 'false');
-  fadeTo(0, 400);
+function hardStop() {
+  clearInterval(fadeTimer);
+  bgm.pause();
+  bgm.volume = 0;
 }
 
-/* 转盘转起来时顺带把音乐带起来（她没主动关过的话） */
+function stopMusic() { fadeTo(0, 400); }
+
+/* 想听就接上。页面上第一次点击/触摸会调它，之后每次转也会调（幂等）。 */
 function startMusicIfWanted() {
-  if (mutedByHer || !bgm.paused) return;
-  playMusic();
+  if (wantsMusic) playMusic();
 }
 
 soundBtn.addEventListener('click', () => {
-  if (bgm.paused) { mutedByHer = false; playMusic(); }
-  else { mutedByHer = true; stopMusic(); }
+  wantsMusic = !wantsMusic;
+  syncSoundButton();
+  if (wantsMusic) playMusic(); else stopMusic();
 });
+
+syncSoundButton();
+playMusic();   // 先试一次；多半会被浏览器拦掉，那就等她的第一次交互
+
+/* 第一次交互就接上音乐 —— 不限于「开始」按钮，页面上碰哪儿都算。
+   注意：如果她第一下点的就是右上角那个按钮，这里会先起播、
+   紧接着 click 把 wantsMusic 翻成 false 再停掉，最终还是关 —— 正是她要的。 */
+['pointerdown', 'touchstart', 'keydown'].forEach(ev =>
+  window.addEventListener(ev, startMusicIfWanted, { once: true, passive: true }));
 
 /* 按权重抽一格 */
 function weightOf(seg) {

@@ -10,11 +10,11 @@
 
 <div class="grain" aria-hidden="true"></div>
 
-<!-- 背景音乐。浏览器一律禁止带声音的自动播放，所以不写 autoplay ——
-     由她点「开始」的那一下（或者点右上角这个按钮）来触发，见 wheel.js。 -->
+<!-- 背景音乐。默认是开的，但浏览器一律禁止带声音的自动播放，所以不写 autoplay ——
+     页面上第一次任何点击/触摸都会把它接上，见 wheel.js。 -->
 <audio id="bgm" src="audio/music.m4a" loop preload="auto"></audio>
 
-<button class="sound" id="sound" type="button" aria-label="打开或关闭音乐" aria-pressed="false">
+<button class="sound is-on" id="sound" type="button" aria-label="打开或关闭音乐" aria-pressed="true">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M10 18.5V5.5l8-1.6v11.1"/>
