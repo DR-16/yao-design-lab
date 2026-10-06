@@ -1,0 +1,2149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Compare · AutoCompare AI — Yao Design Lab</title>
+<meta name="description" content="Five teardowns from a paid API to a $0 permanent URL. The case study of AutoCompare AI." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* palette · pulled from the actual product */
+    --bg:      #06060f;
+    --bg-2:    #0d0d20;
+    --card:    rgba(255,255,255,0.035);
+    --card-2:  rgba(255,255,255,0.055);
+    --border:  rgba(255,255,255,0.08);
+    --border-2:rgba(255,255,255,0.14);
+    --text:    #eeeeff;
+    --muted:   #9797c0;
+    --dim:     #6060a0;
+    --a1:      #6366f1;   /* indigo */
+    --a2:      #a855f7;   /* purple */
+    --ab:      #0ea5e9;   /* cyan   */
+    --ag:      #10b981;   /* green — chose */
+    --ar:      #ef4444;   /* red   — killed */
+    --ay:      #f59e0b;   /* amber */
+    --g1:      linear-gradient(135deg, #6366f1, #a855f7);
+    --g2:      linear-gradient(135deg, #0ea5e9, #6366f1);
+
+    --serif: "Fraunces", "Noto Serif SC", Georgia, serif;
+    --sans:  "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono:  "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: clip; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+    font-weight: 400;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: var(--a1); color: white; }
+
+  /* ---------- ambient glow blobs ---------- */
+  .ambient {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 55% 45% at 15% 55%, rgba(99, 102, 241, 0.13) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 55% at 85% 15%, rgba(168, 85, 247, 0.13) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 40% at 50% 92%, rgba(14, 165, 233, 0.10) 0%, transparent 60%);
+  }
+
+  /* ================================================================
+     CAMERA SCENE · scroll-driven 3D push through the car
+     ---------------------------------------------------------------
+     Technique: pure CSS 3D with `perspective` on the stage; every
+     layer sits at its own base translateZ(). A global `--cp` CSS
+     variable (0 → 1, driven by scroll via rAF-lerp) multiplies into
+     each layer's translateZ, so one unit of scroll literally moves
+     the virtual camera forward. Layers fade as they cross the camera
+     plane — true parallax, no image upscale.
+     ================================================================ */
+  .cam-track {
+    position: relative; z-index: 5;
+    height: 450vh;                 /* long track = cinematic push */
+  }
+  .cam-stage {
+    position: sticky; top: 0;
+    height: 100vh; width: 100%;
+    overflow: hidden;
+    perspective: 1400px;
+    perspective-origin: 50% 50%;
+    background:
+      radial-gradient(ellipse 70% 45% at 50% 25%, rgba(70, 90, 150, 0.25) 0%, transparent 60%),
+      radial-gradient(ellipse 90% 60% at 50% 100%, rgba(15, 15, 30, 0.65) 0%, transparent 60%),
+      linear-gradient(180deg, #080c18 0%, #04060e 55%, #010205 100%);
+  }
+  .cam-stage::before {
+    /* two distant streetlamp halos behind the car (static backdrop) */
+    content: "";
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(circle 5px at 14% 44%, rgba(255, 220, 150, 0.85), transparent 70%),
+      radial-gradient(circle 180px at 14% 44%, rgba(255, 200, 120, 0.12), transparent 70%),
+      radial-gradient(circle 4px at 86% 42%, rgba(255, 220, 150, 0.7), transparent 70%),
+      radial-gradient(circle 140px at 86% 42%, rgba(255, 200, 120, 0.08), transparent 70%);
+    pointer-events: none;
+  }
+
+  .cam-scene {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
+    --cp: 0;                        /* camera progress 0..1, set by JS */
+    --push: 1500;                   /* total camera travel in px        */
+  }
+  .layer {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+    pointer-events: none;
+  }
+
+  /* ------------------------------------------------------------
+     LAYER 1 · CAR REAR — the view the user starts on.
+       base Z = 0  →  camera passes through it between cp 0.25-0.45
+     ------------------------------------------------------------ */
+  .layer-rear {
+    width: min(760px, 86vw);
+    transform: translate(-50%, -50%) translateZ(calc(var(--cp) * var(--push) * 1px));
+    /* fade 0.25 → 0.45 (cp*5-1.25 → 1 across that range) */
+    opacity: calc(1 - max(0, var(--cp) * 5 - 1.25));
+  }
+  .layer-rear .l-roof {
+    height: 10px; margin: 0 4% -2px;
+    background: linear-gradient(180deg, rgba(190, 210, 230, 0.5), rgba(70, 90, 110, 0.1));
+    border-radius: 60% 60% 0 0 / 100% 100% 0 0;
+    box-shadow: 0 -3px 10px rgba(180, 210, 255, 0.18);
+  }
+  .layer-rear .l-windshield {
+    position: relative;
+    clip-path: polygon(5% 0%, 95% 0%, 100% 100%, 0% 100%);
+    height: 210px;
+    background:
+      linear-gradient(170deg, rgba(180, 200, 255, 0.12) 0%, transparent 42%),
+      linear-gradient(180deg, rgba(14, 20, 36, 0.90) 0%, rgba(5, 8, 16, 0.95) 100%);
+    border-top: 2px solid rgba(190, 210, 240, 0.22);
+    box-shadow: inset 0 -22px 42px rgba(0, 0, 0, 0.45);
+  }
+  /* dim silhouette of what's inside, visible through the dark glass */
+  .layer-rear .l-silhouette {
+    position: absolute; inset: 20% 10% 10%;
+    background:
+      /* two dim headrest shadows */
+      radial-gradient(ellipse 24% 60% at 30% 100%, rgba(10, 14, 24, 0.9) 0%, transparent 70%),
+      radial-gradient(ellipse 24% 60% at 70% 100%, rgba(10, 14, 24, 0.9) 0%, transparent 70%),
+      /* far rearview mirror dot */
+      radial-gradient(circle 14px at 50% 20%, rgba(140, 160, 200, 0.35) 0%, transparent 70%);
+  }
+  .layer-rear .l-wiper {
+    position: absolute; bottom: 16px; left: 14%;
+    width: 42%; height: 3px;
+    background: linear-gradient(90deg, rgba(30, 30, 40, 0.9), rgba(150, 160, 180, 0.5));
+    border-radius: 2px;
+    transform: rotate(5deg);
+  }
+  .layer-rear .l-brake {
+    height: 3px; margin: 3px 22% 0;
+    background: linear-gradient(90deg, rgba(200, 40, 40, 0.3), rgba(255, 80, 80, 0.95), rgba(200, 40, 40, 0.3));
+    box-shadow: 0 0 14px rgba(255, 60, 60, 0.75), 0 0 28px rgba(255, 60, 60, 0.35);
+    border-radius: 2px;
+  }
+  .layer-rear .l-trunk {
+    position: relative;
+    margin: 18px -3% 0; padding: 28px 30px 18px;
+    background: linear-gradient(180deg, rgba(38, 42, 52, 0.97), rgba(16, 20, 28, 0.98));
+    border-radius: 4px 4px 10px 10px;
+    display: grid; grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 18px;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08), inset 0 -22px 32px rgba(0, 0, 0, 0.42);
+  }
+  .layer-rear .l-tail {
+    width: 100px; height: 36px;
+    border-radius: 40% 20% 20% 40% / 60% 40% 40% 60%;
+    background: radial-gradient(ellipse at center, rgba(255, 100, 100, 0.95) 0%, rgba(200, 40, 40, 0.85) 50%, rgba(120, 15, 15, 0.9) 100%);
+    box-shadow: 0 0 18px rgba(255, 60, 60, 0.65), 0 0 36px rgba(255, 60, 60, 0.3), inset 0 2px 4px rgba(255, 200, 200, 0.4);
+  }
+  .layer-rear .l-tail.r { border-radius: 20% 40% 40% 20% / 40% 60% 60% 40%; }
+  .layer-rear .l-plate {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 14px; letter-spacing: 0.22em; font-weight: 700;
+    padding: 7px 22px;
+    background: linear-gradient(180deg, #f2f0e0, #dcd8bc);
+    color: #1a1a1a;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  .layer-rear .l-bumper {
+    height: 16px; margin: 0 -2%;
+    background: linear-gradient(180deg, rgba(16, 20, 28, 0.95), rgba(4, 6, 10, 1));
+    border-radius: 0 0 22px 22px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* ------------------------------------------------------------
+     LAYER 2 · REAR CABIN — headliner + side glass + floor.
+       base Z = -550 → crosses camera at cp ≈ 0.37
+     ------------------------------------------------------------ */
+  .layer-cabin {
+    width: 120vw; height: 110vh;
+    transform: translate(-50%, -50%) translateZ(calc(var(--cp) * var(--push) * 1px - 550px));
+    opacity: calc(min(1, var(--cp) * 6) * (1 - max(0, var(--cp) - 0.72) * 5));
+  }
+  .layer-cabin .headliner {
+    position: absolute; left: 0; right: 0; top: 0; height: 32%;
+    background:
+      radial-gradient(ellipse 55% 100% at 50% 100%, rgba(40, 44, 56, 0.85) 0%, rgba(16, 20, 28, 0.95) 100%);
+    clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+  }
+  .layer-cabin .floor {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 28%;
+    background:
+      radial-gradient(ellipse 55% 100% at 50% 0%, rgba(20, 22, 32, 0.9) 0%, rgba(6, 8, 14, 0.98) 100%);
+    clip-path: polygon(18% 0, 82% 0, 100% 100%, 0 100%);
+  }
+  .layer-cabin .side-window {
+    position: absolute; top: 24%; bottom: 32%;
+    width: 25%;
+    background:
+      linear-gradient(180deg, rgba(50, 65, 95, 0.4) 0%, rgba(14, 20, 32, 0.75) 100%);
+    opacity: 0.75;
+  }
+  .layer-cabin .side-window.l { left: 0; clip-path: polygon(0 0, 100% 15%, 100% 85%, 0 100%); }
+  .layer-cabin .side-window.r { right: 0; clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 85%); }
+
+  /* ------------------------------------------------------------
+     LAYER 3 · FRONT SEATS — the two front-row seat backs.
+       base Z = -950
+     ------------------------------------------------------------ */
+  .layer-seats {
+    width: 70vw; max-width: 900px;
+    transform: translate(-50%, -40%) translateZ(calc(var(--cp) * var(--push) * 1px - 950px));
+    opacity: calc(min(1, max(0, var(--cp) - 0.1) * 4) * (1 - max(0, var(--cp) - 0.82) * 6));
+    display: grid; grid-template-columns: 1fr 60px 1fr; gap: 10px;
+    align-items: end;
+  }
+  .layer-seats .seat {
+    position: relative;
+    height: 44vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .layer-seats .headrest {
+    width: 60%; aspect-ratio: 1.1 / 1;
+    background: linear-gradient(180deg, rgba(28, 30, 40, 0.96) 0%, rgba(12, 14, 20, 0.98) 100%);
+    border-radius: 46% 46% 14% 14% / 60% 60% 14% 14%;
+    box-shadow: inset -8px -4px 14px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.5);
+  }
+  .layer-seats .seat-back {
+    width: 100%; flex: 1;
+    margin-top: -8px;
+    background:
+      linear-gradient(180deg, rgba(26, 28, 36, 0.98) 0%, rgba(10, 12, 18, 1) 100%);
+    border-radius: 24px 24px 10px 10px;
+    box-shadow:
+      inset -14px 0 24px rgba(0, 0, 0, 0.5),
+      inset 14px 0 24px rgba(0, 0, 0, 0.5),
+      inset 0 10px 20px rgba(255, 255, 255, 0.03);
+    position: relative;
+  }
+  .layer-seats .seat-back::before {
+    /* subtle center seam */
+    content: "";
+    position: absolute; left: 50%; top: 10%; bottom: 5%;
+    width: 1px; background: rgba(255, 255, 255, 0.04);
+  }
+  .layer-seats .console {
+    height: 70%; align-self: end;
+    background: linear-gradient(180deg, rgba(22, 25, 34, 0.96), rgba(8, 10, 16, 1));
+    border-radius: 6px 6px 4px 4px;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05);
+  }
+  /* label stamped onto the seat back — reads like a leather info-tag.
+     Fade peaks in cp 0.6-0.72 while the seats own the frame, then
+     clears out before the dashboard/mirror take over. */
+  .layer-seats .seat-label {
+    position: absolute;
+    inset: 14% 10% 10%;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    gap: 3px;
+    opacity: calc(
+      min(1, max(0, var(--cp) - 0.48) * 7)
+      * (1 - max(0, var(--cp) - 0.72) * 8)
+    );
+    transition: opacity 0s;
+  }
+  .layer-seats .seat-key {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-style: italic;
+    font-size: clamp(28px, 3.6vw, 48px);
+    line-height: 1;
+    color: #ffcb66;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.7),
+      0 0 24px rgba(255, 180, 80, 0.4);
+    margin-bottom: 14px;
+    letter-spacing: -0.015em;
+  }
+  .layer-seats .seat-sub {
+    font-family: var(--mono);
+    font-size: clamp(9px, 1vw, 12px);
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    color: rgba(220, 230, 255, 0.55);
+    text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  /* ------------------------------------------------------------
+     LAYER 4 · DASHBOARD + FRONT WINDSHIELD — distant interior.
+       base Z = -1150
+     ------------------------------------------------------------ */
+  .layer-dash {
+    width: 95vw;
+    transform: translate(-50%, -50%) translateZ(calc(var(--cp) * var(--push) * 1px - 1150px));
+    opacity: calc(min(1, max(0, var(--cp) - 0.2) * 3) * (1 - max(0, var(--cp) - 0.9) * 10));
+  }
+  .layer-dash .front-glass {
+    position: relative;
+    height: 36vh; margin: 0 10%;
+    background:
+      /* distant road / horizon seen through the windshield */
+      linear-gradient(180deg, rgba(40, 55, 85, 0.65) 0%, rgba(80, 95, 125, 0.4) 60%, rgba(30, 35, 50, 0.65) 100%);
+    border-radius: 10px 10px 50% 50% / 10px 10px 24% 24%;
+    box-shadow: inset 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 -4px 10px rgba(255, 255, 255, 0.05);
+  }
+  .layer-dash .front-glass::before {
+    /* two faint headlight beams on the asphalt ahead */
+    content: "";
+    position: absolute; inset: 60% 20% 10%;
+    background:
+      radial-gradient(ellipse 40% 100% at 30% 100%, rgba(255, 240, 200, 0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 100% at 70% 100%, rgba(255, 240, 200, 0.18) 0%, transparent 70%);
+  }
+  .layer-dash .a-pillar {
+    position: absolute; top: 0; bottom: 10%;
+    width: 10%;
+    background: linear-gradient(180deg, rgba(8, 10, 18, 0.92) 0%, rgba(18, 22, 32, 0.78) 100%);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+  }
+  .layer-dash .a-pillar.l { left: 0; transform: skewX(6deg); transform-origin: top left; }
+  .layer-dash .a-pillar.r { right: 0; transform: skewX(-6deg); transform-origin: top right; }
+  .layer-dash .dashboard {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 14vh;
+    background:
+      radial-gradient(ellipse 50% 100% at 50% 0%, rgba(26, 30, 42, 0.8) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(4, 6, 12, 0.85) 0%, rgba(0, 0, 0, 0.98) 100%);
+  }
+  .layer-dash .dash-screen {
+    position: absolute; left: 50%; bottom: 4vh;
+    transform: translateX(-50%);
+    width: 24%; height: 6vh;
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.14) 0%, rgba(14, 165, 233, 0.08) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 6px;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  }
+
+  /* ------------------------------------------------------------
+     LAYER 5 · INTERIOR REAR-VIEW MIRROR — final target.
+       base Z = -1600 → reaches camera at cp = 1 (actual Z ≈ -100)
+       Carries the h1 / lead / CTAs on the mirror glass.
+     ------------------------------------------------------------ */
+  .layer-mirror {
+    width: 80vw; max-width: 820px;
+    /* positioned slightly above center to match a real interior mirror hanging from the roof */
+    transform: translate(-50%, -58%) translateZ(calc(var(--cp) * var(--push) * 1px - 1600px));
+    opacity: calc(min(1, max(0, var(--cp) - 0.35) * 2));
+  }
+  .layer-mirror .m-stem {
+    width: 10px; height: 22px; margin: 0 auto;
+    background: linear-gradient(180deg, rgba(60, 70, 90, 0.6) 0%, rgba(28, 32, 44, 0.95) 100%);
+    border-radius: 3px 3px 4px 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  .layer-mirror .m-housing {
+    position: relative;
+    padding: 7px;
+    background: linear-gradient(180deg, #2a2f3a 0%, #141720 100%);
+    border-radius: 14px 14px 18px 18px / 14px 14px 40px 40px;
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.7),
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  .layer-mirror .m-glass {
+    position: relative;
+    padding: 34px 44px 32px;
+    border-radius: 10px 10px 14px 14px / 10px 10px 32px 32px;
+    background:
+      /* reflective glass gradient — a hint of the night sky / street behind the camera */
+      linear-gradient(165deg, rgba(70, 85, 115, 0.4) 0%, rgba(20, 28, 44, 0.92) 50%, rgba(10, 14, 24, 0.95) 100%);
+    box-shadow:
+      inset 0 2px 6px rgba(255, 255, 255, 0.12),
+      inset 0 -8px 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-align: center;
+  }
+  .layer-mirror .m-glass::before {
+    /* subtle brighter streak like glass reflection */
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(200, 220, 255, 0.14) 0%, transparent 45%);
+    pointer-events: none;
+  }
+  .layer-mirror .m-content { position: relative; z-index: 2; }
+  .layer-mirror .m-content .h-tag {
+    margin-bottom: 16px;
+    padding: 5px 12px;
+    font-size: 10px;
+    border-color: rgba(200, 220, 255, 0.35);
+    background: rgba(200, 220, 255, 0.06);
+    color: #dfe8ff;
+  }
+  .layer-mirror .m-content .h1 {
+    font-size: clamp(22px, 3.4vw, 44px);
+    line-height: 1.1;
+    margin-bottom: 16px;
+    color: #eef2ff;
+    text-shadow: 0 0 24px rgba(150, 180, 255, 0.4), 0 0 48px rgba(100, 130, 200, 0.2);
+  }
+  .layer-mirror .m-content .h1 em {
+    -webkit-text-fill-color: #ffcb66;
+    background: none; color: #ffcb66;
+    font-style: italic;
+    text-shadow: 0 0 24px rgba(255, 180, 80, 0.6);
+  }
+  .layer-mirror .m-content .lead {
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(220, 230, 255, 0.78);
+    margin-bottom: 18px;
+    max-width: 440px; margin-left: auto; margin-right: auto;
+  }
+  .layer-mirror .m-content .cta-twin { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .layer-mirror .m-content .cta-primary,
+  .layer-mirror .m-content .cta-secondary {
+    padding: 10px 20px;
+    font-size: 12px;
+    border-radius: 8px;
+    pointer-events: auto;
+  }
+  .layer-mirror .m-content .stack-tags {
+    margin-top: 20px; gap: 6px;
+    pointer-events: auto;
+  }
+  .layer-mirror .m-content .stack-tags span {
+    font-size: 9px; padding: 3px 8px;
+    background: rgba(180, 200, 255, 0.08);
+    border-color: rgba(180, 200, 255, 0.15);
+    color: rgba(200, 220, 255, 0.7);
+  }
+  /* let interactive bits on the mirror glass receive clicks even though
+     the layer itself is pointer-events: none */
+  .layer-mirror { }
+  .layer-mirror .m-content a { pointer-events: auto; }
+
+  /* darken the body behind the stage once we've passed through */
+  body.is-inside { background: #020408; }
+
+  /* ------------------------------------------------------------
+     MOBILE SIMPLIFICATION
+     Smaller perspective / shorter track / scaled-down layers.
+     Keeps the effect readable on narrow screens.
+     ------------------------------------------------------------ */
+  @media (max-width: 800px) {
+    .cam-track { height: 320vh; }
+    .cam-stage { perspective: 900px; }
+    .cam-scene { --push: 1100; }
+    .layer-rear { width: 94vw; }
+    .layer-rear .l-tail { width: 60px; height: 24px; }
+    .layer-rear .l-plate { font-size: 11px; padding: 5px 14px; }
+    .layer-seats { width: 92vw; }
+    .layer-seats .seat { height: 36vh; }
+    .layer-mirror { width: 94vw; }
+    .layer-mirror .m-glass { padding: 24px 20px 22px; }
+    .layer-mirror .m-content .h1 { font-size: 20px; }
+    .layer-mirror .m-content .lead { font-size: 12px; }
+  }
+  /* respect reduced motion — static final-state view */
+  @media (prefers-reduced-motion: reduce) {
+    .cam-track { height: 100vh; }
+    .cam-scene { --cp: 1 !important; }
+    .layer-rear, .layer-cabin, .layer-seats, .layer-dash { opacity: 0 !important; }
+  }
+
+  /* ---------- nav ---------- */
+  .nav-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 90;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    background: rgba(6, 6, 15, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .back-link {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text);
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--a2); }
+  .nav-brand {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ================================================================
+     HERO
+     ================================================================ */
+  .hero {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 140px 5vw 60px;
+    text-align: center;
+  }
+  .h-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--a2);
+    padding: 6px 14px;
+    border: 1.5px solid rgba(168, 85, 247, 0.4);
+    border-radius: 999px;
+    margin-bottom: 30px;
+    background: rgba(168, 85, 247, 0.06);
+  }
+  .h1 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(38px, 6.4vw, 76px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 30px;
+  }
+  .h1 em {
+    font-style: italic;
+    background: var(--g1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lead {
+    max-width: 700px; margin: 0 auto 32px;
+    font-size: 17px; line-height: 1.75;
+    color: var(--muted);
+  }
+
+  /* essential question — styled like the product's "verdict" card */
+  .q-card {
+    position: relative;
+    max-width: 780px; margin: 40px auto 0;
+    padding: 26px 32px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(168, 85, 247, 0.08));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    text-align: left;
+    backdrop-filter: blur(8px);
+  }
+  .q-card::before {
+    content: "ESSENTIAL QUESTION";
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    color: var(--a1);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .q-card p {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(17px, 2vw, 22px);
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .q-card .a-line {
+    display: block;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .q-card .a-line b { color: var(--ag); font-weight: 600; }
+
+  .stack-tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-top: 34px;
+  }
+  .stack-tags span {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 5px 11px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+  }
+
+  /* ================================================================
+     PRODUCT-MOCK · a stripped preview of the actual UI
+     ================================================================ */
+  .product-mock {
+    position: relative; z-index: 5;
+    max-width: 900px; margin: 40px auto 40px;
+    padding: 0 5vw;
+  }
+  .mock-shell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 30px 28px 26px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
+  }
+  .mock-inputs {
+    display: grid;
+    grid-template-columns: 1fr 48px 1fr;
+    gap: 14px; align-items: end;
+  }
+  .mock-field {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .mock-label {
+    font-family: var(--mono);
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .mock-input {
+    background: rgba(255,255,255,0.055);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--sans); font-size: 14px;
+  }
+  .mock-input.filled { color: var(--text); }
+  .mock-input .dim { color: var(--dim); }
+  .vs {
+    background: var(--g1);
+    border-radius: 50%;
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    align-self: end;
+    margin-bottom: 2px;
+    color: white;
+  }
+  .mock-caption {
+    margin-top: 16px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.22em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  .mock-caption a {
+    color: var(--a2);
+    border-bottom: 1px dashed rgba(168, 85, 247, 0.4);
+    transition: color 0.2s;
+  }
+  .mock-caption a:hover { color: var(--text); }
+
+  /* ================================================================
+     ROUNDS · 5 pivots rendered as VS cards
+     ================================================================ */
+  .rounds-section {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 80px 5vw 40px;
+  }
+  .rs-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--a2);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .rs-title {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 52px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .rs-title em {
+    font-style: italic;
+    background: var(--g1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .rs-sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 620px;
+    margin: 0 auto 60px;
+  }
+
+  .rounds { display: flex; flex-direction: column; gap: 32px; }
+
+  .round {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+  }
+  .round-head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .round-num {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.22em;
+    color: var(--a1);
+    text-transform: uppercase;
+    background: rgba(99, 102, 241, 0.12);
+    padding: 5px 12px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .round-h {
+    font-family: var(--serif);
+    font-size: 22px; font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .round-h em { font-style: italic; color: var(--a2); }
+  .round-ver {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.08em;
+    color: var(--dim);
+    flex-shrink: 0;
+  }
+
+  .vs-grid {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 20px; align-items: stretch;
+  }
+
+  .side {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 22px;
+  }
+  .side.killed { border-color: rgba(239, 68, 68, 0.25); }
+  .side.chose  { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.04); }
+
+  .side-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .side.killed .side-tag { background: rgba(239, 68, 68, 0.12); color: #fca5a5; }
+  .side.chose  .side-tag { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+
+  .side h4 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1.15;
+    margin-bottom: 10px;
+    letter-spacing: -0.005em;
+  }
+  .side .why {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .side ul { list-style: none; padding: 0; }
+  .side li {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    padding: 4px 0 4px 18px;
+    position: relative;
+    color: var(--text);
+  }
+  .side.killed li::before { content: "✗"; position: absolute; left: 0; color: var(--ar); font-weight: 700; }
+  .side.chose  li::before { content: "✓"; position: absolute; left: 0; color: var(--ag); font-weight: 700; }
+
+  .vs-pill {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--g1);
+    border-radius: 50%;
+    width: 60px; height: 60px;
+    font-family: var(--mono);
+    font-weight: 700; font-size: 14px;
+    color: white;
+    align-self: center;
+    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.3);
+    flex-shrink: 0;
+  }
+
+  .verdict {
+    margin-top: 20px;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(168, 85, 247, 0.08));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 14px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--a1);
+    font-weight: 700;
+    flex-shrink: 0;
+    padding-top: 3px;
+    min-width: 76px;
+  }
+  .verdict-text {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text);
+    flex: 1;
+  }
+
+  /* ================================================================
+     FINAL STACK · spec-sheet
+     ================================================================ */
+  .stack-section {
+    position: relative; z-index: 5;
+    max-width: 900px; margin: 0 auto;
+    padding: 80px 5vw 40px;
+  }
+  .stack-head {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .stack-head .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--ag);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .stack-head h2 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .spec-sheet {
+    background: rgba(16, 185, 129, 0.04);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .spec-sheet .row {
+    display: grid;
+    grid-template-columns: 200px 1fr auto;
+    align-items: baseline;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 20px;
+  }
+  .spec-sheet .row:last-child { border-bottom: none; }
+  .spec-sheet .row.total { background: rgba(16, 185, 129, 0.08); }
+  .sp-key {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sp-val {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--text);
+  }
+  .sp-val code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .sp-price {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ag);
+  }
+  .spec-sheet .row.total .sp-price { font-size: 24px; }
+
+  /* ================================================================
+     LESSONS
+     ================================================================ */
+  .lessons-section {
+    position: relative; z-index: 5;
+    max-width: 1080px; margin: 0 auto;
+    padding: 80px 5vw 40px;
+  }
+  .l-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.4em;
+    color: var(--a2); text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .l-title {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(32px, 4.4vw, 54px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 48px;
+  }
+  .l-title em {
+    font-style: italic;
+    background: var(--g1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lessons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .lesson {
+    padding: 26px 28px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+  }
+  .lesson .num {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--a2);
+    display: block; margin-bottom: 10px;
+  }
+  .lesson h4 {
+    font-family: var(--serif);
+    font-size: 20px; font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -0.005em;
+  }
+  .lesson p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  /* ================================================================
+     CTA
+     ================================================================ */
+  .cta-block {
+    position: relative; z-index: 5;
+    max-width: 880px; margin: 0 auto;
+    padding: 70px 5vw 60px;
+    text-align: center;
+  }
+  .cta-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--a2); text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .cta-block h2 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(28px, 4.2vw, 46px);
+    line-height: 1.08;
+    margin-bottom: 30px;
+    letter-spacing: -0.01em;
+  }
+  .cta-twin { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .cta-primary, .cta-secondary {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 30px;
+    font-family: var(--sans);
+    font-weight: 600; font-size: 14px;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .cta-primary {
+    background: var(--g1);
+    color: white;
+    border: none;
+    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+  }
+  .cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 36px rgba(99, 102, 241, 0.5); }
+  .cta-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+  }
+  .cta-secondary:hover { transform: translateY(-3px); border-color: var(--a1); }
+  .cta-meta {
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.22em;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  .proj-foot {
+    position: relative; z-index: 5;
+    text-align: center;
+    padding: 40px 5vw 40px;
+    border-top: 1px solid var(--border);
+  }
+  .proj-foot p {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.28em;
+    color: var(--dim); margin: 4px 0;
+    text-transform: uppercase;
+  }
+  .proj-foot a { color: var(--a2); border-bottom: 1px solid var(--border); }
+  .proj-foot a:hover { color: var(--text); }
+
+  /* ================================================================
+     WHY-US · 3-way comparison table  (forums vs generic AI vs us)
+     ================================================================ */
+  .why-section {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 60px 5vw 40px;
+  }
+  .why-head { text-align: center; margin-bottom: 44px; }
+  .why-head .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--a2);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .why-head h2 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 50px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+  }
+  .why-head h2 em {
+    font-style: italic;
+    background: var(--g1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .why-head p {
+    max-width: 620px; margin: 16px auto 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .cmp-table {
+    display: grid;
+    grid-template-columns: 200px 1fr 1fr 1fr;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  .cmp-table .h-row {
+    display: contents;
+  }
+  .cmp-cell {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .cmp-cell.head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    background: rgba(255,255,255,0.03);
+    padding-top: 20px; padding-bottom: 20px;
+  }
+  .cmp-cell.head.us    { color: var(--a2); background: rgba(168, 85, 247, 0.10); }
+  .cmp-cell.head.other { color: var(--muted); }
+  .cmp-cell.dim        { color: var(--dim); background: rgba(255,255,255,0.01); }
+  .cmp-cell.attr {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .cmp-cell.us { background: rgba(168, 85, 247, 0.05); color: var(--text); }
+  .cmp-cell:last-child, .cmp-cell.us  { }
+  .cmp-row { display: contents; }
+  .cmp-row > .cmp-cell:last-child { border-right: none; }
+  .cmp-icon {
+    display: inline-block;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    margin-right: 6px;
+  }
+  .cmp-icon.no  { color: var(--ar); }
+  .cmp-icon.mid { color: var(--ay); }
+  .cmp-icon.ok  { color: var(--ag); }
+  .cmp-cell .sub {
+    font-size: 11px;
+    color: var(--dim);
+    font-family: var(--mono);
+    letter-spacing: 0.02em;
+  }
+
+  /* ================================================================
+     PROMISE · two big proof cards (accurate + free)
+     ================================================================ */
+  .promise-section {
+    position: relative; z-index: 5;
+    max-width: 1100px; margin: 0 auto;
+    padding: 60px 5vw 40px;
+  }
+  .promise-head { text-align: center; margin-bottom: 40px; }
+  .promise-head .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.32em;
+    color: var(--ag);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .promise-head h2 {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 50px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+  }
+  .promise-head h2 em {
+    font-style: italic;
+    background: var(--g1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .promise-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .promise {
+    padding: 32px 30px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .promise.accurate { border-color: rgba(14, 165, 233, 0.35); background: rgba(14, 165, 233, 0.04); }
+  .promise.free     { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.04); }
+  .promise .p-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .promise.accurate .p-tag { background: rgba(14, 165, 233, 0.15); color: #7dd3fc; }
+  .promise.free     .p-tag { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+  .promise .p-claim {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: 34px;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .promise.accurate .p-claim { color: #7dd3fc; }
+  .promise.free     .p-claim { color: #6ee7b7; }
+  .promise .p-sub {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 20px;
+  }
+  .promise .p-proof-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .promise ul {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .promise li {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+    padding-left: 22px;
+    position: relative;
+  }
+  .promise li::before {
+    content: "→";
+    position: absolute; left: 0;
+    color: var(--a1);
+    font-weight: 700;
+  }
+  .promise li code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .promise .p-quote {
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.25);
+    border-left: 3px solid var(--a1);
+    border-radius: 4px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ---------- lang switch + floating CTA ---------- */
+  .lang-switch {
+    position: fixed;
+    right: 22px; bottom: 22px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: rgba(13, 13, 32, 0.92);
+    border: 1px solid var(--border-2);
+    border-radius: 12px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+  }
+  .lang-switch button {
+    background: none; border: none; padding: 2px 4px;
+    color: var(--muted); cursor: pointer;
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.18em;
+    transition: color 0.2s;
+  }
+  .lang-switch button.active { color: var(--a2); font-weight: 600; }
+  .lang-switch button:hover { color: var(--text); }
+  .lang-switch .lang-divider { color: var(--border-2); }
+
+  .cta-float {
+    position: fixed;
+    left: 22px; bottom: 22px; z-index: 200;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px;
+    background: var(--g1);
+    color: white;
+    font-family: var(--sans); font-weight: 600;
+    font-size: 13px;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cta-float:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(99, 102, 241, 0.5); }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s, transform 0.7s; }
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* lang toggle */
+  [data-lang="en"] { display: none; }
+  body.lang-en [data-lang="cn"] { display: none; }
+  body.lang-en [data-lang="en"] { display: inline; }
+
+  @media (max-width: 800px) {
+    .vs-grid { grid-template-columns: 1fr; gap: 14px; }
+    .vs-pill { margin: 0 auto; width: 50px; height: 50px; font-size: 12px; }
+    .lessons { grid-template-columns: 1fr; }
+    .round-head { flex-wrap: wrap; }
+    .spec-sheet .row { grid-template-columns: 130px 1fr; }
+    .spec-sheet .row .sp-price { grid-column: 1 / -1; text-align: right; }
+    .mock-inputs { grid-template-columns: 1fr; }
+    .vs { margin: 0 auto; }
+    .lang-switch { right: 12px; bottom: 12px; padding: 6px 10px; font-size: 10px; }
+    .cta-float  { left: 12px;  bottom: 12px; padding: 10px 16px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav class="nav-bar">
+  <a href="../" class="back-link">← <span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a>
+  <span class="nav-brand">DR · COMPARE · A CASE STUDY</span>
+</nav>
+
+<!-- ================================================================
+     CAMERA SCENE · scroll-driven 3D push through the car.
+     Camera starts behind the rear bumper and travels forward along
+     the car's longitudinal centerline, passing through the rear
+     windshield, the rear cabin, between the front seats, and ends
+     with the interior rear-view mirror filling the frame.
+     ================================================================ -->
+<div class="cam-track" id="camTrack">
+  <div class="cam-stage">
+    <div class="cam-scene" id="camScene">
+
+      <!-- LAYER 1 · CAR REAR (seen from directly behind) -->
+      <div class="layer layer-rear" aria-hidden="true">
+        <div class="l-roof"></div>
+        <div class="l-windshield">
+          <div class="l-silhouette"></div>
+          <div class="l-wiper"></div>
+        </div>
+        <div class="l-brake"></div>
+        <div class="l-trunk">
+          <div class="l-tail l"></div>
+          <div class="l-plate">DR · YAO LAB</div>
+          <div class="l-tail r"></div>
+        </div>
+        <div class="l-bumper"></div>
+      </div>
+
+      <!-- LAYER 2 · REAR CABIN (headliner + side glass + floor) -->
+      <div class="layer layer-cabin" aria-hidden="true">
+        <div class="headliner"></div>
+        <div class="side-window l"></div>
+        <div class="side-window r"></div>
+        <div class="floor"></div>
+      </div>
+
+      <!-- LAYER 3 · FRONT SEATS (two seat backs with headrests + console).
+           Seat backs carry the two core product promises — like a tag
+           stitched / stamped onto the leather. -->
+      <div class="layer layer-seats" aria-hidden="true">
+        <div class="seat seat-l">
+          <div class="headrest"></div>
+          <div class="seat-back">
+            <div class="seat-label">
+              <span class="seat-key"><span data-lang="cn">准.</span><span data-lang="en">Accurate.</span></span>
+              <span class="seat-sub">temperature: 0</span>
+              <span class="seat-sub">JSON schema</span>
+              <span class="seat-sub"><span data-lang="cn">不编造</span><span data-lang="en">no made-up specs</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="console"></div>
+        <div class="seat seat-r">
+          <div class="headrest"></div>
+          <div class="seat-back">
+            <div class="seat-label">
+              <span class="seat-key"><span data-lang="cn">免费.</span><span data-lang="en">Free.</span></span>
+              <span class="seat-sub">$0 / mo</span>
+              <span class="seat-sub"><span data-lang="cn">不绑卡</span><span data-lang="en">no credit card</span></span>
+              <span class="seat-sub"><span data-lang="cn">自带 Groq key</span><span data-lang="en">bring your own Groq key</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LAYER 4 · DASHBOARD + FRONT WINDSHIELD (deep interior) -->
+      <div class="layer layer-dash" aria-hidden="true">
+        <div class="a-pillar l"></div>
+        <div class="front-glass"></div>
+        <div class="a-pillar r"></div>
+        <div class="dashboard"></div>
+        <div class="dash-screen"></div>
+      </div>
+
+      <!-- LAYER 5 · INTERIOR REAR-VIEW MIRROR (final target, carries hero copy) -->
+      <div class="layer layer-mirror">
+        <div class="m-stem"></div>
+        <div class="m-housing">
+          <div class="m-glass">
+            <div class="m-content">
+              <span class="h-tag"><span data-lang="cn">给不懂车的人用的对比工具</span><span data-lang="en">A comparison tool for people who don't know cars</span></span>
+              <h1 class="h1">
+                <span data-lang="cn">输入两款车名, <em>60 秒</em>拿到并列对比</span>
+                <span data-lang="en">Type two cars in — get a <em>full side-by-side</em> in 60 seconds</span>
+              </h1>
+              <p class="lead">
+                <span data-lang="cn">不用刷 20 个论坛贴, 不用一遍遍问 ChatGPT. 六段固定结构, 一次生成。数据准, 不用花钱, 不用绑卡。</span>
+                <span data-lang="en">No trawling forum threads. No re-prompting ChatGPT. Six fixed sections, one shot. Accurate. Free. No card.</span>
+              </p>
+              <div class="cta-twin">
+                <a class="cta-primary" href="https://car-compare-7uta.onrender.com" target="_blank" rel="noopener">
+                  <span data-lang="cn">立即使用 →</span>
+                  <span data-lang="en">use it now →</span>
+                </a>
+                <a class="cta-secondary" href="#why">
+                  <span data-lang="cn">往下看 ↓</span>
+                  <span data-lang="en">scroll ↓</span>
+                </a>
+              </div>
+              <div class="stack-tags">
+                <span>Groq · llama-3.3-70b</span>
+                <span>temperature: 0</span>
+                <span>JSON schema</span>
+                <span>$0 / mo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================
+     PRODUCT MOCK
+     ================================================================ -->
+<section class="product-mock">
+  <div class="mock-shell">
+    <div class="mock-inputs">
+      <div class="mock-field">
+        <span class="mock-label"><span data-lang="cn">车型 A</span><span data-lang="en">Car A</span></span>
+        <span class="mock-input filled">2025款 保时捷 718 GTS 4.0</span>
+      </div>
+      <div class="vs">VS</div>
+      <div class="mock-field">
+        <span class="mock-label"><span data-lang="cn">车型 B</span><span data-lang="en">Car B</span></span>
+        <span class="mock-input filled">2024款 宝马 M2</span>
+      </div>
+    </div>
+    <p class="mock-caption">
+      <span data-lang="cn">这就是产品实际的样子 →&nbsp;</span>
+      <span data-lang="en">This is what the actual product looks like →&nbsp;</span>
+      <a href="https://car-compare-7uta.onrender.com" target="_blank" rel="noopener">car-compare-7uta.onrender.com</a>
+    </p>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     WHY-US · 3-way comparison table
+     ================================================================ -->
+<section class="why-section" id="why">
+  <div class="why-head">
+    <p class="eyebrow"><span data-lang="cn">3 选 1 · 你为什么应该用这个</span><span data-lang="en">3 options · why this one</span></p>
+    <h2>
+      <span data-lang="cn">对比 3 种查车方式 · <em>只有一种同时能做到</em></span>
+      <span data-lang="en">Three ways to compare cars · <em>only one does everything</em></span>
+    </h2>
+    <p>
+      <span data-lang="cn">同样是想搞清楚"两款车买哪个", 论坛帖子太杂, 通用 AI 每次输出格式都不同。这是并列对比:</span>
+      <span data-lang="en">Same job — "which of these two should I buy?" Forum threads are messy; general AI reshapes the answer every time. Here they are side by side:</span>
+    </p>
+  </div>
+
+  <div class="cmp-table">
+    <div class="h-row">
+      <div class="cmp-cell head"></div>
+      <div class="cmp-cell head other"><span data-lang="cn">汽车论坛 / 贴吧</span><span data-lang="en">forums / reddit</span></div>
+      <div class="cmp-cell head other"><span data-lang="cn">通用 AI · ChatGPT / Kimi</span><span data-lang="en">generic AI · ChatGPT / Kimi</span></div>
+      <div class="cmp-cell head us"><span data-lang="cn">AutoCompare AI · 我们</span><span data-lang="en">AutoCompare AI · this</span></div>
+    </div>
+
+    <!-- row: 输出结构 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">输出结构</span><span data-lang="en">output structure</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">大段文字, 要自己抠</span><span data-lang="en">long prose, dig it out yourself</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">每次问格式都不一样</span><span data-lang="en">shape changes every prompt</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">6 段固定结构 · 100%</span><span data-lang="en">6 fixed sections · 100%</span><span class="sub"><code>response_format: json_object</code></span></div>
+    </div>
+
+    <!-- row: 一次对比两款 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">一次对比两款</span><span data-lang="en">two-car side-by-side</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">要开两个帖来回切</span><span data-lang="en">two tabs, keep switching</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">段落式描述, 没并列</span><span data-lang="en">paragraph blob, not aligned</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">左右并列表 + AI 综合建议</span><span data-lang="en">left/right table + AI verdict</span></div>
+    </div>
+
+    <!-- row: 多版本 (variants) -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">多版本 (手动/PDK 等)</span><span data-lang="en">variants (manual / PDK etc.)</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">看你能不能翻到</span><span data-lang="en">if you can find the right thread</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">大概率漏一半</span><span data-lang="en">usually skips half of them</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn"><code>variants</code> 数组强制列全</span><span data-lang="en"><code>variants</code> array forces all versions</span></div>
+    </div>
+
+    <!-- row: 数据一致性 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">数据一致性</span><span data-lang="en">consistency</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">发帖人主观 + 广告</span><span data-lang="en">personal takes + hidden ads</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">同样输入, 每次输出略变</span><span data-lang="en">same input drifts each time</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">同输入永远同输出</span><span data-lang="en">same input → same output, always</span><span class="sub"><code>temperature: 0</code></span></div>
+    </div>
+
+    <!-- row: 上手门槛 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">上手门槛</span><span data-lang="en">onboarding</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">要会搜, 会分辨软广</span><span data-lang="en">need search skills + ad-radar</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">要会写 prompt</span><span data-lang="en">need prompt-writing skills</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">输入两个车名 · 就这样</span><span data-lang="en">type two car names · that's it</span></div>
+    </div>
+
+    <!-- row: 费用 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">你的花费</span><span data-lang="en">your cost</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon mid">〜</span> <span data-lang="cn">免费 · 但看广告 / 被割</span><span data-lang="en">free · but ads + lead-gen</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">ChatGPT Plus $20/mo · Claude $20/mo</span><span data-lang="en">ChatGPT Plus $20/mo · Claude $20/mo</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">$0 · 自带免费 Groq key</span><span data-lang="en">$0 · bring your free Groq key</span></div>
+    </div>
+
+    <!-- row: 隐私 -->
+    <div class="cmp-row">
+      <div class="cmp-cell attr"><span data-lang="cn">隐私</span><span data-lang="en">privacy</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">帖子 + 账号被跟踪</span><span data-lang="en">forum accounts tracked</span></div>
+      <div class="cmp-cell dim"><span class="cmp-icon no">✗</span> <span data-lang="cn">可能被用来训练</span><span data-lang="en">may be used for training</span></div>
+      <div class="cmp-cell us"><span class="cmp-icon ok">✓</span> <span data-lang="cn">Key 只存你浏览器 · 关标签就没</span><span data-lang="en">key lives in your tab only · gone on close</span><span class="sub"><code>sessionStorage</code></span></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     PROMISE · two big proof cards (accurate + free)
+     ================================================================ -->
+<section class="promise-section">
+  <div class="promise-head">
+    <p class="eyebrow"><span data-lang="cn">两个承诺 · 每个都有具体证据</span><span data-lang="en">two promises · each with receipts</span></p>
+    <h2>
+      <span data-lang="cn">为什么<em>准</em> · 为什么<em>免费</em></span>
+      <span data-lang="en">Why it's <em>accurate</em> · why it's <em>free</em></span>
+    </h2>
+  </div>
+
+  <div class="promise-grid">
+
+    <!-- === PROMISE 1: ACCURATE === -->
+    <article class="promise accurate">
+      <span class="p-tag"><span data-lang="cn">承诺一</span><span data-lang="en">promise 1</span></span>
+      <h3 class="p-claim">
+        <span data-lang="cn">准.</span>
+        <span data-lang="en">Accurate.</span>
+      </h3>
+      <p class="p-sub">
+        <span data-lang="cn">不猜、不编、不会同一款车这次给你 3.0T 下次给你 3.6T。</span>
+        <span data-lang="en">No guessing, no fabricating, no telling you 3.0T today and 3.6T tomorrow for the same car.</span>
+      </p>
+      <p class="p-proof-label"><span data-lang="cn">具体做了什么 →</span><span data-lang="en">what makes it that way →</span></p>
+      <ul>
+        <li><span data-lang="cn">用 <code>Groq · llama-3.3-70b-versatile</code>, 对全球主流车型数据掌握得比通用聊天模型好</span><span data-lang="en">Uses <code>Groq · llama-3.3-70b-versatile</code>, whose grasp of global car specs beats generic chat models</span></li>
+        <li><span data-lang="cn"><code>temperature: 0</code> — 强制确定性输出, 同样的输入永远得到同样的对比</span><span data-lang="en"><code>temperature: 0</code> — deterministic. Same query, same answer forever</span></li>
+        <li><span data-lang="cn"><code>response_format: json_object</code> — 强制 JSON, 6 段结构不可能变形</span><span data-lang="en"><code>response_format: json_object</code> — schema-enforced. The 6-section shape can't drift</span></li>
+        <li><span data-lang="cn">System prompt 明确写"用专业知识填写、不要编造", 字段格式和地区都锁死</span><span data-lang="en">System prompt explicitly says "use your knowledge, don't fabricate," locks field format and region</span></li>
+      </ul>
+      <p class="p-quote">
+        <span data-lang="cn">v3.1 修的真实 bug: 保时捷 992.2 GTS 曾经被输出成 3.0T (实际 3.6T). 加强 prompt 后再没出现过。</span>
+        <span data-lang="en">Real v3.1 bug: the Porsche 992.2 GTS came back as 3.0T (it's a 3.6T). Prompt got tightened; never happened again.</span>
+      </p>
+    </article>
+
+    <!-- === PROMISE 2: FREE === -->
+    <article class="promise free">
+      <span class="p-tag"><span data-lang="cn">承诺二</span><span data-lang="en">promise 2</span></span>
+      <h3 class="p-claim">
+        <span data-lang="cn">免费.</span>
+        <span data-lang="en">Free.</span>
+      </h3>
+      <p class="p-sub">
+        <span data-lang="cn">不订阅, 不绑卡, 不会某天到期. 你用多少次, 都是 $0。</span>
+        <span data-lang="en">No subscription, no credit card, no expiry. Use it once or a hundred times — always $0.</span>
+      </p>
+      <p class="p-proof-label"><span data-lang="cn">成本核算 →</span><span data-lang="en">cost breakdown →</span></p>
+      <ul>
+        <li><span data-lang="cn">你只需要一个免费的 Groq API key (60 秒申请 · <code>~1000 req/day</code> 额度)</span><span data-lang="en">You only need a free Groq API key (60-second signup · <code>~1000 req/day</code> quota)</span></li>
+        <li><span data-lang="cn">我这边: Render Free ($0) + UptimeRobot ($0) + GitHub Free ($0)</span><span data-lang="en">On my side: Render Free ($0) + UptimeRobot ($0) + GitHub Free ($0)</span></li>
+        <li><span data-lang="cn">Key 存在 <code>sessionStorage</code>, 每个用户成本自己算, 用户越多我这边成本还是 $0</span><span data-lang="en">Key stays in your <code>sessionStorage</code>. Each user pays their own compute, so scale doesn't change my $0</span></li>
+        <li><span data-lang="cn">UptimeRobot 每 5 分钟 ping 一次, Render 永不冷启动</span><span data-lang="en">UptimeRobot pings every 5 min so Render never cold-starts</span></li>
+      </ul>
+      <p class="p-quote">
+        <span data-lang="cn">v6 换掉 Railway 就是因为它要 $5/月 + 绑卡. 只要我心里还惦记"下个月要不要续费", 作品迟早会挂。</span>
+        <span data-lang="en">v6 killed Railway precisely because it wanted $5/mo + a card. Any project I mentally track for renewal will eventually die.</span>
+      </p>
+    </article>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     ROUNDS · 5 pivots — now framed as "how we got here"
+     ================================================================ -->
+<section class="rounds-section">
+  <p class="rs-eyebrow"><span data-lang="cn">背后的故事 · 给想看是怎么做出来的人</span><span data-lang="en">how it got here · for the curious builder</span></p>
+  <h2 class="rs-title">
+    <span data-lang="cn">为什么长成这个样子: <em>推倒 5 次</em></span>
+    <span data-lang="en">Why it looks like this: <em>5 teardowns</em></span>
+  </h2>
+  <p class="rs-sub">
+    <span data-lang="cn">上面那两个承诺 (准 + 免费), 不是一开始就选对的架构 — 是砍掉 5 个"看起来最保险"的选择之后剩下来的形状. 每轮左边是我杀掉的, 右边是我改用的。</span>
+    <span data-lang="en">The two promises above (accurate + free) aren't the stack I started with — they're what's left after killing five "safest-looking" choices in a row. Left column = what I killed. Right = what replaced it.</span>
+  </p>
+
+  <div class="rounds">
+
+    <!-- ============== Round 1 · Anthropic → Ollama ============== -->
+    <article class="round">
+      <div class="round-head">
+        <span class="round-num">Round 1</span>
+        <h3 class="round-h">
+          <span data-lang="cn">付费 API, 让作品只有<em>付得起的人</em>能玩</span>
+          <span data-lang="en">Paid APIs mean only <em>paying users</em> get to play</span>
+        </h3>
+        <span class="round-ver">v1 → v2</span>
+      </div>
+      <div class="vs-grid">
+        <div class="side killed">
+          <span class="side-tag">killed</span>
+          <h4>Anthropic Claude API</h4>
+          <p class="why">
+            <span data-lang="cn">最初的选择. 质量高, 数据准, 但每次调用要钱, 用户需要绑卡才能用。</span>
+            <span data-lang="en">The safe first pick. High quality, accurate data — but every call costs money and users need a credit card.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">用户不愿付</span><span data-lang="en">users won't pay</span></li>
+            <li><span data-lang="cn">我付又变成'我的作品要养'</span><span data-lang="en">if I pay it becomes "my project to maintain"</span></li>
+          </ul>
+        </div>
+        <div class="vs-pill">VS</div>
+        <div class="side chose">
+          <span class="side-tag">chose</span>
+          <h4>Ollama + qwen2.5:14b</h4>
+          <p class="why">
+            <span data-lang="cn">本地大模型, 完全离线, 一分钱不花。</span>
+            <span data-lang="en">Local LLM, fully offline, zero dollars.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">$0 · 无 API key</span><span data-lang="en">$0 · no API key</span></li>
+            <li><span data-lang="cn">离线也能跑</span><span data-lang="en">runs offline</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <p class="verdict-text">
+          <span data-lang="cn">"$5/月的作品没人用. $0 才是分享的前提。"</span>
+          <span data-lang="en">"A $5/mo project nobody uses. $0 is the prerequisite for sharing, not a bonus."</span>
+        </p>
+      </div>
+    </article>
+
+    <!-- ============== Round 2 · Ollama → Groq ============== -->
+    <article class="round">
+      <div class="round-head">
+        <span class="round-num">Round 2</span>
+        <h3 class="round-h">
+          <span data-lang="cn">"本地" 不等于 <em>"无门槛"</em></span>
+          <span data-lang="en">"Local" isn't the same as <em>"no barrier"</em></span>
+        </h3>
+        <span class="round-ver">v2 → v3</span>
+      </div>
+      <div class="vs-grid">
+        <div class="side killed">
+          <span class="side-tag">killed</span>
+          <h4>Ollama · 本地推理</h4>
+          <p class="why">
+            <span data-lang="cn">刚跑通就意识到: 用户要下 10GB+ 模型 + 装 Ollama + 确保硬件够。"$0 但要花两小时装环境" 不算 $0。</span>
+            <span data-lang="en">Realised right after it worked: users need to download a 10GB+ model, install Ollama, and have the hardware. "$0 but two hours of setup" is not $0.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">10 GB+ 模型下载</span><span data-lang="en">10GB+ model download</span></li>
+            <li><span data-lang="cn">硬件不够就跑不动</span><span data-lang="en">weak hardware = won't run</span></li>
+          </ul>
+        </div>
+        <div class="vs-pill">VS</div>
+        <div class="side chose">
+          <span class="side-tag">chose</span>
+          <h4>Groq · llama-3.3-70b-versatile</h4>
+          <p class="why">
+            <span data-lang="cn">云端免费 LLM, 用户只要一个免费 API key. 速度还比本地推理快得多。</span>
+            <span data-lang="en">Free cloud LLM. Users just paste a free API key. Actually faster than local inference.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">$0, 不用绑卡</span><span data-lang="en">$0, no card required</span></li>
+            <li><span data-lang="cn">推理速度 &gt; 本地</span><span data-lang="en">faster than local inference</span></li>
+            <li><span data-lang="cn">用户 60 秒就能上手</span><span data-lang="en">60-second onboarding</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <p class="verdict-text">
+          <span data-lang="cn">"下 10GB 模型的门槛, 比绑一张信用卡还高。"</span>
+          <span data-lang="en">"A 10GB download is a bigger barrier than a credit card."</span>
+        </p>
+      </div>
+    </article>
+
+    <!-- ============== Round 3 · Web scraping → Model knowledge ============== -->
+    <article class="round">
+      <div class="round-head">
+        <span class="round-num">Round 3</span>
+        <h3 class="round-h">
+          <span data-lang="cn"><em>稳定错的 5%</em> 比波动错的 25% 好用</span>
+          <span data-lang="en"><em>Reliably wrong 5%</em> beats erratically wrong 25%</span>
+        </h3>
+        <span class="round-ver">v3 → v4</span>
+      </div>
+      <div class="vs-grid">
+        <div class="side killed">
+          <span class="side-tag">killed</span>
+          <h4>DuckDuckGo 联网 + 两阶段管道</h4>
+          <p class="why">
+            <span data-lang="cn">听起来最合理: "先搜实时数据, 再让 LLM 整合"。实际网页结构不稳, 大量 '暂无数据'. 992.2 GTS 甚至输出 3.0T (实际 3.6T)。</span>
+            <span data-lang="en">Sounded right on paper: fetch live data, then let the LLM synthesize. Reality: page structures kept breaking, tons of "not found," and the 992.2 GTS came back as a 3.0T (it's a 3.6T).</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">数据错得没规律</span><span data-lang="en">errors were random</span></li>
+            <li><span data-lang="cn">两次 LLM 调用 → 2× 成本 / 延迟</span><span data-lang="en">2× LLM calls → 2× cost + latency</span></li>
+          </ul>
+        </div>
+        <div class="vs-pill">VS</div>
+        <div class="side chose">
+          <span class="side-tag">chose</span>
+          <h4>纯模型知识 + temperature 0 + JSON schema</h4>
+          <p class="why">
+            <span data-lang="cn">彻底删掉搜索层, 让 Groq 用自己的知识填. <code>temperature: 0</code> + <code>response_format: json_object</code>, 输出稳定得像模板生成。</span>
+            <span data-lang="en">Deleted the whole scraping layer. Groq fills from its own weights. <code>temperature: 0</code> + <code>response_format: json_object</code> — outputs read like they came from a template.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">数据准度 <b>反而提高</b></span><span data-lang="en">accuracy <b>went up</b></span></li>
+            <li><span data-lang="cn">代码少了一半</span><span data-lang="en">codebase halved</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <p class="verdict-text">
+          <span data-lang="cn">"'实时' 是幻觉. 用户要的是'每次都对得上', 不是'每次都不一样'。"</span>
+          <span data-lang="en">"'Real-time' is a mirage. What users want is consistent, not fresh."</span>
+        </p>
+      </div>
+    </article>
+
+    <!-- ============== Round 4 · Local URL → Public URL ============== -->
+    <article class="round">
+      <div class="round-head">
+        <span class="round-num">Round 4</span>
+        <h3 class="round-h">
+          <span data-lang="cn">只有我能访问的地址, <em>不算作品</em></span>
+          <span data-lang="en">A URL only I can reach <em>isn't a project</em></span>
+        </h3>
+        <span class="round-ver">v4 → v5</span>
+      </div>
+      <div class="vs-grid">
+        <div class="side killed">
+          <span class="side-tag">killed</span>
+          <h4>本地永久域名 · http://DR-compare</h4>
+          <p class="why">
+            <span data-lang="cn">用 launchd + pfctl 让 Flask 开机自启 + 80→5000 端口转发. 打开电脑就有. 但只有"我这台电脑打开的时候"别人才能连。</span>
+            <span data-lang="en">launchd + pfctl auto-starts Flask and forwards port 80→5000. Works whenever my Mac is on — which means it doesn't work whenever it isn't.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">只在我的机器活着</span><span data-lang="en">alive only on my machine</span></li>
+            <li><span data-lang="cn">分享要走 ngrok/内网穿透</span><span data-lang="en">sharing needs ngrok / tunnels</span></li>
+          </ul>
+        </div>
+        <div class="vs-pill">VS</div>
+        <div class="side chose">
+          <span class="side-tag">chose</span>
+          <h4>Railway 部署 · 公网 URL</h4>
+          <p class="why">
+            <span data-lang="cn">加一个 <code>Procfile</code> (<code>web: gunicorn app:app</code>), 代码不动, 直接跑云上. 全班秒开链接。</span>
+            <span data-lang="en">Added a <code>Procfile</code> (<code>web: gunicorn app:app</code>), code untouched, straight to the cloud. Anyone with the link opens it instantly.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">24/7 可访问</span><span data-lang="en">reachable 24/7</span></li>
+            <li><span data-lang="cn">git push 自动重部署</span><span data-lang="en">git push auto-redeploys</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <p class="verdict-text">
+          <span data-lang="cn">"能不能被点开, 是 v0 的问题, 不是 v99 的问题。"</span>
+          <span data-lang="en">"'Can it be opened' is a v0 question, not a v99 question."</span>
+        </p>
+      </div>
+    </article>
+
+    <!-- ============== Round 5 · Railway → Render + UptimeRobot ============== -->
+    <article class="round">
+      <div class="round-head">
+        <span class="round-num">Round 5</span>
+        <h3 class="round-h">
+          <span data-lang="cn">永远不要让作品挂在<em>"我可能会忘续费"</em>的东西上</span>
+          <span data-lang="en">Never depend on <em>"I might forget to renew"</em></span>
+        </h3>
+        <span class="round-ver">v5 → v6</span>
+      </div>
+      <div class="vs-grid">
+        <div class="side killed">
+          <span class="side-tag">killed</span>
+          <h4>Railway Hobby ($5/月, 需绑卡)</h4>
+          <p class="why">
+            <span data-lang="cn">送了 $5 credit, 但一开始就要绑卡. 绑卡 = 心里永远有根"要不要续费"的弦。</span>
+            <span data-lang="en">Comes with $5 credit but demands a card upfront. A card on file = a running low-key mental tab about renewal.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">要信用卡</span><span data-lang="en">requires a credit card</span></li>
+            <li><span data-lang="cn">停付就断服务</span><span data-lang="en">stop paying → service down</span></li>
+          </ul>
+        </div>
+        <div class="vs-pill">VS</div>
+        <div class="side chose">
+          <span class="side-tag">chose</span>
+          <h4>Render Free + UptimeRobot 保活</h4>
+          <p class="why">
+            <span data-lang="cn">Render 免费套餐永久不收费, 唯一问题是 15 分钟无访问会休眠. 用 UptimeRobot 每 5 分钟 ping 一次直接绕过。</span>
+            <span data-lang="en">Render's free tier is genuinely free forever, and the one flaw (15-min sleep) gets patched by UptimeRobot pinging every 5 minutes.</span>
+          </p>
+          <ul>
+            <li><span data-lang="cn">永久 $0, 不绑卡</span><span data-lang="en">$0 forever, no card</span></li>
+            <li><span data-lang="cn">冷启动被自动规避</span><span data-lang="en">cold starts auto-mitigated</span></li>
+            <li><span data-lang="cn">git push 依然自动部署</span><span data-lang="en">git push still auto-deploys</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <p class="verdict-text">
+          <span data-lang="cn">"能永远跑下去的作品, 不能有'我'这个单点故障。"</span>
+          <span data-lang="en">"A project that runs forever can't have <em>me</em> as a single point of failure."</span>
+        </p>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+
+<!-- ================================================================
+     FINAL STACK · spec-sheet like the product's own output
+     ================================================================ -->
+<section class="stack-section reveal">
+  <div class="stack-head">
+    <p class="eyebrow"><span data-lang="cn">6 版之后 · 最终配置</span><span data-lang="en">After v6 · the final stack</span></p>
+    <h2>
+      <span data-lang="cn">剩下来的形状</span>
+      <span data-lang="en">What's left when everything's been killed</span>
+    </h2>
+  </div>
+  <div class="spec-sheet">
+    <div class="row">
+      <span class="sp-key">LLM</span>
+      <span class="sp-val"><code>Groq · llama-3.3-70b-versatile</code></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row">
+      <span class="sp-key">Frontend</span>
+      <span class="sp-val"><span data-lang="cn">单文件 HTML · 内联 CSS + JS · 无框架</span><span data-lang="en">Single-file HTML · inline CSS + JS · no framework</span></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row">
+      <span class="sp-key">Backend</span>
+      <span class="sp-val"><span data-lang="cn">Flask + gunicorn · 200 行 Python</span><span data-lang="en">Flask + gunicorn · 200 lines of Python</span></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row">
+      <span class="sp-key">Hosting</span>
+      <span class="sp-val"><span data-lang="cn">Render Free · 自动 GitHub 部署 · 无绑卡</span><span data-lang="en">Render Free · auto-deploys from GitHub · no card</span></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row">
+      <span class="sp-key">Keep-Alive</span>
+      <span class="sp-val"><span data-lang="cn">UptimeRobot · 每 5 分钟 ping · 永不休眠</span><span data-lang="en">UptimeRobot · pings every 5 min · never sleeps</span></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row">
+      <span class="sp-key">Auth / Cost</span>
+      <span class="sp-val"><span data-lang="cn">用户自带 Groq key · <code>sessionStorage</code> · 每个用户独立成本</span><span data-lang="en">Users bring their own Groq key · <code>sessionStorage</code> · cost scales per-user</span></span>
+      <span class="sp-price">$0</span>
+    </div>
+    <div class="row total">
+      <span class="sp-key"><span data-lang="cn">我的月度成本</span><span data-lang="en">My monthly cost</span></span>
+      <span class="sp-val"><span data-lang="cn">无论多少用户使用</span><span data-lang="en">regardless of user count</span></span>
+      <span class="sp-price">$0 / mo</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     LESSONS
+     ================================================================ -->
+<section class="lessons-section reveal">
+  <p class="l-eyebrow"><span data-lang="cn">6 版之后 · 学到的几件事</span><span data-lang="en">POST-V6 · WHAT I ACTUALLY LEARNED</span></p>
+  <h2 class="l-title">
+    <span data-lang="cn">推倒 <em>5 次</em> 教我的事</span>
+    <span data-lang="en">What <em>5 teardowns</em> taught me</span>
+  </h2>
+
+  <div class="lessons">
+    <article class="lesson">
+      <span class="num">01</span>
+      <h4>
+        <span data-lang="cn">"看起来最保险"通常是最贵的选择</span>
+        <span data-lang="en">The "safest-looking" option is usually the most expensive one</span>
+      </h4>
+      <p>
+        <span data-lang="cn">付费 API 稳, 本地模型免费, Railway 部署快 — 每一个"最保险"的选择, 都让我半个月后必须推倒重来. 保险是给下一次自己找罪受。</span>
+        <span data-lang="en">Paid API is "reliable," local models are "free," Railway is "fast to deploy" — each safe pick forced a teardown two weeks later. Safe now is expensive later.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">02</span>
+      <h4>
+        <span data-lang="cn">"$0" 不是 nice-to-have, 是分享的前提</span>
+        <span data-lang="en">"$0" isn't nice-to-have — it's the prerequisite for sharing</span>
+      </h4>
+      <p>
+        <span data-lang="cn">只要作品每月扣我一分钱, 我在心里就会开始给它算账、纠结要不要停. 一旦纠结, 就没了"想让人一直用"的动力. $0 才让作品真正独立于我的心情之外。</span>
+        <span data-lang="en">The moment a project costs me a dollar a month, I start second-guessing whether to keep it up. That doubt kills the "I want people to keep using this" energy. $0 is what lets a project outlive my mood.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">03</span>
+      <h4>
+        <span data-lang="cn">稳定的 95% &gt; 波动的 99%</span>
+        <span data-lang="en">A steady 95% &gt; a jittery 99%</span>
+      </h4>
+      <p>
+        <span data-lang="cn">用户不是在测"最高准度", 是在判断"我能不能相信这个工具". 每次都错在同样的地方, 我知道怎么绕; 每次都错在不同地方, 就没人再用了。</span>
+        <span data-lang="en">Users don't benchmark peak accuracy — they gauge trustworthiness. Consistently wrong in the same spot, they route around it. Randomly wrong, they just leave.</span>
+      </p>
+    </article>
+
+    <article class="lesson">
+      <span class="num">04</span>
+      <h4>
+        <span data-lang="cn">好作品不能有"我"这个单点故障</span>
+        <span data-lang="en">A good project can't have "me" as a single point of failure</span>
+      </h4>
+      <p>
+        <span data-lang="cn">"我这台 Mac 开着" / "我记得续费" / "我这个月心情好" — 每有一个依赖是"我", 作品就多一个明天会挂的理由. 最终架构没有任何一步需要我在场。</span>
+        <span data-lang="en">"My Mac is on" / "I remembered to renew" / "I still care this month" — every dependency on <em>me</em> is a reason the project dies tomorrow. The final architecture needs me nowhere.</span>
+      </p>
+    </article>
+  </div>
+</section>
+
+
+<!-- ================================================================
+     CTA
+     ================================================================ -->
+<section class="cta-block">
+  <p class="cta-eyebrow"><span data-lang="cn">现在就可以打开</span><span data-lang="en">it's live · click and try</span></p>
+  <h2><span data-lang="cn">输入两款车, 60 秒拿到完整对比报告</span><span data-lang="en">Two cars in, full comparison out — 60 seconds</span></h2>
+  <div class="cta-twin">
+    <a class="cta-primary" href="https://car-compare-7uta.onrender.com" target="_blank" rel="noopener">
+      <span data-lang="cn">打开工具 →</span>
+      <span data-lang="en">open the tool →</span>
+    </a>
+    <a class="cta-secondary" href="https://github.com/DR-16/car-compare" target="_blank" rel="noopener">
+      <span data-lang="cn">看源代码</span>
+      <span data-lang="en">source</span>
+    </a>
+  </div>
+  <p class="cta-meta">
+    <span data-lang="cn">工具需要一个免费的 Groq API key · <a style="color: var(--a2); border-bottom: 1px dashed rgba(168, 85, 247, 0.4);" href="https://console.groq.com/keys" target="_blank" rel="noopener">在这里 60 秒申请一个</a></span>
+    <span data-lang="en">The tool needs a free Groq API key · <a style="color: var(--a2); border-bottom: 1px dashed rgba(168, 85, 247, 0.4);" href="https://console.groq.com/keys" target="_blank" rel="noopener">grab one here in 60 seconds</a></span>
+  </p>
+</section>
+
+<footer class="proj-foot">
+  <p>Compare (AutoCompare AI) · a Yao Design Lab project</p>
+  <p>© 2026 Daniel Rong · <a href="../"><span data-lang="cn">返回实验室</span><span data-lang="en">back to lab</span></a></p>
+</footer>
+
+<a class="cta-float" href="https://car-compare-7uta.onrender.com" target="_blank" rel="noopener">
+  <span data-lang="cn">打开工具</span>
+  <span data-lang="en">open</span>
+  →
+</a>
+
+<div class="lang-switch" id="langSwitch" aria-label="Language switch">
+  <button type="button" data-set-lang="en">EN</button>
+  <span class="lang-divider">/</span>
+  <button type="button" data-set-lang="cn" class="active">中文</button>
+</div>
+
+
+<script>
+  /* ================================================================
+     CAMERA PUSH — scroll-driven 3D traversal of a layered car scene.
+     ---------------------------------------------------------------
+     Scroll position inside #camTrack maps 1-to-1 to a camera-progress
+     value `cp` (0..1). An rAF loop lerps the DOM-rendered cp toward
+     the scroll-derived target so fast flicks still read smoothly, but
+     every rendered frame is a direct function of actual scroll — so
+     scrolling up truly plays the sequence in reverse.
+
+     The computed cp is written to the --cp CSS variable on #camScene;
+     each layer's base translateZ offset is baked into its CSS calc().
+     We don't scale any whole image; perspective + translateZ does the
+     real spatial depth and the per-layer fade handles pass-through.
+     ================================================================ */
+  (function () {
+    const track = document.getElementById('camTrack');
+    const scene = document.getElementById('camScene');
+    if (!track || !scene) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) { scene.style.setProperty('--cp', '1'); return; }
+
+    let target = 0;        // cp derived from current scroll
+    let current = 0;       // cp as rendered on screen (lerped toward target)
+    let rafId = null;
+    let needsFrame = false;
+
+    function readScroll() {
+      const rect = track.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      const scrolled = Math.max(0, Math.min(total, -rect.top));
+      const raw = total > 0 ? scrolled / total : 0;
+      // Non-linear mapping: finish the whole push by raw=0.68, then hold
+      // cp at 1.0 for the remaining 32% of the track — gives the reader a
+      // decent window (~1.4 viewports) to actually read / click the mirror.
+      target = Math.min(1, raw / 0.68);
+    }
+
+    function frame() {
+      // critically-damped lerp; snap when close enough so we stop ticking
+      const diff = target - current;
+      if (Math.abs(diff) > 0.0004) {
+        current += diff * 0.18;
+      } else {
+        current = target;
+      }
+      scene.style.setProperty('--cp', current.toFixed(4));
+
+      // Mark body.is-inside once camera passes through the windshield,
+      // for any downstream UI that wants to react (e.g. nav tint).
+      document.body.classList.toggle('is-inside', current > 0.45);
+
+      if (Math.abs(target - current) > 0.0004) {
+        rafId = requestAnimationFrame(frame);
+      } else {
+        rafId = null;
+      }
+    }
+
+    function kick() {
+      if (rafId == null) rafId = requestAnimationFrame(frame);
+    }
+
+    function onScroll() {
+      readScroll();
+      kick();
+    }
+    function onResize() {
+      readScroll();
+      kick();
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    readScroll();
+    current = target;              // avoid first-paint jump
+    scene.style.setProperty('--cp', current.toFixed(4));
+    kick();
+  })();
+
+  /* reveal observer for below-the-fold sections */
+  (function () {
+    const ts = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { ts.forEach(el => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((es) => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }});
+    }, { threshold: 0.02, rootMargin: '0px 0px 20% 0px' });
+    ts.forEach(el => io.observe(el));
+  })();
+
+  /* bilingual toggle — shared 'ydl-lang' localStorage */
+  (function () {
+    const saved = localStorage.getItem('ydl-lang');
+    if (saved === 'en') document.body.classList.add('lang-en');
+
+    const buttons = document.querySelectorAll('#langSwitch [data-set-lang]');
+    function refresh() {
+      const isEn = document.body.classList.contains('lang-en');
+      buttons.forEach(b => {
+        b.classList.toggle('active', (b.dataset.setLang === 'en') === isEn);
+      });
+    }
+    refresh();
+
+    buttons.forEach(b => {
+      b.addEventListener('click', () => {
+        const lang = b.dataset.setLang;
+        document.body.classList.toggle('lang-en', lang === 'en');
+        localStorage.setItem('ydl-lang', lang);
+        refresh();
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
